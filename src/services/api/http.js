@@ -1,5 +1,9 @@
 import axios from "axios";
 
+/**
+ * Cliente HTTP para consumir la API del backend (repositorio externo).
+ * La URL base se configura en .env con VITE_API_BASE_URL (ej: http://localhost:8000).
+ */
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/";
 
 export const http = axios.create({

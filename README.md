@@ -54,3 +54,19 @@ Esto permite:
 - Fácil mantenimiento
 
 ---
+
+## 📁 Organización del proyecto y patrones
+
+El código se organiza por capas y responsabilidades, con patrones que facilitan la reutilización y el mantenimiento.
+
+### Estructura principal
+
+| Carpeta | Uso |
+|--------|-----|
+| `src/components/ui` | Componentes base reutilizables (Button, Input, Card, Badge, Container, Spinner, Alert). Presentacionales, configurados por props. |
+| `src/components/layout` | Componentes de estructura de página: Header, Footer, MainLayout, PageContainer. |
+| `src/constants` | Tema (colores, espaciados) y constantes de rutas (ROUTES). Una sola fuente de verdad para diseño y navegación. |
+| `src/utils` | Utilidades (p. ej. `cn` para clases CSS condicionales). |
+| `src/services/api` | Cliente HTTP (axios) y endpoints para consumir el API del backend (repositorio externo). |
+| `src/services/auth` | Contexto de autenticación (AuthProvider) y rutas protegidas (ProtectedRoute). |
+| `src/pages` | Páginas/vistas por módulo (auth, doctor, etc.), que componen layout + componentes UI. |
