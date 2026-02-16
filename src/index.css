@@ -2,9 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== Variables CSS – Sistema de diseño / Identidad de marca ========== */
+:root {
+  /* Paleta primaria (HEX) */
+  --color-primary-50: #e6f4f8;
+  --color-primary-100: #b3dfe8;
+  --color-primary-200: #80cad9;
+  --color-primary-300: #4db5c9;
+  --color-primary-400: #26a3ba;
+  --color-primary-500: #0091ab;
+  --color-primary-600: #007a91;
+  --color-primary-700: #006377;
+  --color-primary-800: #004d5e;
+  --color-primary-900: #003644;
+
+  /* Paleta secundaria */
+  --color-secondary-500: #22c55e;
+  --color-secondary-600: #16a34a;
+
+  /* Acentos */
+  --color-accent-success: #22c55e;
+  --color-accent-warning: #eab308;
+  --color-accent-error: #ef4444;
+  --color-accent-info: #3b82f6;
+
+  /* Tipografía – familias */
+  --font-heading: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Tipografía – tamaños (títulos y texto) */
+  --text-h1: 2.25rem;   /* 36px */
+  --text-h2: 1.875rem;  /* 30px */
+  --text-h3: 1.5rem;   /* 24px */
+  --text-lg: 1.125rem;
+  --text-base: 1rem;
+  --text-sm: 0.875rem;
+  --text-xs: 0.75rem;
+}
+
 @layer base {
   :root {
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-body);
     line-height: 1.5;
     font-weight: 400;
     color: #0f172a;
@@ -15,35 +53,28 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
   a {
     font-weight: 500;
-    color: #0091ab;
+    color: var(--color-primary-500);
     text-decoration: inherit;
   }
   a:hover {
-    color: #007a91;
+    color: var(--color-primary-600);
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
   }
 
   h1, h2, h3 {
+    font-family: var(--font-heading);
     line-height: 1.2;
   }
+  h1 { font-size: var(--text-h1); }
+  h2 { font-size: var(--text-h2); }
+  h3 { font-size: var(--text-h3); }
 }
 
 @layer components {

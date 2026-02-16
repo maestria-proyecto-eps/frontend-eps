@@ -1,1 +1,1 @@
-export { theme, ROUTES } from './theme';
+export { theme, ROUTES, BRAND_NAME } from './theme';

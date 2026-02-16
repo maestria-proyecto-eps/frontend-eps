@@ -58,6 +58,9 @@ export const theme = {
   },
 };
 
+/** Nombre de la EPS (identidad de marca) */
+export const BRAND_NAME = 'EPS';
+
 export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',

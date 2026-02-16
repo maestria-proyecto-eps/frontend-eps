@@ -9,8 +9,18 @@ import {
   Container,
   Spinner,
   Alert,
+  DatePicker,
 } from '../components/ui';
-import { ROUTES } from '../constants';
+import { ROUTES, BRAND_NAME } from '../constants';
+
+const PALETA_PRIMARIA = { nombre: 'Primario', hex: '#0091ab', uso: 'Acciones principales, enlaces' };
+const PALETA_SECUNDARIA = { nombre: 'Secundario', hex: '#22c55e', uso: 'Éxito, bienestar' };
+const PALETA_ACENTOS = [
+  { nombre: 'Éxito', hex: '#22c55e' },
+  { nombre: 'Advertencia', hex: '#eab308' },
+  { nombre: 'Error', hex: '#ef4444' },
+  { nombre: 'Info', hex: '#3b82f6' },
+];
 
 export default function Home() {
   return (
@@ -19,7 +29,7 @@ export default function Home() {
       <section className="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-16 md:py-24">
         <Container className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Bienvenido a EPS
+            Bienvenido a {BRAND_NAME}
           </h1>
           <p className="text-xl text-primary-100 max-w-2xl mx-auto mb-8">
             Salud y bienestar para ti y tu familia. Conoce los componentes base del proyecto.
@@ -38,6 +48,99 @@ export default function Home() {
       </section>
 
       <PageContainer>
+        {/* Sección: Identidad de marca / Sistema de diseño */}
+        <section className="mb-16">
+          <h2 className="text-2xl font-bold text-neutral-800 mb-2">
+            Identidad de marca y sistema de diseño
+          </h2>
+          <p className="text-neutral-600 mb-8">
+            Elementos de identidad aplicados en el proyecto. Guía en <code className="bg-neutral-100 px-1 rounded text-sm">docs/brand/</code>.
+          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <Card padding={true}>
+              <Card.Header>
+                <h3 className="text-lg font-semibold text-neutral-800">Nombre de la EPS</h3>
+              </Card.Header>
+              <Card.Body>
+                <p className="text-2xl font-bold text-primary-600">{BRAND_NAME}</p>
+                <p className="text-sm text-neutral-500 mt-1">Definido en <code className="bg-neutral-100 px-1 rounded">constants/theme.js</code> (BRAND_NAME).</p>
+              </Card.Body>
+            </Card>
+
+            <Card padding={true}>
+              <Card.Header>
+                <h3 className="text-lg font-semibold text-neutral-800">Logo</h3>
+                <p className="text-sm text-neutral-500">Color, B/N, horizontal, vertical</p>
+              </Card.Header>
+              <Card.Body>
+                <div className="border-2 border-dashed border-neutral-200 rounded-lg p-8 text-center text-neutral-500 text-sm">
+                  Assets en <code className="bg-neutral-100 px-1 rounded">/docs/brand/assets/</code>
+                </div>
+              </Card.Body>
+            </Card>
+          </div>
+
+          <Card padding={true} className="mb-8">
+            <Card.Header>
+              <h3 className="text-lg font-semibold text-neutral-800">Paleta de colores (HEX)</h3>
+              <p className="text-sm text-neutral-500">Primario, secundario, acentos</p>
+            </Card.Header>
+            <Card.Body>
+              <div className="flex flex-wrap gap-6">
+                <div>
+                  <div className="w-16 h-16 rounded-lg shadow-inner mb-2" style={{ backgroundColor: PALETA_PRIMARIA.hex }} />
+                  <p className="font-medium text-neutral-800">{PALETA_PRIMARIA.nombre}</p>
+                  <p className="text-sm text-neutral-500">{PALETA_PRIMARIA.hex}</p>
+                </div>
+                <div>
+                  <div className="w-16 h-16 rounded-lg shadow-inner mb-2" style={{ backgroundColor: PALETA_SECUNDARIA.hex }} />
+                  <p className="font-medium text-neutral-800">{PALETA_SECUNDARIA.nombre}</p>
+                  <p className="text-sm text-neutral-500">{PALETA_SECUNDARIA.hex}</p>
+                </div>
+                {PALETA_ACENTOS.map((a) => (
+                  <div key={a.nombre}>
+                    <div className="w-12 h-12 rounded-lg shadow-inner mb-2" style={{ backgroundColor: a.hex }} />
+                    <p className="font-medium text-neutral-800 text-sm">{a.nombre}</p>
+                    <p className="text-xs text-neutral-500">{a.hex}</p>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <Card padding={true}>
+              <Card.Header>
+                <h3 className="text-lg font-semibold text-neutral-800">Tipografía</h3>
+                <p className="text-sm text-neutral-500">Títulos, texto, tamaños</p>
+              </Card.Header>
+              <Card.Body>
+                <p className="text-3xl font-bold text-neutral-800 mb-2">Título (h1)</p>
+                <p className="text-xl text-neutral-700 mb-2">Subtítulo (h2)</p>
+                <p className="text-base text-neutral-600 mb-2">Texto base</p>
+                <p className="text-sm text-neutral-500">Texto pequeño. Variables CSS: <code className="bg-neutral-100 px-1 rounded text-xs">--text-h1</code>, <code className="bg-neutral-100 px-1 rounded text-xs">--text-base</code>, etc.</p>
+              </Card.Body>
+            </Card>
+
+       
+          </div>
+
+          <Card padding={true} className="mb-16">
+            <Card.Header>
+              <h3 className="text-lg font-semibold text-neutral-800">Recursos del sistema de diseño</h3>
+            </Card.Header>
+            <Card.Body>
+              <ul className="space-y-2 text-sm text-neutral-600">
+                <li><strong>Guía de aplicación en interfaces:</strong> <code className="bg-neutral-100 px-1 rounded">docs/brand/GUIA-APLICACION.md</code></li>
+                <li><strong>Assets exportados:</strong> <code className="bg-neutral-100 px-1 rounded">/docs/brand/assets/</code></li>
+                <li><strong>Variables CSS generadas:</strong> <code className="bg-neutral-100 px-1 rounded">src/index.css</code> (<code className="bg-neutral-100 px-1 rounded">:root</code>)</li>
+              </ul>
+            </Card.Body>
+          </Card>
+
+        </section>
+
         {/* Sección: Componentes UI base */}
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-neutral-800 mb-2">
@@ -100,6 +203,11 @@ export default function Home() {
                     label="Con error"
                     error="Este campo es obligatorio"
                     placeholder="Email"
+                    className="md:col-span-2"
+                  />
+                  <DatePicker
+                    label="Fecha de cita"
+                    hint="Ejemplo de DatePicker base"
                     className="md:col-span-2"
                   />
                 </div>

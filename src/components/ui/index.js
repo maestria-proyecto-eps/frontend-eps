@@ -5,3 +5,4 @@ export { Badge } from './Badge';
 export { Container } from './Container';
 export { Spinner } from './Spinner';
 export { Alert } from './Alert';
+export { DatePicker } from './DatePicker';
