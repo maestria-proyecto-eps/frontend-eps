@@ -74,9 +74,23 @@ export default function Home() {
                 <p className="text-sm text-neutral-500">Color, B/N, horizontal, vertical</p>
               </Card.Header>
               <Card.Body>
-                <div className="border-2 border-dashed border-neutral-200 rounded-lg p-8 text-center text-neutral-500 text-sm">
-                  Assets en <code className="bg-neutral-100 px-1 rounded">/docs/brand/assets/</code>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="flex flex-col items-center p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <img src="/logo-horizontal.svg" alt="Logo horizontal" className="h-12 w-auto object-contain" />
+                    <span className="text-sm text-neutral-600 mt-2">Horizontal</span>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <img src="/logo-bn.svg" alt="Logo blanco y negro" className="h-12 w-auto object-contain" />
+                    <span className="text-sm text-neutral-600 mt-2">B/N</span>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <img src="/logo-vertical.svg" alt="Logo vertical" className="h-16 w-auto object-contain" />
+                    <span className="text-sm text-neutral-600 mt-2">Vertical</span>
+                  </div>
                 </div>
+                <p className="text-xs text-neutral-500 mt-4 text-center">
+                  Archivos en <code className="bg-neutral-100 px-1 rounded">public/</code>
+                </p>
               </Card.Body>
             </Card>
           </div>
@@ -133,7 +147,7 @@ export default function Home() {
             <Card.Body>
               <ul className="space-y-2 text-sm text-neutral-600">
                 <li><strong>Guía de aplicación en interfaces:</strong> <code className="bg-neutral-100 px-1 rounded">docs/brand/GUIA-APLICACION.md</code></li>
-                <li><strong>Assets exportados:</strong> <code className="bg-neutral-100 px-1 rounded">/docs/brand/assets/</code></li>
+                <li><strong>Assets de marca:</strong> <code className="bg-neutral-100 px-1 rounded">public/brand/</code></li>
                 <li><strong>Variables CSS generadas:</strong> <code className="bg-neutral-100 px-1 rounded">src/index.css</code> (<code className="bg-neutral-100 px-1 rounded">:root</code>)</li>
               </ul>
             </Card.Body>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="700" height="900" viewBox="0 0 700 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="APS VIDA logo vertical color">
+  <defs>
+    <linearGradient id="gradB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00A86B"/>
+      <stop offset="100%" stop-color="#0077B6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon -->
+  <circle cx="350" cy="220" r="170" fill="url(#gradB)"/>
+  <path d="M270 295 L350 145 L430 295 Z" fill="white" opacity="0.95"/>
+  <path d="M350 185 C310 185 285 215 285 245 C285 285 318 315 350 340 C382 315 415 285 415 245 C415 215 390 185 350 185 Z"
+        fill="#E8F8F2" opacity="0.95"/>
+
+  <!-- Wordmark -->
+  <g fill="#0F172A" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="350" y="520" font-size="128" font-weight="700" letter-spacing="3">APS</text>
+    <text x="350" y="645" font-size="128" font-weight="300" letter-spacing="5" fill="#00A86B">VIDA</text>
+    <text x="350" y="715" font-size="30" fill="#475569" letter-spacing="1.5">EPS · SALUD Y BIENESTAR</text>
+  </g>
+</svg>
