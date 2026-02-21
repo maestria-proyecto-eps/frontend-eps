@@ -1,3 +1,6 @@
+/**
+ * Rutas del API (backend en otro repo). Solo paths relativos; la base URL está en http.js.
+ */
 export const endpoints = {
     login: "/login",
   
