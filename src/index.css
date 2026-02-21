@@ -4,27 +4,44 @@
 
 /* ========== Variables CSS – Sistema de diseño / Identidad de marca ========== */
 :root {
-  /* Paleta primaria (HEX) */
-  --color-primary-50: #e6f4f8;
-  --color-primary-100: #b3dfe8;
-  --color-primary-200: #80cad9;
-  --color-primary-300: #4db5c9;
-  --color-primary-400: #26a3ba;
-  --color-primary-500: #0091ab;
-  --color-primary-600: #007a91;
-  --color-primary-700: #006377;
-  --color-primary-800: #004d5e;
-  --color-primary-900: #003644;
+  /* Primario – Verde #009E7A (bienestar, prevención, atención médica) */
+  --color-primary-50: #e6f7f4;
+  --color-primary-100: #b3ebdf;
+  --color-primary-200: #80dfca;
+  --color-primary-300: #4dd3b5;
+  --color-primary-400: #26c79e;
+  --color-primary-500: #009E7A;
+  --color-primary-600: #008566;
+  --color-primary-700: #006b52;
+  --color-primary-800: #00523e;
+  --color-primary-900: #00382a;
 
-  /* Paleta secundaria */
-  --color-secondary-500: #22c55e;
-  --color-secondary-600: #16a34a;
+  /* Secundario – Azul #1E5AA8 (respaldo, seguridad, formalidad) */
+  --color-secondary-50: #e8eef7;
+  --color-secondary-100: #c5d4eb;
+  --color-secondary-200: #9eb9df;
+  --color-secondary-300: #769ed3;
+  --color-secondary-400: #4a82c4;
+  --color-secondary-500: #1E5AA8;
+  --color-secondary-600: #1a4d91;
+  --color-secondary-700: #16407a;
+  --color-secondary-800: #123363;
+  --color-secondary-900: #0d264b;
 
-  /* Acentos */
-  --color-accent-success: #22c55e;
-  --color-accent-warning: #eab308;
-  --color-accent-error: #ef4444;
-  --color-accent-info: #3b82f6;
+  /* Acento – Amarillo #F4B400 (alertas preventivas, notificaciones, destacados) */
+  --color-accent: #F4B400;
+
+  /* Emergencias – Rojo #D32F2F (urgencias, estados críticos) */
+  --color-emergency: #D32F2F;
+
+  /* Base neutra */
+  --color-white: #FFFFFF;
+
+  /* Semánticos */
+  --color-accent-success: #009E7A;
+  --color-accent-warning: #F4B400;
+  --color-accent-error: #D32F2F;
+  --color-accent-info: #1E5AA8;
 
   /* Tipografía – familias */
   --font-heading: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -46,7 +63,7 @@
     line-height: 1.5;
     font-weight: 400;
     color: #0f172a;
-    background-color: #f8fafc;
+    background-color: var(--color-white);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;

@@ -35,12 +35,6 @@ export default function Header({ className = '', showAuth = true }) {
                 >
                   Iniciar sesión
                 </Link>
-                <Link
-                  to={ROUTES.LOGIN}
-                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors"
-                >
-                  Acceder
-                </Link>
               </>
             )}
           </nav>

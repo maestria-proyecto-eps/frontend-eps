@@ -57,44 +57,83 @@ El cumplimiento de estas pautas garantiza reconocimiento y consistencia de marca
 
 ## 4. Paleta de colores
 
-### 4.1 Color primario (azul — salud, confianza)
+### 4.1 Color primario – Verde
 
-Uso: acciones principales, enlaces, elementos de foco, header.
+Representa **bienestar, prevención y atención médica**.
 
-| Nombre   | HEX       | RGB              |
-|----------|-----------|------------------|
-| Primary 50  | `#e6f4f8` | 230, 244, 248   |
-| Primary 100 | `#b3dfe8` | 179, 223, 232   |
-| Primary 200 | `#80cad9` | 128, 202, 217   |
-| Primary 300 | `#4db5c9` | 77, 181, 201    |
-| Primary 400 | `#26a3ba` | 38, 163, 186    |
-| **Primary 500** | **`#0091ab`** | **0, 145, 171** |
-| Primary 600 | `#007a91` | 0, 122, 145    |
-| Primary 700 | `#006377` | 0, 99, 119     |
-| Primary 800 | `#004d5e` | 0, 77, 94      |
-| Primary 900 | `#003644` | 0, 54, 68      |
+**HEX:** `#009E7A` · **RGB:** 0, 158, 122
 
-### 4.2 Color secundario (verde — bienestar, éxito)
-
-Uso: confirmaciones, estados positivos, mensajes de éxito.
+**Uso:** Botones principales (p. ej. Agendar cita), iconos médicos, estados activos, elementos del logo.
 
 | Nombre   | HEX       | RGB              |
 |----------|-----------|------------------|
-| **Secondary 500** | **`#22c55e`** | **34, 197, 94** |
-| Secondary 600 | `#16a34a` | 22, 163, 74    |
+| Primary 50  | `#e6f7f4` | 230, 247, 244   |
+| Primary 100 | `#b3ebdf` | 179, 235, 223   |
+| Primary 200 | `#80dfca` | 128, 223, 202   |
+| Primary 300 | `#4dd3b5` | 77, 211, 181    |
+| Primary 400 | `#26c79e` | 38, 199, 158    |
+| **Primary 500** | **`#009E7A`** | **0, 158, 122** |
+| Primary 600 | `#008566` | 0, 133, 102    |
+| Primary 700 | `#006b52` | 0, 107, 82     |
+| Primary 800 | `#00523e` | 0, 82, 62      |
+| Primary 900 | `#00382a` | 0, 56, 42      |
 
-### 4.3 Colores de acento (semánticos)
+### 4.2 Color secundario – Azul
 
-| Uso      | Nombre  | HEX       |
-|----------|---------|-----------|
-| Éxito    | Success | `#22c55e` |
-| Advertencia | Warning | `#eab308` |
-| Error    | Error   | `#ef4444` |
-| Información | Info  | `#3b82f6` |
+Transmite **respaldo, seguridad y formalidad institucional**.
 
-### 4.4 Neutros (textos y fondos)
+**HEX:** `#1E5AA8` · **RGB:** 30, 90, 168
 
-Para textos, bordes y fondos usar la escala de grises definida en el sistema (p. ej. neutral-50 a neutral-900 en `theme.js`). Mantener contraste accesible (texto sobre fondo según WCAG).
+**Uso:** Encabezados, tarjetas institucionales, títulos principales.
+
+| Nombre   | HEX       | RGB              |
+|----------|-----------|------------------|
+| Secondary 50  | `#e8eef7` | 232, 238, 247   |
+| Secondary 100 | `#c5d4eb` | 197, 212, 235   |
+| Secondary 200 | `#9eb9df` | 158, 185, 223   |
+| Secondary 300 | `#769ed3` | 118, 158, 211   |
+| Secondary 400 | `#4a82c4` | 74, 130, 196    |
+| **Secondary 500** | **`#1E5AA8`** | **30, 90, 168** |
+| Secondary 600 | `#1a4d91` | 26, 77, 145    |
+| Secondary 700 | `#16407a` | 22, 64, 122    |
+| Secondary 800 | `#123363` | 18, 51, 99     |
+| Secondary 900 | `#0d264b` | 13, 38, 75     |
+
+### 4.3 Color acento – Amarillo
+
+Aporta **dinamismo y resalta acciones importantes**.
+
+**HEX:** `#F4B400` · **RGB:** 244, 180, 0
+
+**Uso:** Alertas preventivas, notificaciones, elementos destacados.
+
+### 4.4 Color emergencias – Rojo
+
+Uso **exclusivo para urgencias y hospitalización**.
+
+**HEX:** `#D32F2F` · **RGB:** 211, 47, 47
+
+**Uso:** Botón “Urgencias”, estados críticos, alertas de riesgo.
+
+### 4.5 Base neutra – Blanco
+
+**HEX:** `#FFFFFF` · **RGB:** 255, 255, 255
+
+**Uso:** Fondo principal, formularios.
+
+### 4.6 Resumen semántico
+
+| Uso           | Nombre    | HEX       |
+|---------------|-----------|-----------|
+| Primario      | Primary   | `#009E7A` |
+| Secundario    | Secondary | `#1E5AA8` |
+| Acento        | Accent    | `#F4B400` |
+| Emergencias   | Emergency | `#D32F2F` |
+| Base          | White     | `#FFFFFF` |
+
+### 4.7 Neutros (textos y bordes)
+
+Para textos, bordes y fondos secundarios se usa la escala de grises en `theme.js` (neutral-50 a neutral-900). Mantener contraste accesible (WCAG).
 
 ---
 
