@@ -4,6 +4,12 @@ import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
 import { AuthContext } from "../../services/auth/AuthProvider";
 
+import {
+  Button,
+  Input,
+  Card,
+} from '../../components/ui';
+
 export default function Login() {
   const nav = useNavigate();
   const auth = useContext(AuthContext);
@@ -33,44 +39,37 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <form
-        onSubmit={submit}
-        className="border p-6 rounded space-y-3 w-80"
-      >
-        <h2 className="text-lg font-bold text-center">
-          Iniciar sesión
-        </h2>
+      <Card className="w-80">
+        <Card.Header>
+          <h2 className="text-lg font-bold text-center">Iniciar sesión</h2>
+        </Card.Header>
 
-        <input
-          placeholder="Usuario"
-          value={user_name}
-          onChange={(e) => setUser(e.target.value)}
-          className="border p-2 w-full rounded"
-          required
-        />
+        <Card.Body>
+          <form onSubmit={submit} className="space-y-3">
+            <Input
+              placeholder="Usuario"
+              name="user_name"
+              value={user_name}
+              onChange={(e) => setUser(e.target.value)}
+              required
+            />
 
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPass(e.target.value)}
-          className="border p-2 w-full rounded"
-          required
-        />
+            <Input
+              type="password"
+              placeholder="Contraseña"
+              name="password"
+              value={password}
+              onChange={(e) => setPass(e.target.value)}
+              error={msg || undefined}
+              required
+            />
 
-        <button
-          type="submit"
-          className="bg-blue-500 text-white p-2 w-full rounded"
-        >
-          Entrar
-        </button>
-
-        {msg && (
-          <div className="text-red-500 text-sm text-center">
-            {msg}
-          </div>
-        )}
-      </form>
+            <Button type="submit" fullWidth>
+              Entrar
+            </Button>
+          </form>
+        </Card.Body>
+      </Card>
     </div>
   );
 }
