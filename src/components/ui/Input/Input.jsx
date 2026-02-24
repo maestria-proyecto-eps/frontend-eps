@@ -36,7 +36,7 @@ export default function Input({
             'block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-neutral-100 disabled:cursor-not-allowed',
             leftIcon && 'pl-10',
             rightIcon && 'pr-10',
-            error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
+            error && 'border-emergency-500 focus:border-emergency-500 focus:ring-emergency-500',
             className
           )}
           aria-invalid={!!error}
@@ -50,7 +50,7 @@ export default function Input({
         )}
       </div>
       {error && (
-        <p id={`${inputId}-error`} className="text-sm text-red-600" role="alert">
+        <p id={`${inputId}-error`} className="text-sm text-emergency-600" role="alert">
           {error}
         </p>
       )}

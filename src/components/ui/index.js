@@ -6,3 +6,5 @@ export { Container } from './Container';
 export { Spinner } from './Spinner';
 export { Alert } from './Alert';
 export { DatePicker } from './DatePicker';
+export { default as DataTable, VALIDATORS } from './DataTable/DataTable.jsx';
+export { Modal } from './Modal';

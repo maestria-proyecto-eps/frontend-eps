@@ -75,6 +75,7 @@ export const ROUTES = {
   LOGIN: '/login',
   COMPONENTS: '/components',
   DOCTOR: '/doctor',
+  USUARIOS: '/usuarios',
 };
 
 export default theme;

@@ -2,10 +2,10 @@ import React from 'react';
 import { cn } from '../../../utils/cn';
 
 const variants = {
-  success: 'bg-green-50 border-green-200 text-green-800',
-  warning: 'bg-amber-50 border-amber-200 text-amber-800',
-  error: 'bg-red-50 border-red-200 text-red-800',
-  info: 'bg-blue-50 border-blue-200 text-blue-800',
+  success: 'bg-success-50 border-success-200 text-success-800',
+  warning: 'bg-accent-50 border-accent-200 text-accent-800',
+  error: 'bg-emergency-50 border-emergency-200 text-emergency-800',
+  info: 'bg-secondary-50 border-secondary-200 text-secondary-800',
 };
 
 /**

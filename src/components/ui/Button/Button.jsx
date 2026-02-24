@@ -6,7 +6,8 @@ const variants = {
   secondary: 'bg-secondary-500 hover:bg-secondary-600 text-white border-transparent',
   outline: 'bg-transparent border-2 border-primary-500 text-primary-500 hover:bg-primary-50',
   ghost: 'bg-transparent hover:bg-neutral-100 text-neutral-700',
-  danger: 'bg-red-500 hover:bg-red-600 text-white border-transparent',
+  danger: 'bg-emergency-500 hover:bg-emergency-600 text-white border-transparent',
+  deactivate: 'bg-emergency-100 hover:bg-emergency-500 text-emergency-800 border-transparent',
 };
 
 const sizes = {
