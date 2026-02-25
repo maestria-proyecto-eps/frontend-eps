@@ -236,13 +236,21 @@ Se ejecuta automáticamente al abrir un **Pull Request** hacia `develop`, `qa` o
 
 > El PR no debe mergearse si CI falla.
 
-### Despliegue Continuo (CD) — `cd.yml`
+### Despliegue Continuo (CD) — Vercel Auto-Deploy
 
-Se ejecuta automáticamente al **mergear un PR** (push) a las ramas con entorno:
+Vercel está conectado directamente al repositorio de GitHub y despliega automáticamente cuando se hace push a una rama. Gracias a las **Branch Protection Rules**, el push solo ocurre después de mergear un PR que haya pasado CI.
 
-| Rama | Entorno | Plataforma |
+El flujo es:
+
+1. Se abre PR → CI (`ci.yml`) valida lint + build
+2. CI pasa → se permite mergear el PR
+3. Merge genera push a la rama destino → Vercel despliega automáticamente
+
+| Rama | Entorno | Tipo de Deploy |
 |---|---|---|
-| `develop` | Development (preview) | Vercel |
-| `main` | Production | Vercel |
+| `develop` | Preview | Vercel genera una URL de preview |
+| `main` | Production | Vercel despliega a producción |
 
 > `qa` no tiene despliegue — funciona como compuerta de calidad (solo CI).
+>
+> **No se necesita workflow de CD** (`cd.yml`) para el frontend — Vercel maneja el deploy de forma nativa.
