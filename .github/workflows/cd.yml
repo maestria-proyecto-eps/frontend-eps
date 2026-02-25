@@ -1,0 +1,59 @@
+# CD - frontend-eps → Vercel
+# Triggers on merged PRs (push) to develop and main
+#
+# Secrets:
+#   VERCEL_TOKEN      - Vercel API token
+#   VERCEL_ORG_ID     - Vercel org ID
+#   VERCEL_PROJECT_ID - Vercel project ID
+
+name: CD
+
+on:
+  push:
+    branches: [develop, main]
+
+concurrency:
+  group: cd-${{ github.ref }}
+
+jobs:
+  deploy-dev:
+    name: Deploy → Dev
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm i -g vercel@latest
+      - name: Deploy to Vercel (Preview)
+        run: |
+          vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  deploy-prod:
+    name: Deploy → Production
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm i -g vercel@latest
+      - name: Deploy to Vercel (Production)
+        run: |
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

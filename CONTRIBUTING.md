@@ -74,13 +74,14 @@ Ejemplos:
 
 # 🌳 Convención de Ramas (GitFlow Simplificado)
 
-Este proyecto utiliza un **GitFlow simplificado** para mantener orden, claridad y estabilidad en el desarrollo.
+Este proyecto utiliza un **GitFlow simplificado** con rama de QA como compuerta de calidad antes de producción.
 
 ### 📌 Estructura de ramas
 
 ```
-main
-develop
+main         ← producción
+qa           ← quality gate (validación antes de prod)
+develop      ← integración / entorno dev
 feature/*
 bugfix/*
 hotfix/*
@@ -91,22 +92,28 @@ hotfix/*
 ## 🔹 `main`
 
 * Contiene únicamente código estable y listo para producción.
-* Siempre debe estar en estado **deployable**.
+* Al hacer merge aquí se **despliega automáticamente a producción** (Vercel).
 * No se permite hacer push directo.
-* Solo recibe cambios desde:
-
-  * `develop` (nuevas versiones)
+* Solo recibe PRs desde:
+  * `qa` (nuevas versiones validadas)
   * `hotfix/*` (correcciones críticas)
+
+---
+
+## 🔹 `qa`
+
+* Rama de **quality gate** — validación final antes de producción.
+* **No tiene entorno de despliegue propio**, solo ejecuta CI (lint + build).
+* Recibe PRs desde `develop`.
+* Desde aquí se abre PR hacia `main` para ir a producción.
 
 ---
 
 ## 🔹 `develop`
 
-* Rama de integración.
-* Base para nuevas funcionalidades.
-* Puede contener cambios en validación antes de llegar a producción.
+* Rama de integración y desarrollo.
+* Al hacer merge aquí se **despliega automáticamente al entorno de desarrollo** (Vercel preview).
 * Recibe merges desde:
-
   * `feature/*`
   * `bugfix/*`
   * `hotfix/*` (después de aplicar en `main`)
@@ -136,13 +143,14 @@ feature/notifications-module
 1. Se crea desde `develop`
 2. Se implementa la funcionalidad
 3. Se abre Pull Request hacia `develop`
-4. Se elimina después del merge
+4. CI valida automáticamente (lint + build)
+5. Se elimina después del merge
 
 ---
 
 ## 🐛 `bugfix/*`
 
-Ramas para corregir errores detectados en `develop` antes de pasar a producción.
+Ramas para corregir errores detectados en `develop` o `qa` antes de pasar a producción.
 
 ### 📌 Convención de nombres
 
@@ -189,9 +197,8 @@ hotfix/crash-on-startup
 
 1. Se crea desde `main`
 2. Se corrige el problema
-3. Se hace merge hacia:
-
-   * `main`
+3. Se hace PR hacia:
+   * `main` (se despliega a producción automáticamente)
    * `develop` (obligatorio para evitar regresiones)
 4. Se elimina después del merge
 
@@ -199,8 +206,9 @@ hotfix/crash-on-startup
 
 ## 📌 Reglas Generales
 
-* ❌ No hacer push directo a `main` ni `develop`
+* ❌ No hacer push directo a `main`, `qa` ni `develop`
 * ✅ Todo cambio debe pasar por Pull Request
+* ✅ Los PRs ejecutan CI automáticamente (lint + build)
 * ✅ Mantener nombres descriptivos y en kebab-case
 * ✅ Eliminar ramas después del merge
 * ✅ Mantener commits claros y atómicos
@@ -210,17 +218,31 @@ hotfix/crash-on-startup
 ## 🔁 Flujo General
 
 ```
-feature/* → develop → main
-bugfix/*  → develop → main
-hotfix/*  → main → develop
+feature/* ──PR──→ develop ──PR──→ qa ──PR──→ main
+bugfix/*  ──PR──→ develop ──PR──→ qa ──PR──→ main
+hotfix/*  ──PR──→ main + develop
 ```
 
-Este modelo permite:
+---
 
-* Separar desarrollo de producción
-* Mantener estabilidad en `main`
-* Trabajar en paralelo sin conflictos
-* Aplicar correcciones críticas sin afectar el flujo normal
+## 🚀 CI/CD y Entornos
 
-```
-```
+### Integración Continua (CI) — `ci.yml`
+
+Se ejecuta automáticamente al abrir un **Pull Request** hacia `develop`, `qa` o `main`:
+
+* **Lint** — ESLint
+* **Build** — Valida que `vite build` compile correctamente
+
+> El PR no debe mergearse si CI falla.
+
+### Despliegue Continuo (CD) — `cd.yml`
+
+Se ejecuta automáticamente al **mergear un PR** (push) a las ramas con entorno:
+
+| Rama | Entorno | Plataforma |
+|---|---|---|
+| `develop` | Development (preview) | Vercel |
+| `main` | Production | Vercel |
+
+> `qa` no tiene despliegue — funciona como compuerta de calidad (solo CI).
