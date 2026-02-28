@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { cn } from '../../../utils/cn';
 import { Button } from '../Button';
 import { Input } from '../Input';
@@ -6,39 +6,7 @@ import { Card } from '../Card';
 import { Spinner } from '../Spinner';
 import { Modal } from '../Modal';
 import { Alert } from '../Alert';
-
-/**
- * Validadores de alto nivel reutilizables para campos habituales (email, documento, etc.).
- * La página puede usar estos nombres en field.validation o definir lógica propia en formConfig.validate.
- */
-export const VALIDATORS = {
-  required: (value, field) => {
-    if (value == null || String(value).trim() === '') {
-      return `${field.label || field.key} es obligatorio`;
-    }
-    return null;
-  },
-  email: (value, field) => {
-    if (value == null || String(value).trim() === '') return null;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      return 'Email no válido';
-    }
-    return null;
-  },
-  /** Identificación / documento: solo números y letras, longitud configurable (min/max por defecto 5-20). */
-  document: (value, field, _form, options = {}) => {
-    if (value == null || String(value).trim() === '') return null;
-    const min = options.min ?? 5;
-    const max = options.max ?? 20;
-    const str = String(value).trim();
-    if (str.length < min) return `Mínimo ${min} caracteres`;
-    if (str.length > max) return `Máximo ${max} caracteres`;
-    if (!/^[a-zA-Z0-9\-]+$/.test(str)) {
-      return 'Solo letras, números y guiones';
-    }
-    return null;
-  },
-};
+import { VALIDATORS } from './validators';
 
 /**
  * Construye el objeto vacío del formulario a partir de formConfig.fields.
@@ -59,7 +27,7 @@ function getEmptyForm(fields = []) {
  * field.validation puede ser ['required', 'email'] o ['required', { name: 'document', options: { min, max } }].
  * Si no hay field.validation, se usa required por defecto y email si type === 'email'.
  */
-function runFieldValidation(form, fields, context = {}) {
+function runFieldValidation(form, fields) {
   const err = {};
   fields.forEach((f) => {
     const val = form[f.key];
@@ -113,10 +81,9 @@ export default function DataTable({
   className = '',
 }) {
   const hasCrud = formConfig && (onCreate || onEdit || onDeactivate);
-  const fields = formConfig?.fields ?? [];
+  const fields = useMemo(() => formConfig?.fields ?? [], [formConfig?.fields]);
   const statusKey = formConfig?.statusKey;
   const activeValue = formConfig?.activeValue ?? 'Activo';
-  const deactivatedValue = formConfig?.deactivatedValue ?? 'Inactivo';
 
   const [modalCreate, setModalCreate] = useState(false);
   const [modalEdit, setModalEdit] = useState(false);

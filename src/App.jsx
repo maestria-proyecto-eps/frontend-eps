@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./services/auth/AuthProvider";
+import AuthProvider from "./services/auth/AuthProvider";
 import ProtectedRoute from "./services/auth/ProtectedRoute";
 
 // auth

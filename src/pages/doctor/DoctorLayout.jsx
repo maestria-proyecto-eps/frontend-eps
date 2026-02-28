@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
-import { AuthContext } from "../../services/auth/AuthProvider";
+import { AuthContext } from "../../services/auth/AuthContext";
 
 export default function UserLayout() {
   const auth = useContext(AuthContext);

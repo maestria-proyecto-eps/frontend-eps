@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { cn } from '../../../utils/cn';
 
 /**
@@ -15,7 +15,8 @@ export default function Input({
   id,
   ...props
 }) {
-  const inputId = id || props.name || `input-${Math.random().toString(36).slice(2)}`;
+  const generatedId = useId();
+  const inputId = id || props.name || generatedId;
 
   return (
     <div className={cn('space-y-1', containerClassName)}>

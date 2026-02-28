@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
-import { AuthContext } from "../../services/auth/AuthProvider";
+import { AuthContext } from "../../services/auth/AuthContext";
 
 export default function Login() {
   const nav = useNavigate();
@@ -17,7 +17,7 @@ export default function Login() {
     setMsg("");
 
     try {
-      const { data } = await http.post(endpoints.login, {
+      const { data } = await http.post(endpoints.auth.login, {
         user_name,
         password,
       });
@@ -26,7 +26,7 @@ export default function Login() {
 
       if (data.role === "admin") nav("/admin");
       else nav("/user");
-    } catch (err) {
+    } catch {
       setMsg("Login inválido");
     }
   };
