@@ -14,7 +14,7 @@ export default function DoctorExample() {
 
     try {
       const { data } = await http.get(
-        endpoints.doctor_example.doctorExampleEndpoint
+        endpoints.users.doctorExample
       );
 
       // Se asume que el endpoint devuelve un array

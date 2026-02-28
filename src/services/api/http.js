@@ -1,13 +1,16 @@
 import axios from "axios";
 
 /**
- * Cliente HTTP para consumir la API del backend (repositorio externo).
- * La URL base se configura en .env con VITE_API_BASE_URL (ej: http://localhost:8000).
+ * Cliente HTTP para consumir los microservicios del backend.
+ *
+ * En producción/preview, Vercel Rewrites (vercel.json) redirige las
+ * peticiones /api/* al microservicio correcto en Render.
+ *
+ * En desarrollo local, Vite proxy (vite.config.js) hace lo mismo
+ * contra los servicios levantados en localhost.
  */
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/";
-
 export const http = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: "",
 });
 
 http.interceptors.request.use((config) => {

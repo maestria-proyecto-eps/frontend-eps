@@ -17,7 +17,7 @@ export default function Login() {
     setMsg("");
 
     try {
-      const { data } = await http.post(endpoints.login, {
+      const { data } = await http.post(endpoints.auth.login, {
         user_name,
         password,
       });

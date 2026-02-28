@@ -1,0 +1,28 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/auth/:path*",
+      "destination": "$AUTH_SERVICE_URL/:path*"
+    },
+    {
+      "source": "/api/users/:path*",
+      "destination": "$USERS_SERVICE_URL/:path*"
+    },
+    {
+      "source": "/api/appointments/:path*",
+      "destination": "$APPOINTMENTS_SERVICE_URL/:path*"
+    },
+    {
+      "source": "/api/emergency/:path*",
+      "destination": "$EMERGENCY_SERVICE_URL/:path*"
+    },
+    {
+      "source": "/api/pharmacy/:path*",
+      "destination": "$PHARMACY_SERVICE_URL/:path*"
+    },
+    {
+      "source": "/api/medical-records/:path*",
+      "destination": "$MEDICAL_RECORDS_SERVICE_URL/:path*"
+    }
+  ]
+}

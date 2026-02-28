@@ -2,7 +2,7 @@
 ## 📁 Estructura del proyecto
 
 ```text
-src/
+src/                 
  ├── components/
  ├── pages/
  ├── services/
@@ -243,7 +243,7 @@ Vercel está conectado directamente al repositorio de GitHub y despliega automá
 El flujo es:
 
 1. Se abre PR → CI (`ci.yml`) valida lint + build
-2. CI pasa → se permite mergear el PR
+2. CI pasa ✅ → se permite mergear el PR
 3. Merge genera push a la rama destino → Vercel despliega automáticamente
 
 | Rama | Entorno | Tipo de Deploy |
@@ -254,3 +254,57 @@ El flujo es:
 > `qa` no tiene despliegue — funciona como compuerta de calidad (solo CI).
 >
 > **No se necesita workflow de CD** (`cd.yml`) para el frontend — Vercel maneja el deploy de forma nativa.
+
+---
+
+## 🌐 API Gateway (Vercel Rewrites)
+
+El frontend actúa como **punto de entrada único** a todos los microservicios backend gracias a **Vercel Rewrites** (`vercel.json`).
+
+### ¿Cómo funciona?
+
+```
+Browser → https://frontend.vercel.app/api/auth/login
+                    │
+              Vercel Rewrite (proxy transparente)
+                    │
+                    ▼
+         https://backend-eps-auth-service.onrender.com/login
+```
+
+### Mapeo de rutas
+
+| Prefijo en el frontend | Microservicio en Render |
+|---|---|
+| `/api/auth/*` | `backend-eps-auth-service` |
+| `/api/users/*` | `backend-eps-users-service` |
+| `/api/appointments/*` | `backend-eps-appointments-service` |
+| `/api/emergency/*` | `backend-eps-emergency-service` |
+| `/api/pharmacy/*` | `backend-eps-pharmacy-service` |
+| `/api/medical-records/*` | `backend-eps-medical-records-service` |
+
+### Archivos clave
+
+| Archivo | Función |
+|---|---|
+| `vercel.json` | Define los rewrites con `$ENV_VAR` por entorno |
+| `src/services/api/endpoints.js` | Rutas con prefijo `/api/{servicio}/` |
+| `src/services/api/http.js` | Cliente Axios con `baseURL: ""` (mismo dominio) |
+| `vite.config.js` | Proxy local para desarrollo (`npm run dev`) |
+
+### Variables de entorno en Vercel
+
+Cada microservicio tiene una variable con su URL en Render. Se configura por entorno en **Vercel Dashboard → Settings → Environment Variables**:
+
+| Variable | Preview (`develop`) | Production (`main`) |
+|---|---|---|
+| `AUTH_SERVICE_URL` | URL del servicio DEV | URL del servicio PROD |
+| `USERS_SERVICE_URL` | URL del servicio DEV | URL del servicio PROD |
+| `APPOINTMENTS_SERVICE_URL` | URL del servicio DEV | URL del servicio PROD |
+| `EMERGENCY_SERVICE_URL` | URL del servicio DEV | URL del servicio PROD |
+| `PHARMACY_SERVICE_URL` | URL del servicio DEV | URL del servicio PROD |
+| `MEDICAL_RECORDS_SERVICE_URL` | URL del servicio DEV | URL del servicio PROD |
+
+### Desarrollo local
+
+En local, `vite.config.js` configura un proxy que redirige `/api/*` a los servicios corriendo en `localhost`. Ajusta los puertos según tu setup.
