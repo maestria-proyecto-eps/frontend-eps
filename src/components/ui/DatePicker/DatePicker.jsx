@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { cn } from '../../../utils/cn';
 
 /**
@@ -16,7 +16,8 @@ export default function DatePicker({
   onChange,
   ...props
 }) {
-  const inputId = id || props.name || `date-${Math.random().toString(36).slice(2)}`;
+  const generatedId = useId();
+  const inputId = id || props.name || generatedId;
 
   const handleChange = (e) => {
     if (onChange) {
