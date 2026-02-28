@@ -308,3 +308,46 @@ Cada microservicio tiene una variable con su URL en Render. Se configura por ent
 ### Desarrollo local
 
 En local, `vite.config.js` configura un proxy que redirige `/api/*` a los servicios corriendo en `localhost`. Ajusta los puertos según tu setup.
+
+---
+
+### ➕ Agregar un nuevo microservicio
+
+Si se crea un nuevo microservicio (ej: `backend-eps-notifications-service`), hay que actualizar **4 archivos + Vercel Dashboard**:
+
+1. **`vercel.json`** — agregar el rewrite:
+   ```json
+   { "source": "/api/notifications/:path*", "destination": "$NOTIFICATIONS_SERVICE_URL/:path*" }
+   ```
+
+2. **`vite.config.js`** — agregar la entrada en `server.proxy`:
+   ```js
+   '/api/notifications': 'http://localhost:800X',
+   ```
+
+3. **`src/services/api/endpoints.js`** — agregar la sección:
+   ```js
+   notifications: {
+     list: "/api/notifications/",
+   },
+   ```
+
+4. **Vercel Dashboard → Settings → Environment Variables** — agregar:
+   * `NOTIFICATIONS_SERVICE_URL` → Preview: URL del servicio DEV en Render
+   * `NOTIFICATIONS_SERVICE_URL` → Production: URL del servicio PROD en Render
+
+5. **Redeploy en Vercel** para que tome las nuevas variables.
+
+---
+
+### ➖ Eliminar un microservicio
+
+Si se elimina un microservicio, quitar las referencias en los mismos 4 lugares:
+
+1. **`vercel.json`** — eliminar el rewrite correspondiente
+2. **`vite.config.js`** — eliminar la entrada del proxy
+3. **`src/services/api/endpoints.js`** — eliminar la sección de endpoints
+4. **Vercel Dashboard** — eliminar las variables de entorno (Preview + Production)
+5. **Código** — buscar y eliminar todas las importaciones y llamadas a esos endpoints en `src/`
+
+> 💡 Tip: Busca en todo el proyecto con `grep -rn "/api/nombre-servicio/" src/` para asegurarte de no dejar referencias huérfanas.

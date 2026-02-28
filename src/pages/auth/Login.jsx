@@ -26,7 +26,7 @@ export default function Login() {
 
       if (data.role === "admin") nav("/admin");
       else nav("/user");
-    } catch (err) {
+    } catch {
       setMsg("Login inválido");
     }
   };

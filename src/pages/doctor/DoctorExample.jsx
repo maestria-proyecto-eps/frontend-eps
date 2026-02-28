@@ -19,7 +19,7 @@ export default function DoctorExample() {
 
       // Se asume que el endpoint devuelve un array
       setItems(data || []);
-    } catch (err) {
+    } catch {
       setError("Error cargando datos");
     } finally {
       setLoading(false);
