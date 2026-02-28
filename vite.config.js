@@ -9,12 +9,12 @@ export default defineConfig({
     // Redirige /api/* a los microservicios levantados en localhost.
     // Ajusta los puertos según tu setup local.
     proxy: {
-      '/api/auth':            'http://localhost:8001',
-      '/api/users':           'http://localhost:8002',
-      '/api/appointments':    'http://localhost:8003',
-      '/api/emergency':       'http://localhost:8004',
-      '/api/pharmacy':        'http://localhost:8005',
-      '/api/medical-records': 'http://localhost:8006',
+      '/api/auth':            'https://backend-eps-auth-service.onrender.com',
+      '/api/users':           'https://backend-eps-users-service-dev.onrender.com',
+      '/api/appointments':    'https://backend-eps-appointments-service-dev.onrender.com',
+      '/api/emergency':       'https://backend-eps-emergency-service.onrender.com',
+      '/api/pharmacy':        'https://backend-eps-pharmacy-service-dev.onrender.com',
+      '/api/medical-records': 'https://backend-eps-medical-records-service-dev.onrender.com',
     },
   },
 })
