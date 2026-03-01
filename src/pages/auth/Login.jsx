@@ -4,17 +4,13 @@ import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
 import { AuthContext } from "../../services/auth/AuthProvider";
 
-import {
-  Button,
-  Input,
-  Card,
-} from '../../components/ui';
+import { Button, Input, Card } from '../../components/ui';
 
 export default function Login() {
   const nav = useNavigate();
   const auth = useContext(AuthContext);
 
-  const [user_name, setUser] = useState("");
+  const [num_documento, setUser] = useState("");
   const [password, setPass] = useState("");
   const [msg, setMsg] = useState("");
 
@@ -24,16 +20,30 @@ export default function Login() {
 
     try {
       const { data } = await http.post(endpoints.login, {
-        user_name,
+        num_documento: parseInt(num_documento),
         password,
       });
 
-      auth.login(data.access_token);
+      if (data.hasError) {
+        setMsg(data.Message);
+        return;
+      }
 
-      if (data.role === "admin") nav("/admin");
-      else nav("/user");
+      auth.login(data.Data.access_token);
+
+      if (auth.role === "Médico") nav("/doctor");
+      else if (auth.role === "Paciente") nav("/patient");
+      else if (auth.role === "Enfermero") nav("/nurse");
+      else if (auth.role === "Farmaceuta") nav("/pharmacy");
+      else if (auth.role === "Recepcionista") nav("/receptionist");
+      else if (auth.role === "Talento Humano") nav("/hr");
+      else {
+        auth.logout();
+        setMsg("Tu role no tiene permisos para acceder.");
+      }
+
     } catch (err) {
-      setMsg("Login inválido");
+      setMsg("Error de conexión. Intente nuevamente.");
     }
   };
 
@@ -48,8 +58,8 @@ export default function Login() {
           <form onSubmit={submit} className="space-y-3">
             <Input
               placeholder="Usuario"
-              name="user_name"
-              value={user_name}
+              name="num_documento"
+              value={num_documento}
               onChange={(e) => setUser(e.target.value)}
               required
             />
