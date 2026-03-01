@@ -29,7 +29,7 @@ export default function App() {
           <Route
             path="/doctor"
             element={
-              <ProtectedRoute allowRoles={["doctor"]}>
+              <ProtectedRoute allowRoles={["Médico"]}>
                 <DoctorLayout />
               </ProtectedRoute>
             }

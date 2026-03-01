@@ -31,17 +31,21 @@ export default function Login() {
 
       auth.login(data.Data.access_token);
 
-      if (auth.role === "Médico") nav("/doctor");
-      else if (auth.role === "Paciente") nav("/patient");
-      else if (auth.role === "Enfermero") nav("/nurse");
-      else if (auth.role === "Farmaceuta") nav("/pharmacy");
-      else if (auth.role === "Recepcionista") nav("/receptionist");
-      else if (auth.role === "Talento Humano") nav("/hr");
+      // Lee el role del token directamente, no del contexto
+      const payload = JSON.parse(atob(data.Data.access_token.split(".")[1]));
+      const role = payload.role;
+      
+      if (role === "Médico") nav("/doctor");
+      else if (role === "Paciente") nav("/patient");
+      else if (role === "Enfermero") nav("/nurse");
+      else if (role === "Farmaceuta") nav("/pharmacy");
+      else if (role === "Recepcionista") nav("/receptionist");
+      else if (role === "Talento Humano") nav("/hr");
       else {
         auth.logout();
         setMsg("Tu role no tiene permisos para acceder.");
       }
-
+      
     } catch (err) {
       setMsg("Error de conexión. Intente nuevamente.");
     }
