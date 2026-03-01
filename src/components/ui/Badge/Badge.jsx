@@ -4,9 +4,11 @@ import { cn } from '../../../utils/cn';
 const variants = {
   primary: 'bg-primary-100 text-primary-800',
   secondary: 'bg-secondary-100 text-secondary-800',
-  success: 'bg-green-100 text-green-800',
-  warning: 'bg-amber-100 text-amber-800',
-  error: 'bg-red-100 text-red-800',
+  success: 'bg-primary-100 text-primary-800',
+  /* Pendiente: fondo accent-40 (claro, un poco más oscuro), texto accent-800 */
+  warning: 'bg-accent-40 text-accent-800',
+  /* Rechazado: fondo emergency-25 (muy claro), texto emergency-800 */
+  error: 'bg-emergency-25 text-emergency-800',
   neutral: 'bg-neutral-100 text-neutral-700',
 };
 

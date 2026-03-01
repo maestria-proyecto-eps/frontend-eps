@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
-import { AuthContext } from "../../services/auth/AuthProvider";
+import { AuthContext } from "../../services/auth/AuthContext";
 
 import { Button, Input, Card } from '../../components/ui';
 
@@ -19,7 +19,7 @@ export default function Login() {
     setMsg("");
 
     try {
-      const { data } = await http.post(endpoints.login, {
+      const { data } = await http.post(endpoints.auth.login, {
         num_documento: parseInt(num_documento),
         password,
       });

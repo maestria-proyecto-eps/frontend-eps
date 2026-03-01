@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { cn } from '../../../utils/cn';
 
 /**
@@ -16,7 +16,8 @@ export default function DatePicker({
   onChange,
   ...props
 }) {
-  const inputId = id || props.name || `date-${Math.random().toString(36).slice(2)}`;
+  const generatedId = useId();
+  const inputId = id || props.name || generatedId;
 
   const handleChange = (e) => {
     if (onChange) {
@@ -44,7 +45,7 @@ export default function DatePicker({
           'block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 ' +
             'focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 ' +
             'disabled:bg-neutral-100 disabled:cursor-not-allowed',
-          error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
+          error && 'border-emergency-500 focus:border-emergency-500 focus:ring-emergency-500',
           className
         )}
         aria-invalid={!!error}
@@ -57,7 +58,7 @@ export default function DatePicker({
       {error && (
         <p
           id={`${inputId}-error`}
-          className="text-sm text-red-600"
+          className="text-sm text-emergency-600"
           role="alert"
         >
           {error}

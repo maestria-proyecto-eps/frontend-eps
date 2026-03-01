@@ -1,11 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./services/auth/AuthProvider";
+import AuthProvider from "./services/auth/AuthProvider";
 import ProtectedRoute from "./services/auth/ProtectedRoute";
 
 // auth
 import Login from "./pages/auth/Login";
 import Home from "./pages/Home";
 import Components from "./pages/Components";
+import Usuarios from "./pages/Usuarios/usuarios";
 import DoctorExample from "./pages/doctor/DoctorExample"
 import DoctorLayout from "./pages/doctor/DoctorLayout"
 import { ROUTES } from "./constants";
@@ -19,6 +20,7 @@ export default function App() {
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
+          <Route path="/usuarios" element={<Usuarios />} />
 
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
