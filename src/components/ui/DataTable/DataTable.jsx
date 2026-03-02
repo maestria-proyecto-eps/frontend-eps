@@ -98,12 +98,22 @@ export default function DataTable({
   const [submitting, setSubmitting] = useState(false);
 
   const getEmptyFormState = useCallback(() => getEmptyForm(fields), [fields]);
+  const fieldsForMode = useCallback(
+    (mode) =>
+      fields.filter(
+        (f) => (mode === 'create' && !f.editOnly) || (mode === 'edit' && !f.createOnly)
+      ),
+    [fields]
+  );
   const validate = useCallback(
-    (values, context = {}) =>
-      formConfig?.validate
-        ? formConfig.validate(values, fields, context)
-        : runFieldValidation(values, fields, context),
-    [formConfig, fields]
+    (values, context = {}) => {
+      const mode = context.mode ?? 'create';
+      const fieldsToValidate = fieldsForMode(mode);
+      return formConfig?.validate
+        ? formConfig.validate(values, fieldsToValidate, context)
+        : runFieldValidation(values, fieldsToValidate, context);
+    },
+    [formConfig, fieldsForMode]
   );
 
   const openCreate = () => {
@@ -235,14 +245,6 @@ export default function DataTable({
     pagination?.onPageSizeChange?.(size);
     pagination?.onPageChange?.(1);
   };
-
-  const fieldsForMode = useCallback(
-    (mode) =>
-      fields.filter(
-        (f) => (mode === 'create' && !f.editOnly) || (mode === 'edit' && !f.createOnly)
-      ),
-    [fields]
-  );
 
   const renderFormFields = (mode) =>
     fieldsForMode(mode).map((f) => {
