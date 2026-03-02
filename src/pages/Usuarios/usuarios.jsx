@@ -68,7 +68,7 @@ export default function Usuarios() {
         setTotal(0);
         return;
       }
-      const { data: list = [], page: currentPage = 1, pages = 0 } = res.data;
+      const { data: list = [], pages = 0 } = res.data;
       setUsuarios(Array.isArray(list) ? list : []);
       setTotal(pages * pageSize);
     } catch (err) {
