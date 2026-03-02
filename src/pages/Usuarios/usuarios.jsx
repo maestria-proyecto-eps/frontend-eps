@@ -1,53 +1,30 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MainLayout, PageContainer } from '../../components/layout';
 import { DataTable, Badge, Button } from '../../components/ui';
 import { ROUTES } from '../../constants';
+import { http } from '../../services/api/http';
+import { endpoints } from '../../services/api/endpoints';
 
-
-
-// Datos de ejemplo (luego vendrán del API)
-const USUARIOS_INICIALES = [
-  { id: 1, nombre: 'María García', documento: '12345678', email: 'maria.garcia@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 2, nombre: 'Juan Pérez', documento: '87654321', email: 'juan.perez@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 3, nombre: 'Ana López', documento: '11223344', email: 'ana.lopez@ejemplo.com', rol: 'HR', estado: 'Inactivo' },
-  { id: 4, nombre: 'Carlos Ruiz', documento: '44332211', email: 'carlos.ruiz@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 5, nombre: 'Laura Martínez', documento: '55667788', email: 'laura.martinez@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 6, nombre: 'Pedro Sánchez', documento: '99887766', email: 'pedro.sanchez@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 7, nombre: 'Sofía Ramírez', documento: '55443322', email: 'sofia.ramirez@ejemplo.com', rol: 'HR', estado: 'Activo' },
-  { id: 8, nombre: 'Diego Fernández', documento: '11224455', email: 'diego.fernandez@ejemplo.com', rol: 'Usuario', estado: 'Inactivo' },
-  { id: 9, nombre: 'Elena Torres', documento: '66778899', email: 'elena.torres@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 10, nombre: 'Miguel Díaz', documento: '33445566', email: 'miguel.diaz@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 11, nombre: 'Isabel Moreno', documento: '77889900', email: 'isabel.moreno@ejemplo.com', rol: 'HR', estado: 'Inactivo' },
-  { id: 12, nombre: 'Roberto Castro', documento: '22334455', email: 'roberto.castro@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 13, nombre: 'Carmen Ortiz', documento: '88990011', email: 'carmen.ortiz@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 14, nombre: 'Andrés Vargas', documento: '44556677', email: 'andres.vargas@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 15, nombre: 'Patricia Reyes', documento: '99001122', email: 'patricia.reyes@ejemplo.com', rol: 'HR', estado: 'Inactivo' },
-  { id: 16, nombre: 'Fernando Mora', documento: '55667788', email: 'fernando.mora@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 17, nombre: 'Lucía Herrera', documento: '12341234', email: 'lucia.herrera@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 18, nombre: 'Jorge Jiménez', documento: '56785678', email: 'jorge.jimenez@ejemplo.com', rol: 'Usuario', estado: 'Inactivo' },
-  { id: 19, nombre: 'Rosa Navarro', documento: '90129012', email: 'rosa.navarro@ejemplo.com', rol: 'HR', estado: 'Activo' },
-  { id: 20, nombre: 'Antonio Romero', documento: '34563456', email: 'antonio.romero@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-];
-
+// Roles quemados según los que aparecen en la respuesta del API
 const ROLES_OPCIONES = [
-  { value: 'Admin', label: 'Admin' },
-  { value: 'Usuario', label: 'Usuario' },
-  { value: 'HR', label: 'HR' },
+  { value: 2, label: 'Médico' },
+  { value: 3, label: 'Paciente' },
+  { value: 4, label: 'Enfermero' },
+  { value: 5, label: 'Farmaceuta' },
 ];
 
 const ESTADOS_OPCIONES = [
-  { value: 'Activo', label: 'Activo' },
-  { value: 'Inactivo', label: 'Inactivo' },
+  { value: 1, label: 'Activo' },
+  { value: 0, label: 'Inactivo' },
 ];
 
 const COLUMNAS_USUARIOS = [
-  { key: 'nombre', label: 'Nombre', filterable: true },
-  { key: 'documento', label: 'Documento', filterable: true },
-  { key: 'email', label: 'Email', filterable: true },
-  { key: 'rol', label: 'Rol', filterable: true, filterType: 'select', filterOptions: ROLES_OPCIONES },
-  { key: 'estado', label: 'Estado', filterable: true, filterType: 'select', filterOptions: ESTADOS_OPCIONES, render: (valor) => (
-    <Badge variant={valor === 'Activo' ? 'success' : 'neutral'} size="sm">{valor}</Badge>
+  { key: 'id_usuario', label: 'ID', filterable: false },
+  { key: 'num_documento', label: 'Documento', filterable: true },
+  { key: 'rol_des', label: 'Rol', filterable: true, filterType: 'select', filterOptions: ROLES_OPCIONES.map((r) => ({ value: r.label, label: r.label })) },
+  { key: 'estado', label: 'Estado', filterable: true, filterType: 'select', filterOptions: ESTADOS_OPCIONES.map((e) => ({ value: String(e.value), label: e.label })), render: (valor) => (
+    <Badge variant={valor === 1 ? 'success' : 'neutral'} size="sm">{valor === 1 ? 'Activo' : 'Inactivo'}</Badge>
   )},
 ];
 
@@ -59,46 +36,95 @@ const FORM_CONFIG_USUARIOS = {
   editSubmitLabel: 'Guardar',
   confirmDeactivateTitle: 'Confirmar desactivación',
   confirmDeactivateMessage: (row) => (
-    <>¿Está seguro que desea desactivar a <strong>{row?.nombre}</strong>? El usuario no podrá acceder al sistema.</>
+    <>¿Está seguro que desea desactivar al usuario con documento <strong>{row?.num_documento}</strong>?</>
   ),
   statusKey: 'estado',
-  activeValue: 'Activo',
-  deactivatedValue: 'Inactivo',
+  activeValue: 1,
+  deactivatedValue: 0,
   fields: [
-    { key: 'nombre', label: 'Nombre', type: 'text', placeholder: 'Nombre completo', validation: ['required'] },
-    { key: 'documento', label: 'Documento', type: 'text', placeholder: 'Número de documento', validation: ['required', 'document'] },
-    { key: 'email', label: 'Email', type: 'email', placeholder: 'correo@ejemplo.com', validation: ['required', 'email'] },
-    { key: 'rol', label: 'Rol', type: 'select', options: ROLES_OPCIONES },
-    { key: 'estado', label: 'Estado', type: 'select', options: ESTADOS_OPCIONES, defaultValue: 'Activo' },
+    { key: 'num_documento', label: 'Número de documento', type: 'text', placeholder: 'Documento', validation: ['required', 'document'] },
+    { key: 'password', label: 'Contraseña', type: 'password', placeholder: 'Contraseña', validation: ['required'], createOnly: true },
+    { key: 'password_confirm', label: 'Confirmar contraseña', type: 'password', placeholder: 'Repetir contraseña', validation: ['required', 'passwordMatch'], createOnly: true },
+    { key: 'id_rol', label: 'Rol', type: 'select', options: ROLES_OPCIONES },
   ],
 };
 
 export default function Usuarios() {
-  const [usuarios, setUsuarios] = React.useState(() => [...USUARIOS_INICIALES]);
+  const [usuarios, setUsuarios] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState({});
   const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(5);
+  const [pageSize, setPageSize] = React.useState(10);
+  const [total, setTotal] = React.useState(0);
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: res } = await http.get(endpoints.users.list, {
+        params: { pag: page, cantidad: pageSize },
+      });
+      if (res.hasError || !res.data) {
+        setUsuarios([]);
+        setTotal(0);
+        return;
+      }
+      const { data: list = [], page: currentPage = 1, pages = 0 } = res.data;
+      setUsuarios(Array.isArray(list) ? list : []);
+      setTotal(pages * pageSize);
+    } catch (err) {
+      console.error('Error al cargar usuarios:', err);
+      setUsuarios([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const filtrado = usuarios.filter((row) => {
     return Object.entries(filters).every(([key, val]) => {
       if (val == null || String(val).trim() === '') return true;
-      return String(row[key] ?? '').toLowerCase().includes(String(val).toLowerCase());
+      const cell = row[key];
+      if (key === 'estado') return String(cell) === String(val);
+      return String(cell ?? '').toLowerCase().includes(String(val).trim().toLowerCase());
     });
   });
-  const total = filtrado.length;
-  const paginados = filtrado.slice((page - 1) * pageSize, page * pageSize);
 
-  const handleCreate = (newRow) => {
-    const nuevoId = Math.max(0, ...usuarios.map((u) => u.id)) + 1;
-    setUsuarios((prev) => [...prev, { id: nuevoId, ...newRow }]);
+  const hasActiveFilters = Object.values(filters).some((v) => v != null && String(v).trim() !== '');
+  const paginationTotal = hasActiveFilters ? filtrado.length : total;
+
+  useEffect(() => {
+    if (hasActiveFilters) setPage(1);
+  }, [hasActiveFilters]);
+
+  const handleCreate = async (newRow) => {
+    await http.post(endpoints.users.create, {
+      num_documento: Number(newRow.num_documento) || newRow.num_documento,
+      password: newRow.password,
+      id_rol: Number(newRow.id_rol),
+    });
+    await fetchUsers();
   };
 
-  const handleEdit = (id, updatedRow) => {
-    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, ...updatedRow } : u)));
+  const handleEdit = async (id, updatedRow) => {
+    await http.put(endpoints.users.updateById(id), {
+      num_documento: Number(updatedRow.num_documento) || updatedRow.num_documento,
+      id_rol: Number(updatedRow.id_rol),
+    });
+    await fetchUsers();
   };
 
-  const handleDeactivate = (id) => {
-    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, estado: 'Inactivo' } : u)));
+  const handleDeactivate = async (id) => {
+    await http.put(endpoints.users.changeStatus(id), { estado: 0 });
+    await fetchUsers();
+  };
+
+  const handleActivate = async (id) => {
+    await http.put(endpoints.users.changeStatus(id), { estado: 1 });
+    await fetchUsers();
   };
 
   return (
@@ -112,14 +138,15 @@ export default function Usuarios() {
         </div>
         <DataTable
           columns={COLUMNAS_USUARIOS}
-          data={paginados}
+          data={filtrado}
           filters={filters}
           onFiltersChange={setFilters}
+          loading={loading}
           pagination={{
             page,
             pageSize,
-            total,
-            pageSizeOptions: [5, 10, 25],
+            total: paginationTotal,
+            pageSizeOptions: [5, 10, 25, 30],
             onPageChange: setPage,
             onPageSizeChange: (size) => { setPageSize(size); setPage(1); },
           }}
@@ -127,8 +154,9 @@ export default function Usuarios() {
           onCreate={handleCreate}
           onEdit={handleEdit}
           onDeactivate={handleDeactivate}
-          keyExtractor={(row) => row.id}
-          emptyMessage="No hay usuarios que coincidan con los filtros"
+          onActivate={handleActivate}
+          keyExtractor={(row) => row.id_usuario}
+          emptyMessage={loading ? 'Cargando...' : 'No hay usuarios o no coinciden con los filtros'}
         />
       </PageContainer>
     </MainLayout>

@@ -74,16 +74,18 @@ export default function DataTable({
   onCreate,
   onEdit,
   onDeactivate,
+  onActivate,
   keyExtractor = (row) => row.id ?? row.documento ?? JSON.stringify(row),
   loading = false,
   emptyMessage = 'No hay datos',
   renderRowActions,
   className = '',
 }) {
-  const hasCrud = formConfig && (onCreate || onEdit || onDeactivate);
+  const hasCrud = formConfig && (onCreate || onEdit || onDeactivate || onActivate);
   const fields = useMemo(() => formConfig?.fields ?? [], [formConfig?.fields]);
   const statusKey = formConfig?.statusKey;
   const activeValue = formConfig?.activeValue ?? 'Activo';
+  const deactivatedValue = formConfig?.deactivatedValue;
 
   const [modalCreate, setModalCreate] = useState(false);
   const [modalEdit, setModalEdit] = useState(false);
@@ -209,6 +211,11 @@ export default function DataTable({
     [statusKey, activeValue]
   );
 
+  const showRowActivate = useCallback(
+    (row) => statusKey && deactivatedValue !== undefined && row[statusKey] === deactivatedValue,
+    [statusKey, deactivatedValue]
+  );
+
   const hasFilters = columns.some((col) => col.filterable);
   const page = pagination?.page ?? 1;
   const pageSize = pagination?.pageSize ?? 10;
@@ -264,7 +271,7 @@ export default function DataTable({
         <Input
           key={f.key}
           label={f.label}
-          type={f.type === 'email' ? 'email' : f.type === 'number' ? 'number' : 'text'}
+          type={f.type === 'email' ? 'email' : f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : 'text'}
           value={form[f.key] ?? ''}
           onChange={(e) => setField(f.key, e.target.value)}
           error={formErrors[f.key]}
@@ -276,14 +283,19 @@ export default function DataTable({
 
   const defaultRowActions = hasCrud
     ? (row) => (
-        <div className="flex justify-end gap-1">
+        <div className="flex justify-end items-center gap-2">
           {onEdit && (
             <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
               Editar
             </Button>
           )}
+          {onActivate && showRowActivate(row) && (
+            <Button variant="primary" size="sm" className="min-w-[110px]" onClick={() => onActivate(keyExtractor(row))}>
+              Activar
+            </Button>
+          )}
           {onDeactivate && showRowDeactivate(row) && (
-            <Button variant="deactivate" size="sm" onClick={() => openDeactivate(row)}>
+            <Button variant="deactivate" size="sm" className="min-w-[110px]" onClick={() => openDeactivate(row)}>
               Desactivar
             </Button>
           )}

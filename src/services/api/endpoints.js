@@ -1,26 +1,30 @@
 /**
  * Rutas del API organizadas por microservicio.
  *
- * El prefijo /api/{servicio}/ permite que Vercel Rewrites (vercel.json)
- * enrute cada petición al microservicio correcto en Render.
- *
- * Mapeo:
- *   /api/auth/*             → backend-eps-auth-service
- *   /api/users/*            → backend-eps-users-service
- *   /api/appointments/*     → backend-eps-appointments-service
- *   /api/emergency/*        → backend-eps-emergency-service
- *   /api/pharmacy/*         → backend-eps-pharmacy-service
- *   /api/medical-records/*  → backend-eps-medical-records-service
+ * Users service: se apunta directamente a Render (o usar proxy con pathRewrite).
+ * Resto de servicios usan prefijo /api/{servicio}/ con proxy o Vercel rewrites.
  */
+const USERS_API_BASE = 'https://backend-eps-users-service-dev.onrender.com';
+
 export const endpoints = {
   // ── Auth Service ──────────────────────────────────
   auth: {
     login: "/api/auth/login",
   },
 
-  // ── Users Service ─────────────────────────────────
+  // ── Users Service (URL base directa a Render) ─────
   users: {
     doctorExample: "/api/users/doctor/example",
+    /** GET lista paginada: ?pag=1&cantidad=30 */
+    list: `${USERS_API_BASE}/users/`,
+    /** POST crear usuario */
+    create: `${USERS_API_BASE}/users/`,
+    /** PUT actualizar usuario (id numérico) */
+    updateById: (id) => `${USERS_API_BASE}/users/${id}`,
+    /** PUT cambiar estado (activar/desactivar) */
+    changeStatus: (id) => `${USERS_API_BASE}/users/${id}/change-status`,
+    /** DELETE desactivar/eliminar usuario (id numérico) - legacy, preferir changeStatus */
+    deleteById: (id) => `${USERS_API_BASE}/users/${id}`,
   },
 
   // ── Appointments Service ──────────────────────────
