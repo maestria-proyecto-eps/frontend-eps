@@ -16,6 +16,12 @@ export const VALIDATORS = {
     }
     return null;
   },
+  /** Verifica que el campo coincida con el campo 'password' del formulario. */
+  passwordMatch: (value, _field, form) => {
+    if (value == null || String(value).trim() === '') return null;
+    if (value !== form.password) return 'Las contraseñas no coinciden';
+    return null;
+  },
   /** Identificación / documento: solo números y letras, longitud configurable (min/max por defecto 5-20). */
   document: (value, _field, _form, options = {}) => {
     if (value == null || String(value).trim() === '') return null;
