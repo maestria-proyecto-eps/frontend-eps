@@ -4,19 +4,70 @@ import { MainLayout } from "../components/layout";
 import { Button, Container } from "../components/ui";
 import { ROUTES, BRAND_NAME } from "../constants";
 
+/**
+ * Home (HU)
+ * - Página de bienvenida
+ * - Logo (arriba izq)
+ * - Nombre + descripción EPS
+ * - Botón /login (header y CTA principal)
+ * - "Nuestros servicios": Hospitalizaciones, Urgencias, Atención médica especializada, Medicamentos
+ * - CTA final para iniciar sesión
+ *
+ * Ajuste solicitado:
+ * - Eliminar "Panel de atención"
+ * - Usar ilustración /general.svg (fondo blanco) en el bloque derecho del hero
+ */
+
+const SERVICES = [
+  {
+    key: "hospitalizaciones",
+    title: "Hospitalizaciones",
+    description:
+      "Gestión y seguimiento de procesos de hospitalización y autorizaciones.",
+    iconSrc: "/services/hospitalizaciones.svg",
+    iconBg: "bg-secondary-50 border-secondary-100",
+    ring: "hover:ring-secondary-200",
+  },
+  {
+    key: "urgencias",
+    title: "Urgencias",
+    description: "Acceso rápido a rutas de atención y soporte para casos urgentes.",
+    iconSrc: "/services/urgencias.svg",
+    // Emergency SOLO para urgencias (manual)
+    iconBg: "bg-emergency-50 border-emergency-500/20",
+    ring: "hover:ring-emergency-500/20",
+  },
+  {
+    key: "especializada",
+    title: "Atención médica especializada",
+    description: "Consulta y coordinación de especialidades médicas y remisiones.",
+    iconSrc: "/services/atencion-especializada.svg",
+    iconBg: "bg-primary-50 border-primary-100",
+    ring: "hover:ring-primary-200",
+  },
+  {
+    key: "medicamentos",
+    title: "Medicamentos",
+    description: "Información de fórmulas, dispensación y seguimiento de tratamientos.",
+    iconSrc: "/services/medicamentos.svg",
+    iconBg: "bg-neutral-50 border-neutral-200",
+    ring: "hover:ring-neutral-300",
+  },
+];
+
 export default function Home() {
   return (
     <MainLayout>
       {/* HERO */}
       <section className="bg-white">
         <Container className="py-10 md:py-14">
-          {/* Header ligero (solo para Home): Logo izq + botón der */}
+          {/* Top row: Logo izq + Login der */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img
                 src="/logo-horizontal.svg"
                 alt={`${BRAND_NAME} - Logo`}
-                className="h-40 md:h-44 w-auto object-contain"
+                className="h-20 sm:h-24 md:h-28 w-auto object-contain"
                 loading="eager"
               />
             </div>
@@ -28,17 +79,19 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Contenido hero */}
-          <div className="mt-10 grid grid-cols-1 gap-10 md:grid-cols-2 md:items-center">
-            {/* Texto */}
+          {/* Hero content */}
+          <div className="mt-10 grid grid-cols-1 gap-10 md:grid-cols-2 md:items-start">
+            {/* Left: copy */}
             <div>
               <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-neutral-900">
-                Bienvenido a <span className="text-secondary-500">{BRAND_NAME}</span>
+                Bienvenido a{" "}
+                <span className="text-secondary-500">{BRAND_NAME}</span>
               </h1>
 
-              <p className="mt-4 text-base md:text-lg text-neutral-600 max-w-xl">
-                Plataforma enfocada en gestionar usuarios, información y procesos administrativos
-                de salud con una experiencia moderna y consistente.
+              <p className="mt-4 text-base md:text-lg text-neutral-700 max-w-xl">
+                {BRAND_NAME} es una Entidad Promotora de Salud enfocada en la prevención, el bienestar
+                y la atención integral. Desde esta plataforma podrás gestionar afiliaciones, trámites
+                y procesos administrativos con una experiencia moderna, consistente y segura.
               </p>
 
               <ul className="mt-6 space-y-2 text-neutral-700">
@@ -56,49 +109,24 @@ export default function Home() {
                 </li>
               </ul>
 
+              {/* Único CTA funcional requerido */}
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link to={ROUTES.LOGIN}>
                   <Button size="lg">Ingresar al sistema</Button>
                 </Link>
-
-                <Link to={ROUTES.COMPONENTS}>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="border-secondary-500 text-secondary-600 hover:bg-secondary-50"
-                  >
-                    Ver componentes
-                  </Button>
-                </Link>
               </div>
             </div>
 
-            {/* Ilustración / panel derecho */}
-            <div className="md:justify-self-end">
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-6 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-secondary-600">Panel de atención</p>
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Accesos rápidos y estado de servicios.
-                    </p>
-                  </div>
-                  <div className="h-10 w-10 rounded-xl bg-primary-100 flex items-center justify-center">
-                    <span className="text-primary-700 font-bold">+</span>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-3">
-                  <div className="h-10 rounded-xl bg-white border border-neutral-200" />
-                  <div className="h-10 rounded-xl bg-white border border-neutral-200" />
-                  <div className="h-10 rounded-xl bg-white border border-neutral-200" />
-                </div>
-
-                <div className="mt-6 rounded-xl bg-secondary-50 border border-secondary-100 p-4">
-                  <p className="text-sm font-medium text-secondary-700">Recomendación</p>
-                  <p className="text-sm text-secondary-700/80">
-                    Mantén tus datos actualizados para agilizar tus trámites.
-                  </p>
+            {/* Right: ilustración general (general.svg) */}
+            <div className="md:justify-self-end w-full">
+              <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-6 shadow-sm">
+                <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-white">
+                  <img
+                    src="/general.svg"
+                    alt="Ilustración general EPS"
+                    className="h-full w-full object-contain"
+                    loading="eager"
+                  />
                 </div>
               </div>
             </div>
@@ -110,25 +138,18 @@ export default function Home() {
       <section className="bg-neutral-50 border-t border-neutral-200">
         <Container className="py-12 md:py-16">
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-neutral-900">Nuestros servicios</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-neutral-900">
+              Nuestros servicios
+            </h2>
             <p className="mt-2 text-neutral-600">
-              Accede a funcionalidades clave de la plataforma desde un solo lugar.
+              Hospitalizaciones, urgencias, atención médica especializada y medicamentos.
             </p>
           </div>
 
-          <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <ServiceCard
-              title="Afiliación y datos"
-              description="Consulta y gestiona información básica de usuarios."
-            />
-            <ServiceCard
-              title="Trámites"
-              description="Radica solicitudes y haz seguimiento del estado."
-            />
-            <ServiceCard
-              title="Atención"
-              description="Canales e información de contacto para soporte."
-            />
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {SERVICES.map((s) => (
+              <ServiceCard key={s.key} {...s} />
+            ))}
           </div>
         </Container>
       </section>
@@ -157,13 +178,25 @@ export default function Home() {
   );
 }
 
-function ServiceCard({ title, description }) {
+function ServiceCard({ title, description, iconSrc, iconBg, ring }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-      <div className="h-12 w-12 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center">
-        <span className="h-2.5 w-2.5 rounded-full bg-primary-500" />
+    <div
+      className={[
+        "rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition",
+        "ring-1 ring-transparent",
+        ring,
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "h-14 w-14 rounded-2xl border flex items-center justify-center overflow-hidden",
+          iconBg,
+        ].join(" ")}
+      >
+        <img src={iconSrc} alt="" className="h-10 w-10 object-contain" loading="lazy" />
       </div>
-      <h3 className="mt-4 font-semibold text-neutral-900">{title}</h3>
+
+      <h3 className="mt-4 text-base font-semibold text-neutral-900">{title}</h3>
       <p className="mt-2 text-sm text-neutral-600">{description}</p>
     </div>
   );
