@@ -16,9 +16,9 @@ export const endpoints = {
   users: {
     doctorExample: "/api/users/doctor/example",
     /** GET lista paginada: ?pag=1&cantidad=30 */
-    list: "/api/users/",
+    list: "/api/users",
     /** POST crear usuario */
-    create: "/api/users/",
+    create: "/api/users",
     /** PUT actualizar usuario (id numérico) */
     updateById: (id) => `/api/users/${id}`,
     /** PUT cambiar estado (activar/desactivar) */
