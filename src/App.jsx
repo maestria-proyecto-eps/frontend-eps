@@ -9,6 +9,7 @@ import Components from "./pages/Components";
 import Usuarios from "./pages/Usuarios/usuarios";
 import DoctorExample from "./pages/doctor/DoctorExample"
 import DoctorLayout from "./pages/doctor/DoctorLayout"
+import NewPatient from "./pages/receptionist/newpatient";
 import { ROUTES } from "./constants";
 
 export default function App() {
@@ -21,6 +22,15 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
           <Route path="/usuarios" element={<Usuarios />} />
+          {/* Ruta protegida para despliegue (rol recepcionista) */}
+          <Route
+            path="/receptionist"
+            element={
+              <ProtectedRoute allowRoles={["Recepcionista"]}>
+                <NewPatient />
+              </ProtectedRoute>
+            }
+          />
 
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />

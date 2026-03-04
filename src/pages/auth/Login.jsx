@@ -24,8 +24,9 @@ export default function Login() {
 
       auth.login(data.access_token);
 
-      if (data.role === "admin") nav("/admin");
-      else nav("/user");
+      if (data.role === "Recepcionista") nav("/receptionist");
+      else if (data.role === "doctor") nav("/doctor");
+      else nav("/");
     } catch (err) {
       setMsg("Login inválido");
     }

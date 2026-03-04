@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { MainLayout, PageContainer } from "../../components/layout";
 import { Button } from "../../components/ui";
 import { ROUTES, BRAND_NAME } from "../../constants";
+import { http } from "../../services/api/http";
+import { endpoints } from "../../services/api/endpoints";
 
 /**
  * HU: Interfaz de afiliación con consentimiento
@@ -273,7 +275,7 @@ export default function NewPatient() {
     setErrors(v);
     if (Object.keys(v).length) return;
 
-    // Anti-duplicado (mock)
+    // Anti-duplicado (mock UI). El backend hará su propia validación.
     const docNumber = onlyDigits(form.num_documento);
     const found = MOCK_EXISTING_PATIENTS.find((p) => String(p.num_documento) === String(docNumber));
     if (found) {
@@ -288,27 +290,19 @@ export default function NewPatient() {
     try {
       const payload = buildCreatePayload(form);
 
-      /**
-       * TODO (siguiente dev):
-       * - import { http } from "../../services/api/http";
-       * - import { endpoints } from "../../services/api/endpoints";
-       * - const res = await http.post(endpoints.patients.create, payload);
-       * - setCreatedPatient(res.data);
-       */
+      // Llamado real al backend: POST /api/patients (requiere token bearer)
+      const res = await http.post(endpoints.patients.create, payload);
 
-      // Simulación: deja el modal funcionando sin inventar "num_afiliacion_formateado" real.
-      await new Promise((r) => setTimeout(r, 500));
-      setCreatedPatient({
-        ...payload,
-        // Cuando exista consumo real, esto vendrá del backend:
-        num_afiliacion_formateado: null,
-        num_afiliacion: null,
-        id_paciente: null,
-        id_usuario: null,
-        id_recepcionista: null,
-      });
-
+      // El backend puede responder plano (PacienteResponse) o envuelto (APIResponse.Data).
+      const patient = res?.data?.Data ?? res?.data;
+      setCreatedPatient(patient);
       setConfirmOpen(true);
+    } catch (err) {
+      const apiMessage = err?.response?.data?.detail || err?.response?.data?.Message;
+      setDuplicateInfo({
+        type: "found",
+        message: apiMessage || "Error al registrar paciente. Verifica los datos o tu sesión.",
+      });
     } finally {
       setBusySubmit(false);
     }
