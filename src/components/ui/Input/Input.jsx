@@ -15,8 +15,8 @@ export default function Input({
   id,
   ...props
 }) {
-  const reactId = useId();
-  const inputId = id || props.name || `input-${reactId}`;
+  const generatedId = useId();
+  const inputId = id || props.name || generatedId;
 
   return (
     <div className={cn('space-y-1', containerClassName)}>

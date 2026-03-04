@@ -27,7 +27,7 @@ function getEmptyForm(fields = []) {
  * field.validation puede ser ['required', 'email'] o ['required', { name: 'document', options: { min, max } }].
  * Si no hay field.validation, se usa required por defecto y email si type === 'email'.
  */
-function runFieldValidation(form, fields, context = {}) {
+function runFieldValidation(form, fields) {
   const err = {};
   fields.forEach((f) => {
     const val = form[f.key];
@@ -74,16 +74,18 @@ export default function DataTable({
   onCreate,
   onEdit,
   onDeactivate,
+  onActivate,
   keyExtractor = (row) => row.id ?? row.documento ?? JSON.stringify(row),
   loading = false,
   emptyMessage = 'No hay datos',
   renderRowActions,
   className = '',
 }) {
-  const hasCrud = formConfig && (onCreate || onEdit || onDeactivate);
-  const fields = useMemo(() => formConfig?.fields ?? [], [formConfig]);
+  const hasCrud = formConfig && (onCreate || onEdit || onDeactivate || onActivate);
+  const fields = useMemo(() => formConfig?.fields ?? [], [formConfig?.fields]);
   const statusKey = formConfig?.statusKey;
   const activeValue = formConfig?.activeValue ?? 'Activo';
+  const deactivatedValue = formConfig?.deactivatedValue;
 
   const [modalCreate, setModalCreate] = useState(false);
   const [modalEdit, setModalEdit] = useState(false);
@@ -96,12 +98,22 @@ export default function DataTable({
   const [submitting, setSubmitting] = useState(false);
 
   const getEmptyFormState = useCallback(() => getEmptyForm(fields), [fields]);
+  const fieldsForMode = useCallback(
+    (mode) =>
+      fields.filter(
+        (f) => (mode === 'create' && !f.editOnly) || (mode === 'edit' && !f.createOnly)
+      ),
+    [fields]
+  );
   const validate = useCallback(
-    (values, context = {}) =>
-      formConfig?.validate
-        ? formConfig.validate(values, fields, context)
-        : runFieldValidation(values, fields, context),
-    [formConfig, fields]
+    (values, context = {}) => {
+      const mode = context.mode ?? 'create';
+      const fieldsToValidate = fieldsForMode(mode);
+      return formConfig?.validate
+        ? formConfig.validate(values, fieldsToValidate, context)
+        : runFieldValidation(values, fieldsToValidate, context);
+    },
+    [formConfig, fieldsForMode]
   );
 
   const openCreate = () => {
@@ -209,6 +221,11 @@ export default function DataTable({
     [statusKey, activeValue]
   );
 
+  const showRowActivate = useCallback(
+    (row) => statusKey && deactivatedValue !== undefined && row[statusKey] === deactivatedValue,
+    [statusKey, deactivatedValue]
+  );
+
   const hasFilters = columns.some((col) => col.filterable);
   const page = pagination?.page ?? 1;
   const pageSize = pagination?.pageSize ?? 10;
@@ -228,14 +245,6 @@ export default function DataTable({
     pagination?.onPageSizeChange?.(size);
     pagination?.onPageChange?.(1);
   };
-
-  const fieldsForMode = useCallback(
-    (mode) =>
-      fields.filter(
-        (f) => (mode === 'create' && !f.editOnly) || (mode === 'edit' && !f.createOnly)
-      ),
-    [fields]
-  );
 
   const renderFormFields = (mode) =>
     fieldsForMode(mode).map((f) => {
@@ -264,7 +273,7 @@ export default function DataTable({
         <Input
           key={f.key}
           label={f.label}
-          type={f.type === 'email' ? 'email' : f.type === 'number' ? 'number' : 'text'}
+          type={f.type === 'email' ? 'email' : f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : 'text'}
           value={form[f.key] ?? ''}
           onChange={(e) => setField(f.key, e.target.value)}
           error={formErrors[f.key]}
@@ -276,14 +285,19 @@ export default function DataTable({
 
   const defaultRowActions = hasCrud
     ? (row) => (
-        <div className="flex justify-end gap-1">
+        <div className="flex justify-end items-center gap-2">
           {onEdit && (
             <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
               Editar
             </Button>
           )}
+          {onActivate && showRowActivate(row) && (
+            <Button variant="primary" size="sm" className="min-w-[110px]" onClick={() => onActivate(keyExtractor(row))}>
+              Activar
+            </Button>
+          )}
           {onDeactivate && showRowDeactivate(row) && (
-            <Button variant="deactivate" size="sm" onClick={() => openDeactivate(row)}>
+            <Button variant="deactivate" size="sm" className="min-w-[110px]" onClick={() => openDeactivate(row)}>
               Desactivar
             </Button>
           )}

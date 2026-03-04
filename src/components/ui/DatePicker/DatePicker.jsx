@@ -16,8 +16,8 @@ export default function DatePicker({
   onChange,
   ...props
 }) {
-  const reactId = useId();
-  const inputId = id || props.name || `date-${reactId}`;
+  const generatedId = useId();
+  const inputId = id || props.name || generatedId;
 
   const handleChange = (e) => {
     if (onChange) {

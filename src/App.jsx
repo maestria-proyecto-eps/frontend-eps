@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./services/auth/AuthProvider";
+import AuthProvider from "./services/auth/AuthProvider";
 import ProtectedRoute from "./services/auth/ProtectedRoute";
 
 // auth
@@ -21,7 +21,7 @@ export default function App() {
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
-          <Route path="/usuarios" element={<Usuarios />} />
+          
           {/* Ruta protegida para despliegue (rol recepcionista) */}
           <Route
             path="/receptionist"
@@ -39,7 +39,7 @@ export default function App() {
           <Route
             path="/doctor"
             element={
-              <ProtectedRoute allowRoles={["doctor"]}>
+              <ProtectedRoute allowRoles={["Médico"]}>
                 <DoctorLayout />
               </ProtectedRoute>
             }
@@ -49,6 +49,22 @@ export default function App() {
             <Route path="example2" element={<DoctorExample />} />
           </Route>
 
+          <Route
+            path="/hr"
+            element={
+              <ProtectedRoute allowRoles={["Talento Humano"]}>
+                <Usuarios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient"
+            element={
+              <ProtectedRoute allowRoles={["Paciente"]}>
+                <DoctorExample />
+              </ProtectedRoute>
+            }
+          />
           {/* Cualquier otra ruta → redirigir al home */}
           <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
         </Routes>

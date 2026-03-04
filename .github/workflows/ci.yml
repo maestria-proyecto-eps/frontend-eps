@@ -1,0 +1,61 @@
+# CI - frontend-eps
+# Runs on PRs targeting develop, qa, main
+
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, qa, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  branch-policy:
+    name: Branch Policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR source branch
+        run: |
+          TARGET="${{ github.base_ref }}"
+          SOURCE="${{ github.head_ref }}"
+          echo "PR: $SOURCE → $TARGET"
+
+          # main solo acepta PRs desde qa o hotfix/*
+          if [[ "$TARGET" == "main" && "$SOURCE" != "qa" && ! "$SOURCE" =~ ^hotfix/ ]]; then
+            echo "❌ PRs a main solo se permiten desde qa o hotfix/*"
+            exit 1
+          fi
+
+          # qa solo acepta PRs desde develop
+          if [[ "$TARGET" == "qa" && "$SOURCE" != "develop" ]]; then
+            echo "❌ PRs a qa solo se permiten desde develop"
+            exit 1
+          fi
+
+          echo "✅ Branch policy OK: $SOURCE → $TARGET"

@@ -24,7 +24,7 @@ const SERVICES = [
     title: "Hospitalizaciones",
     description:
       "Gestión y seguimiento de procesos de hospitalización y autorizaciones.",
-    iconSrc: "/services/hospitalizaciones.svg",
+    iconSrc: "/hospitalizaciones.svg.png",
     iconBg: "bg-secondary-50 border-secondary-100",
     ring: "hover:ring-secondary-200",
   },
@@ -32,7 +32,7 @@ const SERVICES = [
     key: "urgencias",
     title: "Urgencias",
     description: "Acceso rápido a rutas de atención y soporte para casos urgentes.",
-    iconSrc: "/services/urgencias.svg",
+    iconSrc: "/urgencias.svg.png",
     // Emergency SOLO para urgencias (manual)
     iconBg: "bg-emergency-50 border-emergency-500/20",
     ring: "hover:ring-emergency-500/20",
@@ -41,7 +41,7 @@ const SERVICES = [
     key: "especializada",
     title: "Atención médica especializada",
     description: "Consulta y coordinación de especialidades médicas y remisiones.",
-    iconSrc: "/services/atencion-especializada.svg",
+    iconSrc: "/atencion-especializada.svg.png",
     iconBg: "bg-primary-50 border-primary-100",
     ring: "hover:ring-primary-200",
   },
@@ -49,7 +49,7 @@ const SERVICES = [
     key: "medicamentos",
     title: "Medicamentos",
     description: "Información de fórmulas, dispensación y seguimiento de tratamientos.",
-    iconSrc: "/services/medicamentos.svg",
+    iconSrc: "/medicamentos.svg.png",
     iconBg: "bg-neutral-50 border-neutral-200",
     ring: "hover:ring-neutral-300",
   },
@@ -122,7 +122,7 @@ export default function Home() {
               <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-6 shadow-sm">
                 <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-white">
                   <img
-                    src="/general.svg"
+                    src="/general.svg.png"
                     alt="Ilustración general EPS"
                     className="h-full w-full object-contain"
                     loading="eager"

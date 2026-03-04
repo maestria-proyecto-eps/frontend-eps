@@ -1,27 +1,37 @@
+/**
+ * Validadores de alto nivel reutilizables para campos habituales (email, documento, etc.).
+ * La página puede usar estos nombres en field.validation o definir lógica propia en formConfig.validate.
+ */
 export const VALIDATORS = {
-  required: (value, field) => {
-    if (value == null || String(value).trim() === "") {
-      return `${field?.label || field?.key || "Campo"} es obligatorio`;
+  required: (value, _field) => {
+    if (value == null || String(value).trim() === '') {
+      return `${_field.label || _field.key} es obligatorio`;
     }
     return null;
   },
-  email: (value, field) => {
-    if (value == null || String(value).trim() === "") return null;
+  email: (value) => {
+    if (value == null || String(value).trim() === '') return null;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      const label = field?.label || "Email";
-      return `${label} no válido`;
+      return 'Email no válido';
     }
     return null;
   },
-  document: (value, field, _form, options = {}) => {
-    if (value == null || String(value).trim() === "") return null;
+  /** Verifica que el campo coincida con el campo 'password' del formulario. */
+  passwordMatch: (value, _field, form) => {
+    if (value == null || String(value).trim() === '') return null;
+    if (value !== form.password) return 'Las contraseñas no coinciden';
+    return null;
+  },
+  /** Identificación / documento: solo números y letras, longitud configurable (min/max por defecto 5-20). */
+  document: (value, _field, _form, options = {}) => {
+    if (value == null || String(value).trim() === '') return null;
     const min = options.min ?? 5;
     const max = options.max ?? 20;
     const str = String(value).trim();
-    if (str.length < min) return `${field?.label || "Documento"} debe tener al menos ${min} caracteres`;
-    if (str.length > max) return `${field?.label || "Documento"} debe tener máximo ${max} caracteres`;
+    if (str.length < min) return `Mínimo ${min} caracteres`;
+    if (str.length > max) return `Máximo ${max} caracteres`;
     if (!/^[a-zA-Z0-9-]+$/.test(str)) {
-      return `${field?.label || "Documento"} solo admite letras, números y guiones`;
+      return 'Solo letras, números y guiones';
     }
     return null;
   },

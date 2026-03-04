@@ -2,13 +2,16 @@ import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
-import { AuthContext } from "../../services/auth/auth-context";
+
+import { AuthContext } from "../../services/auth/AuthContext";
+
+import { Button, Input, Card } from '../../components/ui';
 
 export default function Login() {
   const nav = useNavigate();
   const auth = useContext(AuthContext);
 
-  const [user_name, setUser] = useState("");
+  const [num_documento, setUser] = useState("");
   const [password, setPass] = useState("");
   const [msg, setMsg] = useState("");
 
@@ -17,62 +20,72 @@ export default function Login() {
     setMsg("");
 
     try {
-      const { data } = await http.post(endpoints.login, {
-        user_name,
+      const { data } = await http.post(endpoints.auth.login, {
+        num_documento: parseInt(num_documento),
         password,
       });
 
-      auth.login(data.access_token);
+      if (data.hasError) {
+        setMsg(data.Message);
+        return;
+      }
 
-      if (data.role === "Recepcionista") nav("/receptionist");
-      else if (data.role === "doctor") nav("/doctor");
-      else nav("/");
-    } catch (error) {
-      const detail = error?.response?.data?.detail || error?.message;
-      setMsg(detail ? `Login inválido: ${detail}` : "Login inválido");
+
+      auth.login(data.Data.access_token);
+
+      // Lee el role del token directamente, no del contexto
+      const payload = JSON.parse(atob(data.Data.access_token.split(".")[1]));
+      const role = payload.role;
+      
+      if (role === "Médico") nav("/doctor");
+      else if (role === "Paciente") nav("/patient");
+      else if (role === "Enfermero") nav("/nurse");
+      else if (role === "Farmaceuta") nav("/pharmacy");
+      else if (role === "Recepcionista") nav("/receptionist");
+      else if (role === "Talento Humano") nav("/hr");
+      else {
+        auth.logout();
+        setMsg("Tu role no tiene permisos para acceder.");
+      }
+      
+    } catch {
+      setMsg("Error de conexión. Intente nuevamente.");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <form
-        onSubmit={submit}
-        className="border p-6 rounded space-y-3 w-80"
-      >
-        <h2 className="text-lg font-bold text-center">
-          Iniciar sesión
-        </h2>
+      <Card className="w-80">
+        <Card.Header>
+          <h2 className="text-lg font-bold text-center">Iniciar sesión</h2>
+        </Card.Header>
 
-        <input
-          placeholder="Usuario"
-          value={user_name}
-          onChange={(e) => setUser(e.target.value)}
-          className="border p-2 w-full rounded"
-          required
-        />
+        <Card.Body>
+          <form onSubmit={submit} className="space-y-3">
+            <Input
+              placeholder="Usuario"
+              name="num_documento"
+              value={num_documento}
+              onChange={(e) => setUser(e.target.value)}
+              required
+            />
 
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPass(e.target.value)}
-          className="border p-2 w-full rounded"
-          required
-        />
+            <Input
+              type="password"
+              placeholder="Contraseña"
+              name="password"
+              value={password}
+              onChange={(e) => setPass(e.target.value)}
+              error={msg || undefined}
+              required
+            />
 
-        <button
-          type="submit"
-          className="bg-blue-500 text-white p-2 w-full rounded"
-        >
-          Entrar
-        </button>
-
-        {msg && (
-          <div className="text-red-500 text-sm text-center">
-            {msg}
-          </div>
-        )}
-      </form>
+            <Button type="submit" fullWidth>
+              Entrar
+            </Button>
+          </form>
+        </Card.Body>
+      </Card>
     </div>
   );
 }
