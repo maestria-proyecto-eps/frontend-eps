@@ -27,7 +27,7 @@ function getEmptyForm(fields = []) {
  * field.validation puede ser ['required', 'email'] o ['required', { name: 'document', options: { min, max } }].
  * Si no hay field.validation, se usa required por defecto y email si type === 'email'.
  */
-function runFieldValidation(form, fields) {
+function runFieldValidation(form, fields, context = {}) {
   const err = {};
   fields.forEach((f) => {
     const val = form[f.key];
