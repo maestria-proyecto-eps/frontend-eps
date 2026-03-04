@@ -46,7 +46,7 @@ export default function Login() {
         setMsg("Tu role no tiene permisos para acceder.");
       }
       
-    } catch (_err) {
+    } catch {
       setMsg("Error de conexión. Intente nuevamente.");
     }
   };
