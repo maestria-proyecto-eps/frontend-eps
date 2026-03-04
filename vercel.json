@@ -5,6 +5,10 @@
       "destination": "https://backend-eps-auth-service.onrender.com/api/auth/:path*"
     },
     {
+      "source": "/api/patients/:path*",
+      "destination": "https://backend-eps-auth-service.onrender.com/api/patients/:path*"
+    },
+    {
       "source": "/api/users/:path*",
       "destination": "https://backend-eps-users-service-dev.onrender.com/api/users/:path*"
     },
