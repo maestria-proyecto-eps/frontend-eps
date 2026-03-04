@@ -4,7 +4,7 @@
  * Users service: se apunta directamente a Render (o usar proxy con pathRewrite).
  * Resto de servicios usan prefijo /api/{servicio}/ con proxy o Vercel rewrites.
  */
-const USERS_API_BASE = 'https://backend-eps-users-service-dev.onrender.com';
+//const USERS_API_BASE = 'https://backend-eps-users-service-dev.onrender.com';
 
 export const endpoints = {
   // ── Auth Service ──────────────────────────────────
@@ -16,15 +16,15 @@ export const endpoints = {
   users: {
     doctorExample: "/api/users/doctor/example",
     /** GET lista paginada: ?pag=1&cantidad=30 */
-    list: `${USERS_API_BASE}/users/`,
+    list: "/api/users/",
     /** POST crear usuario */
-    create: `${USERS_API_BASE}/users/`,
+    create: "/api/users/",
     /** PUT actualizar usuario (id numérico) */
-    updateById: (id) => `${USERS_API_BASE}/users/${id}`,
+    updateById: (id) => `/api/users/${id}`,
     /** PUT cambiar estado (activar/desactivar) */
-    changeStatus: (id) => `${USERS_API_BASE}/users/${id}/change-status`,
+    changeStatus: (id) => `/api/users/${id}/change-status`,
     /** DELETE desactivar/eliminar usuario (id numérico) - legacy, preferir changeStatus */
-    deleteById: (id) => `${USERS_API_BASE}/users/${id}`,
+    deleteById: (id) => `/api/users/${id}`,
   },
 
   // ── Appointments Service ──────────────────────────

@@ -20,7 +20,6 @@ export default function App() {
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
-          <Route path="/usuarios" element={<Usuarios />} />
 
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
@@ -38,6 +37,15 @@ export default function App() {
             <Route path="example1" element={<DoctorExample />} />
             <Route path="example2" element={<DoctorExample />} />
           </Route>
+
+          <Route
+            path="/hr"
+            element={
+              <ProtectedRoute allowRoles={["Talento Humano"]}>
+                <Usuarios />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Cualquier otra ruta → redirigir al home */}
           <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
