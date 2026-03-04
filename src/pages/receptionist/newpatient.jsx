@@ -31,13 +31,6 @@ import { endpoints } from "../../services/api/endpoints";
  *  - consentimiento_datos:boolean
  */
 
-const DOC_TYPES = [
-  { value: "CC", label: "Cédula de ciudadanía (CC)" },
-  { value: "TI", label: "Tarjeta de identidad (TI)" },
-  { value: "CE", label: "Cédula de extranjería (CE)" },
-  { value: "PA", label: "Pasaporte (PA)" },
-];
-
 const GENDERS = [
   { value: "Femenino", label: "Femenino" },
   { value: "Masculino", label: "Masculino" },
@@ -49,12 +42,6 @@ const BLOOD_TYPES = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((x) =
   value: x,
   label: x,
 }));
-
-// Mock local anti-duplicado (UI only). El siguiente dev lo reemplaza por GET real.
-const MOCK_EXISTING_PATIENTS = [
-  { num_documento: 1012345678, num_afiliacion_formateado: "EPS-20260228-3" },
-  { num_documento: 99001122, num_afiliacion_formateado: "EPS-20260110-9" },
-];
 
 function onlyDigits(value) {
   return String(value ?? "").replace(/[^\d]/g, "");
@@ -75,7 +62,6 @@ function validate(form) {
   const errors = {};
 
   // Datos usuario
-  if (!form.documentType) errors.documentType = "Selecciona el tipo de documento.";
   if (!normalize(form.num_documento)) errors.num_documento = "El número de documento es requerido.";
   if (normalize(form.num_documento) && !/^\d+$/.test(onlyDigits(form.num_documento))) {
     errors.num_documento = "El documento debe ser numérico (sin puntos ni espacios).";
@@ -161,7 +147,6 @@ function Modal({ open, title, children, onClose, primaryAction }) {
 export default function NewPatient() {
   const [form, setForm] = React.useState({
     // UI-only
-    documentType: "",
 
     // Backend keys
     num_documento: "",
@@ -180,10 +165,8 @@ export default function NewPatient() {
   });
 
   const [errors, setErrors] = React.useState({});
-  const [busySearch, setBusySearch] = React.useState(false);
   const [busySubmit, setBusySubmit] = React.useState(false);
-
-  const [duplicateInfo, setDuplicateInfo] = React.useState(null);
+  const [submitError, setSubmitError] = React.useState("");
 
   // Modal (preparado para response real del backend)
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -229,62 +212,13 @@ export default function NewPatient() {
     };
   }
 
-  const handleSearchByDocument = async () => {
-    setDuplicateInfo(null);
-
-    const docType = form.documentType;
-    const docNumber = onlyDigits(form.num_documento);
-
-    const localErrors = {};
-    if (!docType) localErrors.documentType = "Selecciona el tipo de documento para buscar.";
-    if (!docNumber) localErrors.num_documento = "Ingresa el número de documento para buscar.";
-
-    if (Object.keys(localErrors).length) {
-      setErrors((prev) => ({ ...prev, ...localErrors }));
-      return;
-    }
-
-    setBusySearch(true);
-    try {
-      // Simulación IO
-      await new Promise((r) => setTimeout(r, 350));
-
-      const found = MOCK_EXISTING_PATIENTS.find((p) => String(p.num_documento) === String(docNumber));
-
-      if (found) {
-        setDuplicateInfo({
-          type: "found",
-          message: `Ya existe un paciente con este documento. N° de afiliación: ${found.num_afiliacion_formateado}`,
-        });
-      } else {
-        setDuplicateInfo({
-          type: "notfound",
-          message: "No se encontraron duplicados. Puedes continuar con el registro.",
-        });
-      }
-    } finally {
-      setBusySearch(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setDuplicateInfo(null);
+    setSubmitError("");
 
     const v = validate(form);
     setErrors(v);
     if (Object.keys(v).length) return;
-
-    // Anti-duplicado (mock UI). El backend hará su propia validación.
-    const docNumber = onlyDigits(form.num_documento);
-    const found = MOCK_EXISTING_PATIENTS.find((p) => String(p.num_documento) === String(docNumber));
-    if (found) {
-      setDuplicateInfo({
-        type: "found",
-        message: `Registro bloqueado: documento duplicado. N° afiliación existente: ${found.num_afiliacion_formateado}`,
-      });
-      return;
-    }
 
     setBusySubmit(true);
     try {
@@ -299,10 +233,7 @@ export default function NewPatient() {
       setConfirmOpen(true);
     } catch (err) {
       const apiMessage = err?.response?.data?.detail || err?.response?.data?.Message;
-      setDuplicateInfo({
-        type: "found",
-        message: apiMessage || "Error al registrar paciente. Verifica los datos o tu sesión.",
-      });
+      setSubmitError(apiMessage || "Error al registrar paciente. Verifica los datos o tu sesión.");
     } finally {
       setBusySubmit(false);
     }
@@ -366,27 +297,11 @@ export default function NewPatient() {
             </Button>
           </Link>
         </div>
-
-        {duplicateInfo ? (
-          <div
-            className={[
-              "mb-6 rounded-2xl border p-4",
-              duplicateInfo.type === "found"
-                ? "bg-emergency-50 border-emergency-500/30"
-                : "bg-primary-50 border-primary-500/20",
-            ].join(" ")}
-          >
-            <p
-              className={[
-                "text-sm font-medium",
-                duplicateInfo.type === "found" ? "text-emergency-500" : "text-primary-700",
-              ].join(" ")}
-            >
-              {duplicateInfo.message}
-            </p>
+        {submitError && (
+          <div className="mb-6 rounded-2xl border border-emergency-500/30 bg-emergency-50 p-4">
+            <p className="text-sm font-medium text-emergency-500">{submitError}</p>
           </div>
-        ) : null}
-
+        )}
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* 1) Datos Usuario */}
           <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
@@ -396,23 +311,7 @@ export default function NewPatient() {
               subtitle="Identificación del paciente para búsqueda y registro."
             />
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Tipo de documento</label>
-                <select
-                  value={form.documentType}
-                  onChange={update("documentType")}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                >
-                  <option value="">Selecciona…</option>
-                  {DOC_TYPES.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <FieldError message={errors.documentType} />
-              </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
               <div>
                 <label className="text-sm font-medium text-neutral-800">Número de documento</label>
@@ -436,22 +335,6 @@ export default function NewPatient() {
                   className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200"
                 />
                 <FieldError message={errors.password} />
-              </div>
-
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={handleSearchByDocument}
-                  disabled={busySearch}
-                  className={[
-                    "w-full rounded-xl px-4 py-2 font-medium transition",
-                    busySearch
-                      ? "bg-neutral-200 text-neutral-600 cursor-not-allowed"
-                      : "bg-secondary-500 text-white hover:bg-secondary-600",
-                  ].join(" ")}
-                >
-                  {busySearch ? "Buscando…" : "Buscar duplicado"}
-                </button>
               </div>
             </div>
           </section>
@@ -560,7 +443,7 @@ export default function NewPatient() {
           <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
             <SectionTitle icon="3" title="Info Médica" subtitle="Información clínica básica." />
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
               <div>
                 <label className="text-sm font-medium text-neutral-800">Tipo de sangre</label>
                 <select
@@ -581,38 +464,6 @@ export default function NewPatient() {
                   Se enviará como: grupo_sanguineo="{form.tipo_sangre || "—"}" y factor_RH="
                   {inferRHFromBloodType(form.tipo_sangre) || "—"}".
                 </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                <p className="text-sm font-semibold text-neutral-900">Resumen (request payload)</p>
-                <p className="mt-2 text-xs text-neutral-600">
-                  Este resumen es para alinear con backend. No expone datos sensibles en producción.
-                </p>
-                <div className="mt-3 text-xs text-neutral-700 space-y-1">
-                  <div>
-                    <span className="font-medium">num_documento:</span>{" "}
-                    {form.num_documento ? Number(form.num_documento) : "—"}
-                  </div>
-                  <div>
-                    <span className="font-medium">nombres:</span> {form.nombres || "—"}
-                  </div>
-                  <div>
-                    <span className="font-medium">apellidos:</span> {form.apellidos || "—"}
-                  </div>
-                  <div>
-                    <span className="font-medium">fecha_nac:</span> {form.fecha_nac || "—"}
-                  </div>
-                  <div>
-                    <span className="font-medium">genero:</span> {form.genero || "—"}
-                  </div>
-                  <div>
-                    <span className="font-medium">grupo_sanguineo:</span> {form.tipo_sangre || "—"}
-                  </div>
-                  <div>
-                    <span className="font-medium">factor_RH:</span>{" "}
-                    {inferRHFromBloodType(form.tipo_sangre) || "—"}
-                  </div>
-                </div>
               </div>
             </div>
           </section>
@@ -686,7 +537,6 @@ export default function NewPatient() {
               onClick={() => {
                 setConfirmOpen(false);
                 setCreatedPatient(null);
-                setDuplicateInfo(null);
                 setErrors({});
                 setForm({
                   documentType: "",
