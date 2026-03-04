@@ -8,10 +8,13 @@ import { endpoints } from '../../services/api/endpoints';
 
 // Roles quemados según los que aparecen en la respuesta del API
 const ROLES_OPCIONES = [
+  { value: 1, label: 'Administrador' },
   { value: 2, label: 'Médico' },
   { value: 3, label: 'Paciente' },
   { value: 4, label: 'Enfermero' },
   { value: 5, label: 'Farmaceuta' },
+  { value: 6, label: 'Recepcionista' },
+  { value: 7, label: 'Talento Humano' },
 ];
 
 const ESTADOS_OPCIONES = [
@@ -56,12 +59,85 @@ export default function Usuarios() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [total, setTotal] = React.useState(0);
+  const [allDocLoaded, setAllDocLoaded] = React.useState(false);
 
   const fetchUsers = useCallback(async () => {
+    const docFilter = filters.num_documento;
+    const estadoFilter = filters.estado;
+    const rolFilter = filters.rol_des;
+
+    const hasDocFilter = docFilter != null && String(docFilter).trim() !== '';
+    const hasEstadoFilter = estadoFilter != null && String(estadoFilter).trim() !== '';
+    const hasRolFilter = rolFilter != null && String(rolFilter).trim() !== '';
+
+    // Si solo hay filtro por documento, queremos traer todas las páginas (cantidad 30)
+    const onlyDocFilter = hasDocFilter && !hasEstadoFilter && !hasRolFilter;
+
+    // Si ya cargamos todo el universo para búsqueda por documento, no volvemos a llamar al backend
+    if (onlyDocFilter && allDocLoaded) {
+      return;
+    }
+
     setLoading(true);
     try {
+      if (onlyDocFilter) {
+        const pageSizeForDoc = 30;
+        let allData = [];
+
+        // Primera página: obtenemos datos y número total de páginas
+        const { data: firstRes } = await http.get(endpoints.users.list, {
+          params: { pag: 1, cantidad: pageSizeForDoc },
+        });
+        if (firstRes.hasError || !firstRes.data) {
+          setUsuarios([]);
+          setTotal(0);
+          return;
+        }
+        const { data: firstList = [], pages = 0 } = firstRes.data;
+        allData = Array.isArray(firstList) ? firstList : [];
+
+        const totalPages = Number(pages) || 0;
+
+        // Traemos el resto de páginas
+        for (let p = 2; p <= totalPages; p += 1) {
+          const { data: resPage } = await http.get(endpoints.users.list, {
+            params: { pag: p, cantidad: pageSizeForDoc },
+          });
+          if (!resPage.hasError && resPage.data?.data) {
+            const pageList = Array.isArray(resPage.data.data) ? resPage.data.data : [];
+            allData = allData.concat(pageList);
+          }
+        }
+
+        setUsuarios(allData);
+        setTotal(allData.length);
+        setPage(1);
+        setPageSize(pageSizeForDoc);
+        setAllDocLoaded(true);
+        return;
+      }
+
+      // Modo normal: paginación y filtros en el backend
+      const params = {
+        pag: page,
+        cantidad: pageSize,
+      };
+
+      if (hasDocFilter) {
+        params.num_documento = String(docFilter).trim();
+      }
+      if (hasEstadoFilter) {
+        params.estado = Number(estadoFilter);
+      }
+      if (hasRolFilter) {
+        const rolOpcion = ROLES_OPCIONES.find((r) => r.label === String(rolFilter).trim());
+        if (rolOpcion) {
+          params.rol = rolOpcion.value;
+        }
+      }
+
       const { data: res } = await http.get(endpoints.users.list, {
-        params: { pag: page, cantidad: pageSize },
+        params,
       });
       if (res.hasError || !res.data) {
         setUsuarios([]);
@@ -78,27 +154,58 @@ export default function Usuarios() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, filters, allDocLoaded]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Filtro adicional en el cliente (para soportar búsquedas por documento sobre el lote recibido)
   const filtrado = usuarios.filter((row) => {
     return Object.entries(filters).every(([key, val]) => {
       if (val == null || String(val).trim() === '') return true;
+      const value = String(val).trim().toLowerCase();
       const cell = row[key];
       if (key === 'estado') return String(cell) === String(val);
-      return String(cell ?? '').toLowerCase().includes(String(val).trim().toLowerCase());
+      // Para documento usamos "empieza por" en lugar de "contiene"
+      if (key === 'num_documento') {
+        const doc = String(cell ?? '').toLowerCase();
+        return doc.startsWith(value);
+      }
+      return String(cell ?? '').toLowerCase().includes(value);
     });
   });
 
-  const hasActiveFilters = Object.values(filters).some((v) => v != null && String(v).trim() !== '');
-  const paginationTotal = hasActiveFilters ? filtrado.length : total;
+  // Cuando solo hay filtro por documento, la paginación se hace completamente en el cliente
+  const hasDocFilterView = filters.num_documento != null && String(filters.num_documento).trim() !== '';
+  const hasEstadoFilterView = filters.estado != null && String(filters.estado).trim() !== '';
+  const hasRolFilterView = filters.rol_des != null && String(filters.rol_des).trim() !== '';
+  const onlyDocFilterView = hasDocFilterView && !hasEstadoFilterView && !hasRolFilterView;
 
-  useEffect(() => {
-    if (hasActiveFilters) setPage(1);
-  }, [hasActiveFilters]);
+  const dataForTable = onlyDocFilterView
+    ? filtrado.slice((page - 1) * pageSize, page * pageSize)
+    : filtrado;
+
+  const paginationTotal = onlyDocFilterView ? filtrado.length : total;
+
+  const handleFiltersChange = (nextFilters) => {
+    // Al cambiar filtros, siempre arrancamos desde la primera página
+    setFilters(nextFilters);
+    setPage(1);
+
+    // Si salimos del modo "solo documento", la próxima vez que entremos recargamos todo el universo
+    const nextDoc = nextFilters.num_documento;
+    const nextEstado = nextFilters.estado;
+    const nextRol = nextFilters.rol_des;
+    const hasNextDoc = nextDoc != null && String(nextDoc).trim() !== '';
+    const hasNextEstado = nextEstado != null && String(nextEstado).trim() !== '';
+    const hasNextRol = nextRol != null && String(nextRol).trim() !== '';
+
+    const nextOnlyDoc = hasNextDoc && !hasNextEstado && !hasNextRol;
+    if (!nextOnlyDoc) {
+      setAllDocLoaded(false);
+    }
+  };
 
   const handleCreate = async (newRow) => {
     await http.post(endpoints.users.create, {
@@ -138,9 +245,9 @@ export default function Usuarios() {
         </div>
         <DataTable
           columns={COLUMNAS_USUARIOS}
-          data={filtrado}
+          data={dataForTable}
           filters={filters}
-          onFiltersChange={setFilters}
+          onFiltersChange={handleFiltersChange}
           loading={loading}
           pagination={{
             page,
