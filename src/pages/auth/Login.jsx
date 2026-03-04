@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
-import { AuthContext } from "../../services/auth/AuthProvider";
+import { AuthContext } from "../../services/auth/auth-context";
 
 export default function Login() {
   const nav = useNavigate();
@@ -27,8 +27,9 @@ export default function Login() {
       if (data.role === "Recepcionista") nav("/receptionist");
       else if (data.role === "doctor") nav("/doctor");
       else nav("/");
-    } catch (err) {
-      setMsg("Login inválido");
+    } catch (error) {
+      const detail = error?.response?.data?.detail || error?.message;
+      setMsg(detail ? `Login inválido: ${detail}` : "Login inválido");
     }
   };
 

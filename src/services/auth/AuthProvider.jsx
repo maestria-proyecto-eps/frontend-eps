@@ -1,6 +1,5 @@
-import React, { createContext, useMemo, useState } from "react";
-
-export const AuthContext = createContext(null);
+import React, { useMemo, useState } from "react";
+import { AuthContext } from "./auth-context";
 
 function decodeJwt(token) {
   try {
@@ -14,12 +13,6 @@ function decodeJwt(token) {
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem("access_token") || "");
   const payload = token ? decodeJwt(token) : null;
-
-  const isExpired = useMemo(() => {
-    if (!payload?.exp) return true;
-    const now = Math.floor(Date.now() / 1000);
-    return payload.exp <= now;
-  }, [payload]);
 
   const role = payload?.role || null;
 
@@ -36,10 +29,10 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({
     token,
     role,
-    isAuthenticated: !!token && !isExpired,
+    isAuthenticated: !!token,
     logout,
     login,
-  }), [token, role, isExpired]);
+  }), [token, role]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

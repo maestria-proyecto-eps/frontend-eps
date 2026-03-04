@@ -19,8 +19,9 @@ export default function DoctorExample() {
 
       // Se asume que el endpoint devuelve un array
       setItems(data || []);
-    } catch (err) {
-      setError("Error cargando datos");
+    } catch (error) {
+      const message = error?.message ? `Error: ${error.message}` : "Error cargando datos";
+      setError(message);
     } finally {
       setLoading(false);
     }
