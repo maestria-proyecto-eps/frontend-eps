@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MainLayout, PageContainer } from '../../components/layout';
+import { PageContainer } from '../../components/layout';
 import { DataTable, Badge, Button } from '../../components/ui';
 import { ROUTES } from '../../constants';
 import { http } from '../../services/api/http';
@@ -235,7 +235,6 @@ export default function Usuarios() {
   };
 
   return (
-    <MainLayout>
       <PageContainer>
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-neutral-800">Gestión de usuarios</h1>
@@ -266,6 +265,5 @@ export default function Usuarios() {
           emptyMessage={loading ? 'Cargando...' : 'No hay usuarios o no coinciden con los filtros'}
         />
       </PageContainer>
-    </MainLayout>
   );
 }

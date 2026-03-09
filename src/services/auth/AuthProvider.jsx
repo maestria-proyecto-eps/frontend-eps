@@ -35,10 +35,10 @@ export default function AuthProvider({ children }) {
   const value = useMemo(() => ({
     token,
     role,
+    payload,           // ← agregar esto
     isAuthenticated: !!token && !isTokenExpired(payload),
     logout,
     login,
   }), [token, role, payload, logout, login]);
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

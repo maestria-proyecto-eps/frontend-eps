@@ -11,7 +11,7 @@ import DoctorExample from "./pages/doctor/DoctorExample"
 import DoctorLayout from "./pages/doctor/DoctorLayout"
 import NewPatient from "./pages/receptionist/newpatient";
 import { ROUTES } from "./constants";
-
+import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 export default function App() {
   return (
     <AuthProvider>
@@ -21,17 +21,6 @@ export default function App() {
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
-          
-          {/* Ruta protegida para despliegue (rol recepcionista) */}
-          <Route
-            path="/receptionist"
-            element={
-              <ProtectedRoute allowRoles={["Recepcionista"]}>
-                <NewPatient />
-              </ProtectedRoute>
-            }
-          />
-
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
 
@@ -49,14 +38,37 @@ export default function App() {
             <Route path="example2" element={<DoctorExample />} />
           </Route>
 
+          {/* Rutas protegidas, requiere autenticación */}
+          
+          {/* Recepcionista */}
+          <Route
+            path="/receptionist"
+            element={
+              <ProtectedRoute allowRoles={["Recepcionista"]}>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<NewPatient />} />
+            <Route path="afiliacion" element={<NewPatient />} />
+            ...
+          </Route>
+
+          {/* Talento Humano */}
           <Route
             path="/hr"
             element={
               <ProtectedRoute allowRoles={["Talento Humano"]}>
-                <Usuarios />
+                <AuthenticatedLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Usuarios />} />
+            <Route path="usuarios" element={<Usuarios />} />
+            ...
+          </Route>
+
+          {/* Paciente */}
           <Route
             path="/patient"
             element={
@@ -65,6 +77,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           {/* Cualquier otra ruta → redirigir al home */}
           <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
         </Routes>

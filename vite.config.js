@@ -18,4 +18,9 @@ export default defineConfig({
       '/api/medical-records': 'https://backend-eps-medical-records-service-dev.onrender.com',
     },
   },
+    test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
 })

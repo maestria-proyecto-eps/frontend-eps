@@ -1,7 +1,7 @@
 // src/pages/receptionist/newpatient.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import { MainLayout, PageContainer } from "../../components/layout";
+import { PageContainer } from "../../components/layout";
 import { Button } from "../../components/ui";
 import { ROUTES, BRAND_NAME } from "../../constants";
 import { http } from "../../services/api/http";
@@ -281,309 +281,307 @@ export default function NewPatient() {
     (createdPatient?.num_afiliacion != null ? String(createdPatient.num_afiliacion) : null);
 
   return (
-    <MainLayout>
-      <PageContainer>
-        <div className="mb-8 flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900">Afiliación de pacientes</h1>
-            <p className="mt-1 text-neutral-600">
-              Registro de paciente con consentimiento para tratamiento de datos.
-            </p>
-          </div>
-
-          <Link to={ROUTES.HOME}>
-            <Button variant="outline" size="sm">
-              ← Volver
-            </Button>
-          </Link>
+    <PageContainer>
+      <div className="mb-8 flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-neutral-900">Afiliación de pacientes</h1>
+          <p className="mt-1 text-neutral-600">
+            Registro de paciente con consentimiento para tratamiento de datos.
+          </p>
         </div>
-        {submitError && (
-          <div className="mb-6 rounded-2xl border border-emergency-500/30 bg-emergency-50 p-4">
-            <p className="text-sm font-medium text-emergency-500">{submitError}</p>
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* 1) Datos Usuario */}
-          <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-            <SectionTitle
-              icon="1"
-              title="Datos Usuario"
-              subtitle="Identificación del paciente para búsqueda y registro."
-            />
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Link to={ROUTES.HOME}>
+          <Button variant="outline" size="sm">
+            ← Volver
+          </Button>
+        </Link>
+      </div>
+      {submitError && (
+        <div className="mb-6 rounded-2xl border border-emergency-500/30 bg-emergency-50 p-4">
+          <p className="text-sm font-medium text-emergency-500">{submitError}</p>
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* 1) Datos Usuario */}
+        <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <SectionTitle
+            icon="1"
+            title="Datos Usuario"
+            subtitle="Identificación del paciente para búsqueda y registro."
+          />
 
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Número de documento</label>
-                <input
-                  inputMode="numeric"
-                  value={form.num_documento}
-                  onChange={update("num_documento")}
-                  placeholder="Ej: 1012345678"
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                />
-                <FieldError message={errors.num_documento} />
-              </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Contraseña</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={update("password")}
-                  placeholder="Mín. 8 caracteres"
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                />
-                <FieldError message={errors.password} />
-              </div>
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Número de documento</label>
+              <input
+                inputMode="numeric"
+                value={form.num_documento}
+                onChange={update("num_documento")}
+                placeholder="Ej: 1012345678"
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.num_documento} />
             </div>
-          </section>
 
-          {/* 2) Info Personal */}
-          <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-            <SectionTitle icon="2" title="Info Personal" subtitle="Datos básicos y de contacto." />
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Contraseña</label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={update("password")}
+                placeholder="Mín. 8 caracteres"
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.password} />
+            </div>
+          </div>
+        </section>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Nombres</label>
+        {/* 2) Info Personal */}
+        <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <SectionTitle icon="2" title="Info Personal" subtitle="Datos básicos y de contacto." />
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Nombres</label>
+              <input
+                value={form.nombres}
+                onChange={update("nombres")}
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.nombres} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Apellidos</label>
+              <input
+                value={form.apellidos}
+                onChange={update("apellidos")}
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.apellidos} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Fecha de nacimiento</label>
+              <input
+                type="date"
+                value={form.fecha_nac}
+                onChange={update("fecha_nac")}
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.fecha_nac} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Género</label>
+              <select
+                value={form.genero}
+                onChange={update("genero")}
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              >
+                <option value="">Selecciona…</option>
+                {GENDERS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <FieldError message={errors.genero} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Email</label>
+              <input
+                value={form.email}
+                onChange={update("email")}
+                placeholder="camila.diaz@example.com"
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.email} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Dirección</label>
+              <input
+                value={form.direccion}
+                onChange={update("direccion")}
+                placeholder="Calle 10 #20-30, Apto 301"
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.direccion} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Contacto de emergencia</label>
+              <input
+                value={form.contacto_emergencia}
+                onChange={update("contacto_emergencia")}
+                placeholder="Nombre completo"
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.contacto_emergencia} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Teléfono de emergencia</label>
+              <input
+                inputMode="numeric"
+                value={form.telefono_emergencia}
+                onChange={update("telefono_emergencia")}
+                placeholder="Ej: 3001234567"
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              />
+              <FieldError message={errors.telefono_emergencia} />
+            </div>
+          </div>
+        </section>
+
+        {/* 3) Info Médica */}
+        <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <SectionTitle icon="3" title="Info Médica" subtitle="Información clínica básica." />
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Tipo de sangre</label>
+              <select
+                value={form.tipo_sangre}
+                onChange={update("tipo_sangre")}
+                className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              >
+                <option value="">Selecciona…</option>
+                {BLOOD_TYPES.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <FieldError message={errors.tipo_sangre} />
+              {/* Nota: backend requiere grupo_sanguineo + factor_RH, se derivan desde tipo_sangre */}
+              <p className="mt-1 text-xs text-neutral-500">
+                Se enviará como: grupo_sanguineo="{form.tipo_sangre || "—"}" y factor_RH="
+                {inferRHFromBloodType(form.tipo_sangre) || "—"}".
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 4) Consentimiento Datos */}
+        <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <SectionTitle icon="4" title="Consentimiento Datos" subtitle="Requerido para completar la afiliación." />
+
+          <div className="rounded-2xl border border-neutral-200 bg-neutral-50">
+            <div className="max-h-56 overflow-auto p-4">
+              <ConsentText />
+            </div>
+
+            <div className="border-t border-neutral-200 p-4">
+              <label className="flex items-start gap-3">
                 <input
-                  value={form.nombres}
-                  onChange={update("nombres")}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+                  type="checkbox"
+                  checked={form.consentimiento_datos}
+                  onChange={update("consentimiento_datos")}
+                  className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-200"
                 />
-                <FieldError message={errors.nombres} />
-              </div>
+                <span className="text-sm text-neutral-800">
+                  He leído y acepto el consentimiento para el tratamiento de datos personales.
+                  <span className="text-emergency-500"> *</span>
+                </span>
+              </label>
 
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Apellidos</label>
-                <input
-                  value={form.apellidos}
-                  onChange={update("apellidos")}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                />
-                <FieldError message={errors.apellidos} />
-              </div>
+              <FieldError message={errors.consentimiento_datos} />
 
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Fecha de nacimiento</label>
-                <input
-                  type="date"
-                  value={form.fecha_nac}
-                  onChange={update("fecha_nac")}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                />
-                <FieldError message={errors.fecha_nac} />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Género</label>
-                <select
-                  value={form.genero}
-                  onChange={update("genero")}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              <div className="mt-3 text-sm">
+                <a
+                  href="/privacy"
+                  className="text-secondary-600 hover:text-secondary-700 underline underline-offset-2"
                 >
-                  <option value="">Selecciona…</option>
-                  {GENDERS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <FieldError message={errors.genero} />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Email</label>
-                <input
-                  value={form.email}
-                  onChange={update("email")}
-                  placeholder="camila.diaz@example.com"
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                />
-                <FieldError message={errors.email} />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Dirección</label>
-                <input
-                  value={form.direccion}
-                  onChange={update("direccion")}
-                  placeholder="Calle 10 #20-30, Apto 301"
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                />
-                <FieldError message={errors.direccion} />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Contacto de emergencia</label>
-                <input
-                  value={form.contacto_emergencia}
-                  onChange={update("contacto_emergencia")}
-                  placeholder="Nombre completo"
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                />
-                <FieldError message={errors.contacto_emergencia} />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Teléfono de emergencia</label>
-                <input
-                  inputMode="numeric"
-                  value={form.telefono_emergencia}
-                  onChange={update("telefono_emergencia")}
-                  placeholder="Ej: 3001234567"
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                />
-                <FieldError message={errors.telefono_emergencia} />
+                  Ver Política de Privacidad completa
+                </a>
               </div>
             </div>
-          </section>
-
-          {/* 3) Info Médica */}
-          <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-            <SectionTitle icon="3" title="Info Médica" subtitle="Información clínica básica." />
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Tipo de sangre</label>
-                <select
-                  value={form.tipo_sangre}
-                  onChange={update("tipo_sangre")}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                >
-                  <option value="">Selecciona…</option>
-                  {BLOOD_TYPES.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <FieldError message={errors.tipo_sangre} />
-                {/* Nota: backend requiere grupo_sanguineo + factor_RH, se derivan desde tipo_sangre */}
-                <p className="mt-1 text-xs text-neutral-500">
-                  Se enviará como: grupo_sanguineo="{form.tipo_sangre || "—"}" y factor_RH="
-                  {inferRHFromBloodType(form.tipo_sangre) || "—"}".
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* 4) Consentimiento Datos */}
-          <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-            <SectionTitle icon="4" title="Consentimiento Datos" subtitle="Requerido para completar la afiliación." />
-
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50">
-              <div className="max-h-56 overflow-auto p-4">
-                <ConsentText />
-              </div>
-
-              <div className="border-t border-neutral-200 p-4">
-                <label className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={form.consentimiento_datos}
-                    onChange={update("consentimiento_datos")}
-                    className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-200"
-                  />
-                  <span className="text-sm text-neutral-800">
-                    He leído y acepto el consentimiento para el tratamiento de datos personales.
-                    <span className="text-emergency-500"> *</span>
-                  </span>
-                </label>
-
-                <FieldError message={errors.consentimiento_datos} />
-
-                <div className="mt-3 text-sm">
-                  <a
-                    href="/privacy"
-                    className="text-secondary-600 hover:text-secondary-700 underline underline-offset-2"
-                  >
-                    Ver Política de Privacidad completa
-                  </a>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Actions */}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Link to={ROUTES.HOME} className="text-sm text-neutral-600 hover:text-neutral-900">
-              Cancelar
-            </Link>
-
-            <button
-              type="submit"
-              disabled={busySubmit}
-              className={[
-                "inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition",
-                busySubmit
-                  ? "bg-neutral-200 text-neutral-600 cursor-not-allowed"
-                  : "bg-primary-500 text-white hover:bg-primary-600",
-              ].join(" ")}
-            >
-              {busySubmit ? "Registrando…" : "Registrar paciente"}
-            </button>
           </div>
-        </form>
+        </section>
 
-        {/* Modal confirmación */}
-        <Modal
-          open={confirmOpen}
-          title="Registro exitoso"
-          onClose={() => setConfirmOpen(false)}
-          primaryAction={
-            <button
-              type="button"
-              onClick={() => {
-                setConfirmOpen(false);
-                setCreatedPatient(null);
-                setErrors({});
-                setForm({
-                  documentType: "",
-                  num_documento: "",
-                  password: "",
-                  nombres: "",
-                  apellidos: "",
-                  fecha_nac: "",
-                  genero: "",
-                  direccion: "",
-                  email: "",
-                  contacto_emergencia: "",
-                  telefono_emergencia: "",
-                  tipo_sangre: "",
-                  consentimiento_datos: false,
-                });
-              }}
-              className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition"
-            >
-              Registrar otro
-            </button>
-          }
-        >
-          <div className="space-y-3">
-            <p className="text-neutral-700">
-              El paciente fue registrado correctamente en <span className="font-medium">{BRAND_NAME}</span>.
-            </p>
+        {/* Actions */}
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link to={ROUTES.HOME} className="text-sm text-neutral-600 hover:text-neutral-900">
+            Cancelar
+          </Link>
 
-            <div className="rounded-2xl border border-primary-500/20 bg-primary-50 p-4">
-              <p className="text-sm text-primary-700 font-medium">Número de afiliación</p>
+          <button
+            type="submit"
+            disabled={busySubmit}
+            className={[
+              "inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition",
+              busySubmit
+                ? "bg-neutral-200 text-neutral-600 cursor-not-allowed"
+                : "bg-primary-500 text-white hover:bg-primary-600",
+            ].join(" ")}
+          >
+            {busySubmit ? "Registrando…" : "Registrar paciente"}
+          </button>
+        </div>
+      </form>
 
-              {affiliation ? (
-                <p className="mt-1 text-xl font-bold text-primary-700">{affiliation}</p>
-              ) : (
-                <p className="mt-1 text-sm text-neutral-700">
-                  Pendiente: se mostrará el <span className="font-medium">num_afiliacion_formateado</span> real
-                  cuando se integre el POST <span className="font-mono">/api/patients</span>.
-                </p>
-              )}
-            </div>
+      {/* Modal confirmación */}
+      <Modal
+        open={confirmOpen}
+        title="Registro exitoso"
+        onClose={() => setConfirmOpen(false)}
+        primaryAction={
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmOpen(false);
+              setCreatedPatient(null);
+              setErrors({});
+              setForm({
+                documentType: "",
+                num_documento: "",
+                password: "",
+                nombres: "",
+                apellidos: "",
+                fecha_nac: "",
+                genero: "",
+                direccion: "",
+                email: "",
+                contacto_emergencia: "",
+                telefono_emergencia: "",
+                tipo_sangre: "",
+                consentimiento_datos: false,
+              });
+            }}
+            className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition"
+          >
+            Registrar otro
+          </button>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-neutral-700">
+            El paciente fue registrado correctamente en <span className="font-medium">{BRAND_NAME}</span>.
+          </p>
 
-            <p className="text-sm text-neutral-600">
-              Usa este número para trámites, citas y consulta de información.
-            </p>
+          <div className="rounded-2xl border border-primary-500/20 bg-primary-50 p-4">
+            <p className="text-sm text-primary-700 font-medium">Número de afiliación</p>
+
+            {affiliation ? (
+              <p className="mt-1 text-xl font-bold text-primary-700">{affiliation}</p>
+            ) : (
+              <p className="mt-1 text-sm text-neutral-700">
+                Pendiente: se mostrará el <span className="font-medium">num_afiliacion_formateado</span> real
+                cuando se integre el POST <span className="font-mono">/api/patients</span>.
+              </p>
+            )}
           </div>
-        </Modal>
-      </PageContainer>
-    </MainLayout>
+
+          <p className="text-sm text-neutral-600">
+            Usa este número para trámites, citas y consulta de información.
+          </p>
+        </div>
+      </Modal>
+    </PageContainer>
   );
 }
