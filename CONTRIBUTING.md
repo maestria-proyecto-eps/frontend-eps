@@ -351,3 +351,48 @@ Si se elimina un microservicio, quitar las referencias en los mismos 4 lugares:
 5. **Código** — buscar y eliminar todas las importaciones y llamadas a esos endpoints en `src/`
 
 > 💡 Tip: Busca en todo el proyecto con `grep -rn "/api/nombre-servicio/" src/` para asegurarte de no dejar referencias huérfanas.
+
+---
+
+## 📝 Estructura de Commits
+
+Para mantener un historial claro y útil, sigue esta convención de commits:
+
+### Formato
+
+```
+<tipo>(<alcance>): <descripción corta>
+
+[descripción larga opcional]
+```
+
+### Tipos de commit
+
+* `feat`: Nueva funcionalidad
+* `fix`: Corrección de bug
+* `docs`: Cambios en documentación
+* `style`: Cambios de formato (sin afectar código)
+* `refactor`: Refactorización de código
+* `test`: Agregar o modificar tests
+* `chore`: Tareas de mantenimiento (dependencias, config, etc.)
+
+### Ejemplos
+
+```bash
+feat(auth): agregar página de login
+
+fix(users): corregir validación de formulario
+
+docs(readme): actualizar instrucciones de instalación
+
+refactor(api): optimizar llamadas HTTP
+
+test(login): agregar tests para componente Login
+```
+
+### Reglas
+
+* Usa el presente del indicativo ("agregar" no "agregué")
+* No termines la descripción con punto
+* La descripción corta debe tener máximo 50 caracteres
+* El alcance es opcional pero recomendado (módulo afectado)
