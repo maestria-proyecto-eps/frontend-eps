@@ -1,48 +1,47 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { AuthContext } from '../services/auth/AuthProvider';
-import { cn } from '../utils/cn';
+import { AuthContext } from '../../../services/auth/AuthContext';
+import { cn } from '../../../utils/cn';
 
 const APP_VERSION = '1.0.0';
 
-/* Mismos menús que el sidebar para los enlaces del footer */
 const FOOTER_MENUS = {
-  doctor:       [
+  "Médico": [
     { label: 'Dashboard',  path: '/doctor'            },
     { label: 'Mis Citas',  path: '/doctor/citas'      },
     { label: 'Remisiones', path: '/doctor/remisiones' },
     { label: 'Historial',  path: '/doctor/historial'  },
   ],
-  nurse:        [
+  "Enfermero": [
     { label: 'Dashboard',         path: '/nurse'                   },
     { label: 'Urgencias',         path: '/nurse/urgencias'         },
     { label: 'Triage',            path: '/nurse/triage'            },
     { label: 'Hospitalizaciones', path: '/nurse/hospitalizaciones' },
   ],
-  patient:      [
+  "Paciente": [
     { label: 'Dashboard',      path: '/patient'                },
     { label: 'Mis Citas',      path: '/patient/citas'          },
     { label: 'Mi Historia',    path: '/patient/historia'       },
     { label: 'Prescripciones', path: '/patient/prescripciones' },
     { label: 'Perfil',         path: '/patient/perfil'         },
   ],
-  hr:           [
-    { label: 'Dashboard',     path: '/hr'              },
-    { label: 'Usuarios',      path: '/hr/usuarios'     },
-    { label: 'Doctores',      path: '/hr/doctores'     },
-    { label: 'Enfermeras',    path: '/hr/enfermeras'   },
-    { label: 'Farmacéuticos', path: '/hr/farmaceuticos'},
-    { label: 'Secretarios',   path: '/hr/secretarios'  },
+  "Talento Humano": [
+    { label: 'Dashboard',     path: '/hr'               },
+    { label: 'Usuarios',      path: '/hr/usuarios'      },
+    { label: 'Doctores',      path: '/hr/doctores'      },
+    { label: 'Enfermeras',    path: '/hr/enfermeras'    },
+    { label: 'Farmacéuticos', path: '/hr/farmaceuticos' },
+    { label: 'Secretarios',   path: '/hr/secretarios'   },
   ],
-  pharmacist:   [
-    { label: 'Dashboard',    path: '/pharmacist'               },
-    { label: 'Inventario',   path: '/pharmacist/inventario'    },
-    { label: 'Dispensación', path: '/pharmacist/dispensacion'  },
-    { label: 'Alertas',      path: '/pharmacist/alertas'       },
+  "Farmaceuta": [
+    { label: 'Dashboard',    path: '/pharmacist'              },
+    { label: 'Inventario',   path: '/pharmacist/inventario'   },
+    { label: 'Dispensación', path: '/pharmacist/dispensacion' },
+    { label: 'Alertas',      path: '/pharmacist/alertas'      },
   ],
-  receptionist: [
-    { label: 'Dashboard',  path: '/receptionist'              },
-    { label: 'Afiliación', path: '/receptionist/afiliacion'   },
+  "Recepcionista": [
+    { label: 'Dashboard',  path: '/receptionist'            },
+    { label: 'Afiliación', path: '/receptionist/afiliacion' },
   ],
 };
 

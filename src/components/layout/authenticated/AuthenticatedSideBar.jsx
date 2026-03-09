@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { AuthContext } from '../services/auth/AuthProvider';
-import { cn } from '../utils/cn';
+import { AuthContext } from '../../../services/auth/AuthContext';
+import { cn } from '../../../utils/cn';
 
 /* ── Iconos SVG inline ─────────────────────────────────────────── */
 const Icon = {
@@ -25,43 +25,42 @@ const SvgIcon = ({ d, className = '' }) => (
   </svg>
 );
 
-/* ── Menús por rol ─────────────────────────────────────────────── */
 const MENUS = {
-  doctor: [
-    { label: 'Dashboard',  path: '/doctor',             icon: Icon.dashboard  },
+  "Médico": [
+    { label: 'Dashboard',  path: '/doctor',             icon: Icon.dashboard  , end: true },
     { label: 'Mis Citas',  path: '/doctor/citas',       icon: Icon.calendar   },
     { label: 'Remisiones', path: '/doctor/remisiones',  icon: Icon.clipboard  },
     { label: 'Historial',  path: '/doctor/historial',   icon: Icon.history    },
   ],
-  nurse: [
-    { label: 'Dashboard',         path: '/nurse',                    icon: Icon.dashboard },
-    { label: 'Urgencias',         path: '/nurse/urgencias',          icon: Icon.alert     },
-    { label: 'Triage',            path: '/nurse/triage',             icon: Icon.triage    },
-    { label: 'Hospitalizaciones', path: '/nurse/hospitalizaciones',  icon: Icon.hospital  },
+  "Enfermero": [
+    { label: 'Dashboard',         path: '/nurse',                   icon: Icon.dashboard , end: true },
+    { label: 'Urgencias',         path: '/nurse/urgencias',         icon: Icon.alert     },
+    { label: 'Triage',            path: '/nurse/triage',            icon: Icon.triage    },
+    { label: 'Hospitalizaciones', path: '/nurse/hospitalizaciones', icon: Icon.hospital  },
   ],
-  patient: [
-    { label: 'Dashboard',      path: '/patient',               icon: Icon.dashboard },
-    { label: 'Mis Citas',      path: '/patient/citas',         icon: Icon.calendar  },
-    { label: 'Mi Historia',    path: '/patient/historia',      icon: Icon.clipboard },
-    { label: 'Prescripciones', path: '/patient/prescripciones',icon: Icon.pill      },
-    { label: 'Perfil',         path: '/patient/perfil',        icon: Icon.profile   },
+  "Paciente": [
+    { label: 'Dashboard',      path: '/patient',                icon: Icon.dashboard , end: true },
+    { label: 'Mis Citas',      path: '/patient/citas',          icon: Icon.calendar  },
+    { label: 'Mi Historia',    path: '/patient/historia',       icon: Icon.clipboard },
+    { label: 'Prescripciones', path: '/patient/prescripciones', icon: Icon.pill      },
+    { label: 'Perfil',         path: '/patient/perfil',         icon: Icon.profile   },
   ],
-  hr: [
-    { label: 'Dashboard',    path: '/hr',               icon: Icon.dashboard  },
-    { label: 'Usuarios',     path: '/hr/usuarios',      icon: Icon.users      },
-    { label: 'Doctores',     path: '/hr/doctores',      icon: Icon.profile    },
-    { label: 'Enfermeras',   path: '/hr/enfermeras',    icon: Icon.users      },
-    { label: 'Farmacéuticos',path: '/hr/farmaceuticos', icon: Icon.pill       },
-    { label: 'Secretarios',  path: '/hr/secretarios',   icon: Icon.clipboard  },
+  "Talento Humano": [
+    { label: 'Dashboard',     path: '/hr',               icon: Icon.dashboard  , end: true },
+    { label: 'Usuarios',      path: '/hr/usuarios',      icon: Icon.users      },
+    { label: 'Doctores',      path: '/hr/doctores',      icon: Icon.profile    },
+    { label: 'Enfermeras',    path: '/hr/enfermeras',    icon: Icon.users      },
+    { label: 'Farmacéuticos', path: '/hr/farmaceuticos', icon: Icon.pill       },
+    { label: 'Secretarios',   path: '/hr/secretarios',   icon: Icon.clipboard  },
   ],
-  pharmacist: [
-    { label: 'Dashboard',   path: '/pharmacist',              icon: Icon.dashboard },
-    { label: 'Inventario',  path: '/pharmacist/inventario',   icon: Icon.inventory },
-    { label: 'Dispensación',path: '/pharmacist/dispensacion', icon: Icon.pill      },
-    { label: 'Alertas',     path: '/pharmacist/alertas',      icon: Icon.alert     },
+  "Farmaceuta": [
+    { label: 'Dashboard',    path: '/pharmacist',              icon: Icon.dashboard , end: true },
+    { label: 'Inventario',   path: '/pharmacist/inventario',   icon: Icon.inventory },
+    { label: 'Dispensación', path: '/pharmacist/dispensacion', icon: Icon.pill      },
+    { label: 'Alertas',      path: '/pharmacist/alertas',      icon: Icon.alert     },
   ],
-  receptionist: [
-    { label: 'Dashboard',  path: '/receptionist',            icon: Icon.dashboard   },
+  "Recepcionista": [
+    { label: 'Dashboard',  path: '/receptionist',            icon: Icon.dashboard   , end: true },
     { label: 'Afiliación', path: '/receptionist/afiliacion', icon: Icon.affiliation },
   ],
 };
@@ -76,7 +75,7 @@ export default function AuthenticatedSideBar({ className = '' }) {
   return (
     <aside
       className={cn(
-        'flex flex-col bg-neutral-900 text-neutral-300 transition-all duration-300 min-h-full',
+        'flex flex-col bg-neutral-200 text-neutral-300 transition-all duration-300 min-h-full',
         collapsed ? 'w-16' : 'w-56',
         className
       )}
@@ -102,13 +101,13 @@ export default function AuthenticatedSideBar({ className = '' }) {
             <li key={item.path}>
               <NavLink
                 to={item.path}
-                end={item.path === `/${role}`}
+                end={!!item.end}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                     isActive
                       ? 'bg-primary-600 text-white'
-                      : 'text-neutral-400 hover:bg-neutral-800 hover:text-white'
+                      : 'text-neutral-700 hover:bg-neutral-400 hover:text-white'
                   )
                 }
                 title={collapsed ? item.label : undefined}

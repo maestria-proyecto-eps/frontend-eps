@@ -1,32 +1,32 @@
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../services/auth/AuthProvider';
-import { cn } from '../utils/cn';
+import { AuthContext } from '../../../services/auth/AuthContext';
+import { cn } from '../../../utils/cn';
 
 const ROLE_LABELS = {
-  doctor:       'Doctor',
-  nurse:        'Enfermera',
-  patient:      'Paciente',
-  hr:           'Recursos Humanos',
-  pharmacist:   'Farmacéutico',
+  doctor: 'Doctor',
+  nurse: 'Enfermera',
+  patient: 'Paciente',
+  hr: 'Recursos Humanos',
+  pharmacist: 'Farmacéutico',
   receptionist: 'Recepcionista',
 };
 
 const ROLE_COLORS = {
-  doctor:       'bg-blue-100 text-blue-700',
-  nurse:        'bg-pink-100 text-pink-700',
-  patient:      'bg-green-100 text-green-700',
-  hr:           'bg-purple-100 text-purple-700',
-  pharmacist:   'bg-orange-100 text-orange-700',
+  doctor: 'bg-blue-100 text-blue-700',
+  nurse: 'bg-pink-100 text-pink-700',
+  patient: 'bg-green-100 text-green-700',
+  hr: 'bg-purple-100 text-purple-700',
+  pharmacist: 'bg-orange-100 text-orange-700',
   receptionist: 'bg-teal-100 text-teal-700',
 };
 
 export default function AuthenticatedHeader({ className = '' }) {
   const auth = useContext(AuthContext);
-  const nav  = useNavigate();
+  const nav = useNavigate();
 
-  const role     = auth?.role || 'patient';
-  const payload  = auth?.payload || {};
+  const role = auth?.role || 'patient';
+  const payload = auth?.payload || {};
   const documento = payload.num_documento || '—';
 
   const roleLabel = ROLE_LABELS[role] || role;
@@ -48,15 +48,14 @@ export default function AuthenticatedHeader({ className = '' }) {
         <div className="flex items-center justify-between h-16">
 
           {/* Logo + nombre EPS */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => nav('/')}>
             <img
               src="/logo-horizontal.svg"
               alt="Logo EPS"
-              className="h-8 w-auto object-contain"
+              className="h-15 w-auto object-contain"
               onError={(e) => { e.target.style.display = 'none'; }}
             />
             <div className="flex flex-col leading-tight">
-              <span className="text-base font-bold text-primary-600 tracking-tight">EPS</span>
               <span className="text-xs text-neutral-400 hidden sm:inline">Salud y Bienestar</span>
             </div>
           </div>
@@ -73,10 +72,6 @@ export default function AuthenticatedHeader({ className = '' }) {
               </span>
             </div>
 
-            {/* Avatar placeholder */}
-            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-sm uppercase select-none">
-              {roleLabel.charAt(0)}
-            </div>
 
             {/* Logout */}
             <button
