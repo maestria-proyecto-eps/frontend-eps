@@ -7,11 +7,12 @@ import Login from "./pages/auth/Login";
 import Home from "./pages/Home";
 import Components from "./pages/Components";
 import Usuarios from "./pages/Usuarios/usuarios";
-import DoctorExample from "./pages/doctor/DoctorExample"
-import DoctorLayout from "./pages/doctor/DoctorLayout"
+import DoctorExample from "./pages/doctor/DoctorExample";
+import DoctorLayout from "./pages/doctor/DoctorLayout";
 import NewPatient from "./pages/receptionist/newpatient";
+import Appointments from "./pages/patient/Appointments";
 import { ROUTES } from "./constants";
-import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
+import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout";
 export default function App() {
   return (
     <AuthProvider>
@@ -21,6 +22,8 @@ export default function App() {
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
+          {/* Página temporal pública para paciente */}
+          <Route path="/patient/appointments" element={<Appointments />} />
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
 
@@ -73,10 +76,12 @@ export default function App() {
             path="/patient"
             element={
               <ProtectedRoute allowRoles={["Paciente"]}>
-                <DoctorExample />
+                <AuthenticatedLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route path="appointments" element={<Appointments />} />
+          </Route>
 
           {/* Cualquier otra ruta → redirigir al home */}
           <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
