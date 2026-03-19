@@ -37,10 +37,15 @@ export default function Calendar() {
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [isVisible, setIsVisible] = React.useState(false);
   const [animStatus, setAnimStatus] = React.useState('idle');
-  const [events, setEvents] = React.useState(EVENTS);
+  const [events, setEvents] = React.useState({});
   const formRef = React.useRef();
 
-  const loadEvents = () => events.filter(e => !form.especialidad || e.extendedProps.specialty === form.especialidad);
+  const loadEvents = () => {
+    if (!events.length) {
+      setEvents(EVENTS);
+    }
+    return EVENTS.filter(e => !form.especialidad || e.extendedProps.specialty === form.especialidad);
+  }
 
   const handleGuideUser = () => {
     setAnimStatus('highlighting');
