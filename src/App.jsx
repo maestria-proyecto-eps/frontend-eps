@@ -10,6 +10,7 @@ import Usuarios from "./pages/Usuarios/usuarios";
 import DoctorExample from "./pages/doctor/DoctorExample"
 import DoctorLayout from "./pages/doctor/DoctorLayout"
 import NewPatient from "./pages/receptionist/newpatient";
+import Calendar from "./pages/patient/calendar";
 import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 export default function App() {
@@ -77,6 +78,9 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Ruta de prueba del calendario */}
+          <Route path="/patient/appointments/new" element={<Calendar />} />
 
           {/* Cualquier otra ruta → redirigir al home */}
           <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
