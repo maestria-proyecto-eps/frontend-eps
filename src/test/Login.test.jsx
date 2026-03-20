@@ -211,11 +211,14 @@ describe('Login — login exitoso y navegación por rol', () => {
     });
   });
 
-  it('llama logout y muestra error si el rol no tiene permisos', async () => {
+  it('navega a /bridge incluso si el rol es "Desconocido"', async () => {
     const token = makeJwt({ role: 'Desconocido' });
     mockHttpPost.mockResolvedValue({
       data: { hasError: false, Data: { access_token: token } },
     });
+
+    mockNavigate.mockClear();
+    mockAuthLogin.mockClear();
 
     renderLogin();
     await userEvent.type(screen.getByTestId('num_documento'), '123456');
@@ -223,8 +226,8 @@ describe('Login — login exitoso y navegación por rol', () => {
     await userEvent.click(screen.getByRole('button', { name: /entrar/i }));
 
     await waitFor(() => {
-      expect(mockAuthLogout).toHaveBeenCalled();
-      expect(screen.getByRole('alert')).toHaveTextContent('no tiene permisos');
+      expect(mockAuthLogin).toHaveBeenCalledWith(token);
+      expect(mockNavigate).toHaveBeenCalledWith('/bridge');
     });
   });
 });
