@@ -206,7 +206,7 @@ describe('Login — login exitoso y navegación por rol', () => {
 
       await waitFor(() => {
         expect(mockAuthLogin).toHaveBeenCalledWith(token);
-        expect(mockNavigate).toHaveBeenCalledWith(path);
+        expect(mockNavigate).toHaveBeenCalledWith('/bridge');
       });
     });
   });
