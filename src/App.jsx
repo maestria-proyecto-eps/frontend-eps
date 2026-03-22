@@ -8,6 +8,8 @@ import Home from "./pages/Home";
 import Components from "./pages/Components";
 import Usuarios from "./pages/Usuarios/usuarios";
 import DoctorExample from "./pages/doctor/DoctorExample"
+import DoctorManager from "./pages/Usuarios/DoctorManager";
+import EspecialidadManager from "./pages/Usuarios/EspecialidadManager";
 import DoctorLayout from "./pages/doctor/DoctorLayout"
 import NewPatient from "./pages/receptionist/newpatient";
 import { ROUTES } from "./constants";
@@ -23,6 +25,10 @@ export default function App() {
           <Route path="/components" element={<Components />} />
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
+
+          {/* HR temporal public */}
+          <Route path="/doctormanager" element={<DoctorManager />} />
+          <Route path="/especialidadmanager" element={<EspecialidadManager />} />
 
           {/* DOCTOR ROLE EXAMPLE */}
           <Route
