@@ -11,6 +11,8 @@ import DoctorExample from "./pages/doctor/DoctorExample"
 import DoctorLayout from "./pages/doctor/DoctorLayout"
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
+import Bridge from "./pages/Bridge";
+import Maintenance from "./pages/Maintenance";
 import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 export default function App() {
@@ -30,16 +32,28 @@ export default function App() {
             path="/doctor"
             element={
               <ProtectedRoute allowRoles={["Médico"]}>
-                <DoctorLayout />
+                <AuthenticatedLayout />
               </ProtectedRoute>
             }
           >
             <Route index element={<DoctorExample />} />
-            <Route path="example1" element={<DoctorExample />} />
-            <Route path="example2" element={<DoctorExample />} />
+            <Route path="citas" element={<Maintenance />} />
+            <Route path="remisiones" element={<Maintenance />} />
+            <Route path="historial" element={<Maintenance />} />
           </Route>
 
           {/* Rutas protegidas, requiere autenticación */}
+
+          <Route
+            path="/bridge"
+            element={
+              <ProtectedRoute>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Bridge />} />
+          </Route>
           
           {/* Recepcionista */}
           <Route
@@ -52,7 +66,6 @@ export default function App() {
           >
             <Route index element={<NewPatient />} />
             <Route path="afiliacion" element={<NewPatient />} />
-            ...
           </Route>
 
           {/* Talento Humano */}
@@ -66,7 +79,36 @@ export default function App() {
           >
             <Route index element={<Usuarios />} />
             <Route path="usuarios" element={<Usuarios />} />
-            ...
+          </Route>
+
+          {/* Enfermero */}
+          <Route
+            path="/nurse"
+            element={
+              <ProtectedRoute allowRoles={["Enfermero"]}>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Maintenance />} />
+            <Route path="urgencias" element={<Maintenance />} />
+            <Route path="triage" element={<Maintenance />} />
+            <Route path="hospitalizaciones" element={<Maintenance />} />
+          </Route>
+
+          {/* Farmaceuta */}
+          <Route
+            path="/pharmacist"
+            element={
+              <ProtectedRoute allowRoles={["Farmaceuta"]}>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Maintenance />} />
+            <Route path="inventario" element={<Maintenance />} />
+            <Route path="dispensacion" element={<Maintenance />} />
+            <Route path="alertas" element={<Maintenance />} />
           </Route>
 
           {/* Paciente */}
@@ -74,10 +116,16 @@ export default function App() {
             path="/patient"
             element={
               <ProtectedRoute allowRoles={["Paciente"]}>
-                <DoctorExample />
+                <AuthenticatedLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Maintenance />} />
+            <Route path="citas" element={<Maintenance />} />
+            <Route path="historia" element={<Maintenance />} />
+            <Route path="prescripciones" element={<Maintenance />} />
+            <Route path="perfil" element={<Maintenance />} />
+          </Route>
 
           {/* Ruta de prueba del calendario */}
           <Route path="/patient/appointments/new" element={<Calendar />} />
