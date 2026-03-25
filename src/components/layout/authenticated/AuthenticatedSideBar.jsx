@@ -161,16 +161,14 @@ export default function AuthenticatedSideBar({ className = '' }) {
                   {items.map((item) => (
                     <li key={item.path}>
                       {(() => {
-                        const itemTarget = item.end ? '/bridge' : item.path;
-                        const preventActiveOnBridge = item.end && location.pathname === '/bridge';
                         return (
                       <NavLink
-                        to={itemTarget}
+                        to={item.path}
                         end={!!item.end}
                         className={({ isActive }) =>
                           cn(
                             'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                            isActive && !preventActiveOnBridge
+                            isActive
                               ? 'bg-primary-600 text-white'
                               : 'text-neutral-700 hover:bg-neutral-400 hover:text-white'
                           )

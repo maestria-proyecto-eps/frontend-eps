@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { PageContainer } from '../../components/layout';
-import { DataTable, Badge, Button } from '../../components/ui';
-import { ROUTES } from '../../constants';
+import { DataTable, Badge } from '../../components/ui';
 import { http } from '../../services/api/http';
 import { endpoints } from '../../services/api/endpoints';
 
@@ -25,9 +23,11 @@ const ESTADOS_OPCIONES = [
 const COLUMNAS_USUARIOS = [
   { key: 'id_usuario', label: 'ID', filterable: false },
   { key: 'num_documento', label: 'Documento', filterable: true },
-  { key: 'rol_des', label: 'Rol', filterable: true, filterType: 'select', filterOptions: ROLES_OPCIONES.map((r) => ({ value: r.label, label: r.label })) },
+  { key: 'nombres', label: 'Nombres', filterable: true },
+  { key: 'apellidos', label: 'Apellidos', filterable: true },
+  { key: 'rol_des', label: 'Rol', filterable: true, filterType: 'select', filterOptions: ROLES_OPCIONES.map((r) => ({ value: String(r.value), label: r.label })) },
   { key: 'estado', label: 'Estado', filterable: true, filterType: 'select', filterOptions: ESTADOS_OPCIONES.map((e) => ({ value: String(e.value), label: e.label })), render: (valor) => (
-    <Badge variant={valor === 1 ? 'success' : 'neutral'} size="sm">{valor === 1 ? 'Activo' : 'Inactivo'}</Badge>
+    <Badge variant={valor === true || valor === 1 ? 'success' : 'neutral'} size="sm">{valor === true || valor === 1 ? 'Activo' : 'Inactivo'}</Badge>
   )},
 ];
 
@@ -42,10 +42,12 @@ const FORM_CONFIG_USUARIOS = {
     <>¿Está seguro que desea desactivar al usuario con documento <strong>{row?.num_documento}</strong>?</>
   ),
   statusKey: 'estado',
-  activeValue: 1,
-  deactivatedValue: 0,
+  activeValue: true,
+  deactivatedValue: false,
   fields: [
-    { key: 'num_documento', label: 'Número de documento', type: 'text', placeholder: 'Documento', validation: ['required', 'document'] },
+    { key: 'num_documento', label: 'Número de documento', type: 'text', placeholder: 'Documento', validation: ['required', 'document'], createOnly: true },
+    { key: 'nombres', label: 'Nombres', type: 'text', placeholder: 'Nombres', validation: ['required'] },
+    { key: 'apellidos', label: 'Apellidos', type: 'text', placeholder: 'Apellidos', validation: ['required'] },
     { key: 'password', label: 'Contraseña', type: 'password', placeholder: 'Contraseña', validation: ['required'], createOnly: true },
     { key: 'password_confirm', label: 'Confirmar contraseña', type: 'password', placeholder: 'Repetir contraseña', validation: ['required', 'passwordMatch'], createOnly: true },
     { key: 'id_rol', label: 'Rol', type: 'select', options: ROLES_OPCIONES },
@@ -61,20 +63,24 @@ export default function Usuarios() {
   const [total, setTotal] = React.useState(0);
   const [allDocLoaded, setAllDocLoaded] = React.useState(false);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async ({ forceReload = false } = {}) => {
     const docFilter = filters.num_documento;
+    const nombresFilter = filters.nombres;
+    const apellidosFilter = filters.apellidos;
     const estadoFilter = filters.estado;
     const rolFilter = filters.rol_des;
 
     const hasDocFilter = docFilter != null && String(docFilter).trim() !== '';
+    const hasNombresFilter = nombresFilter != null && String(nombresFilter).trim() !== '';
+    const hasApellidosFilter = apellidosFilter != null && String(apellidosFilter).trim() !== '';
     const hasEstadoFilter = estadoFilter != null && String(estadoFilter).trim() !== '';
     const hasRolFilter = rolFilter != null && String(rolFilter).trim() !== '';
 
     // Si solo hay filtro por documento, queremos traer todas las páginas (cantidad 30)
-    const onlyDocFilter = hasDocFilter && !hasEstadoFilter && !hasRolFilter;
+    const onlyDocFilter = hasDocFilter && !hasNombresFilter && !hasApellidosFilter && !hasEstadoFilter && !hasRolFilter;
 
     // Si ya cargamos todo el universo para búsqueda por documento, no volvemos a llamar al backend
-    if (onlyDocFilter && allDocLoaded) {
+    if (onlyDocFilter && allDocLoaded && !forceReload) {
       return;
     }
 
@@ -109,7 +115,19 @@ export default function Usuarios() {
           }
         }
 
-        setUsuarios(allData);
+        const mappedAllData = allData.map((u) => ({
+          ...u,
+          nombres: u?.persona?.nombres ?? '',
+          apellidos: u?.persona?.apellidos ?? '',
+          // Normalizamos estado a boolean para que DataTable pueda comparar con
+          // formConfig.activeValue/deactivatedValue (true/false).
+          estado:
+            u?.estado === true ||
+            u?.estado === 1 ||
+            u?.estado === '1' ||
+            u?.estado === 'true',
+        }));
+        setUsuarios(mappedAllData);
         setTotal(allData.length);
         setPage(1);
         setPageSize(pageSizeForDoc);
@@ -124,16 +142,19 @@ export default function Usuarios() {
       };
 
       if (hasDocFilter) {
-        params.num_documento = String(docFilter).trim();
+        params.num_document = String(docFilter).trim();
+      }
+      if (hasNombresFilter) {
+        params.nombres = String(nombresFilter).trim();
+      }
+      if (hasApellidosFilter) {
+        params.apellidos = String(apellidosFilter).trim();
       }
       if (hasEstadoFilter) {
         params.estado = Number(estadoFilter);
       }
       if (hasRolFilter) {
-        const rolOpcion = ROLES_OPCIONES.find((r) => r.label === String(rolFilter).trim());
-        if (rolOpcion) {
-          params.rol = rolOpcion.value;
-        }
+        params.rol = Number(rolFilter);
       }
 
       const { data: res } = await http.get(endpoints.users.list, {
@@ -145,7 +166,19 @@ export default function Usuarios() {
         return;
       }
       const { data: list = [], pages = 0 } = res.data;
-      setUsuarios(Array.isArray(list) ? list : []);
+      const mappedUsers = (Array.isArray(list) ? list : []).map((u) => ({
+        ...u,
+        nombres: u?.persona?.nombres ?? '',
+        apellidos: u?.persona?.apellidos ?? '',
+        // Normalizamos estado a boolean para que DataTable pueda comparar con
+        // formConfig.activeValue/deactivatedValue (true/false).
+        estado:
+          u?.estado === true ||
+          u?.estado === 1 ||
+          u?.estado === '1' ||
+          u?.estado === 'true',
+      }));
+      setUsuarios(mappedUsers);
       setTotal(pages * pageSize);
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
@@ -166,7 +199,22 @@ export default function Usuarios() {
       if (val == null || String(val).trim() === '') return true;
       const value = String(val).trim().toLowerCase();
       const cell = row[key];
-      if (key === 'estado') return String(cell) === String(val);
+      if (key === 'estado') {
+        // El select del UI manda valores '1'/'0', pero el backend puede devolver boolean.
+        // Convertimos ambos a 0/1 para comparar de forma consistente.
+        const cellNum =
+          cell === true || cell === 1 || cell === '1' || cell === 'true'
+            ? 1
+            : cell === false || cell === 0 || cell === '0' || cell === 'false'
+              ? 0
+              : Number(cell);
+        const valNum = val === 'true' ? 1 : val === 'false' ? 0 : Number(val);
+        return cellNum === valNum;
+      }
+      if (key === 'rol_des') {
+        const selectedRole = ROLES_OPCIONES.find((r) => String(r.value) === String(val));
+        return selectedRole ? String(cell ?? '').toLowerCase() === String(selectedRole.label).toLowerCase() : true;
+      }
       // Para documento usamos "empieza por" en lugar de "contiene"
       if (key === 'num_documento') {
         const doc = String(cell ?? '').toLowerCase();
@@ -195,43 +243,67 @@ export default function Usuarios() {
 
     // Si salimos del modo "solo documento", la próxima vez que entremos recargamos todo el universo
     const nextDoc = nextFilters.num_documento;
+    const nextNombres = nextFilters.nombres;
+    const nextApellidos = nextFilters.apellidos;
     const nextEstado = nextFilters.estado;
     const nextRol = nextFilters.rol_des;
     const hasNextDoc = nextDoc != null && String(nextDoc).trim() !== '';
+    const hasNextNombres = nextNombres != null && String(nextNombres).trim() !== '';
+    const hasNextApellidos = nextApellidos != null && String(nextApellidos).trim() !== '';
     const hasNextEstado = nextEstado != null && String(nextEstado).trim() !== '';
     const hasNextRol = nextRol != null && String(nextRol).trim() !== '';
 
-    const nextOnlyDoc = hasNextDoc && !hasNextEstado && !hasNextRol;
+    const nextOnlyDoc = hasNextDoc && !hasNextNombres && !hasNextApellidos && !hasNextEstado && !hasNextRol;
     if (!nextOnlyDoc) {
       setAllDocLoaded(false);
     }
   };
 
   const handleCreate = async (newRow) => {
+    const numDocumento = Number(newRow.num_documento) || newRow.num_documento;
+
+    // 1) Crear persona
+    await http.post(endpoints.persons.create, {
+      num_documento: numDocumento,
+      nombres: String(newRow.nombres ?? '').trim(),
+      apellidos: String(newRow.apellidos ?? '').trim(),
+    });
+
+    // 2) Crear usuario
     await http.post(endpoints.users.create, {
-      num_documento: Number(newRow.num_documento) || newRow.num_documento,
+      num_documento: numDocumento,
       password: newRow.password,
       id_rol: Number(newRow.id_rol),
     });
-    await fetchUsers();
+    await fetchUsers({ forceReload: true });
   };
 
   const handleEdit = async (id, updatedRow) => {
+    const numDocumento = Number(updatedRow.num_documento) || updatedRow.num_documento;
+
+    // 1) Actualizar nombres en /api/persons/{num_documento}
+    await http.put(endpoints.persons.updateById(numDocumento), {
+      nombres: String(updatedRow.nombres ?? '').trim(),
+      // Si el backend requiere ambos campos, mandamos apellidos (sin permitir edición en UI).
+      apellidos: String(updatedRow.apellidos ?? '').trim(),
+    });
+
+    // 2) Actualizar rol en /api/users/{id}
     await http.put(endpoints.users.updateById(id), {
-      num_documento: Number(updatedRow.num_documento) || updatedRow.num_documento,
       id_rol: Number(updatedRow.id_rol),
     });
-    await fetchUsers();
+
+    await fetchUsers({ forceReload: true });
   };
 
   const handleDeactivate = async (id) => {
     await http.put(endpoints.users.changeStatus(id), { estado: 0 });
-    await fetchUsers();
+    await fetchUsers({ forceReload: true });
   };
 
   const handleActivate = async (id) => {
     await http.put(endpoints.users.changeStatus(id), { estado: 1 });
-    await fetchUsers();
+    await fetchUsers({ forceReload: true });
   };
 
   return (

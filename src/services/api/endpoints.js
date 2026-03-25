@@ -27,6 +27,13 @@ export const endpoints = {
     deleteById: (id) => `/api/users/${id}`,
   },
   
+  persons: {
+    /** POST crear persona */
+    create: "/api/persons",
+    /** PUT actualizar persona por número de documento */
+    updateById: (num_documento) => `/api/persons/${num_documento}`,
+  },
+
   patients: {
     create: "/api/patients",
   },
