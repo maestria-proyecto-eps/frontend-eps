@@ -238,9 +238,7 @@ export default function Usuarios() {
       <PageContainer>
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-neutral-800">Gestión de usuarios</h1>
-          <Link to={ROUTES.HOME}>
-            <Button variant="outline" size="sm">← Volver al inicio</Button>
-          </Link>
+          <div />
         </div>
         <DataTable
           columns={COLUMNAS_USUARIOS}

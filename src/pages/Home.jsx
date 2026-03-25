@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { MainLayout } from "../components/layout";
-import { Button, Container } from "../components/ui";
+import { Container } from "../components/ui";
 import { ROUTES, BRAND_NAME } from "../constants";
 
 /**
@@ -71,12 +71,6 @@ export default function Home() {
                 loading="eager"
               />
             </div>
-
-            <Link to={ROUTES.LOGIN}>
-              <Button variant="outline" size="md">
-                Iniciar sesión
-              </Button>
-            </Link>
           </div>
 
           {/* Hero content */}
@@ -109,12 +103,7 @@ export default function Home() {
                 </li>
               </ul>
 
-              {/* Único CTA funcional requerido */}
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link to={ROUTES.LOGIN}>
-                  <Button size="lg">Ingresar al sistema</Button>
-                </Link>
-              </div>
+              <div className="mt-8 flex flex-wrap gap-3" />
             </div>
 
             {/* Right: ilustración general (general.svg) */}
@@ -164,13 +153,7 @@ export default function Home() {
             <p className="mt-2 text-primary-100">
               Inicia sesión para continuar con tus procesos de manera segura.
             </p>
-            <div className="mt-6 flex justify-center">
-              <Link to={ROUTES.LOGIN}>
-                <Button variant="secondary" size="lg">
-                  Iniciar sesión
-                </Button>
-              </Link>
-            </div>
+            <div className="mt-6 flex justify-center" />
           </div>
         </Container>
       </section>
