@@ -226,6 +226,15 @@ export default function DataTable({
     [statusKey, deactivatedValue]
   );
 
+  /** Solo filas activas pueden editarse (si hay statusKey en formConfig). */
+  const showRowEdit = useCallback(
+    (row) => {
+      if (!statusKey) return true;
+      return row[statusKey] === activeValue;
+    },
+    [statusKey, activeValue]
+  );
+
   const hasFilters = columns.some((col) => col.filterable);
   const page = pagination?.page ?? 1;
   const pageSize = pagination?.pageSize ?? 10;
@@ -286,7 +295,7 @@ export default function DataTable({
   const defaultRowActions = hasCrud
     ? (row) => (
         <div className="flex justify-end items-center gap-2">
-          {onEdit && (
+          {onEdit && showRowEdit(row) && (
             <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
               Editar
             </Button>
