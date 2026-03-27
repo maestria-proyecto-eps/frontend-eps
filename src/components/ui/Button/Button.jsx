@@ -4,7 +4,7 @@ import { cn } from '../../../utils/cn';
 const variants = {
   primary: 'bg-primary-500 hover:bg-primary-600 text-white border-transparent',
   secondary: 'bg-secondary-500 hover:bg-secondary-600 text-white border-transparent',
-  outline: 'bg-transparent border-2 border-primary-500 text-primary-500 hover:bg-primary-50',
+  outline: 'bg-transparent border-2 border-primary-500 text-primary-600 hover:bg-primary-50 hover:border-primary-600 transition-all',
   ghost: 'bg-transparent hover:bg-neutral-100 text-neutral-700',
   danger: 'bg-emergency-500 hover:bg-emergency-600 text-white border-transparent',
   deactivate: 'bg-emergency-100 hover:bg-emergency-500 text-emergency-800 border-transparent',
@@ -12,8 +12,8 @@ const variants = {
 
 const sizes = {
   sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg',
+  md: 'px-6 py-2.5 text-base',
+  lg: 'px-8 py-3.5 text-lg',
 };
 
 /**
@@ -37,7 +37,7 @@ export default function Button({
       type={type}
       disabled={disabled}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center gap-2 font-medium rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
         variants[variant],
         sizes[size],
         fullWidth && 'w-full',

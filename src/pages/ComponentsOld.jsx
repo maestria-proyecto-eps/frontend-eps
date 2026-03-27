@@ -10,9 +10,6 @@ import {
   Alert,
   DatePicker,
   DataTable,
-  ColorPalette,
-  ColorPaletteTable,
-  TypographyShowcase,
 } from '../components/ui';
 import { ROUTES, BRAND_NAME } from '../constants';
 
@@ -22,52 +19,6 @@ const PALETA_ACENTOS = [
   { nombre: 'Acento (Amarillo)', hex: '#F4B400' },
   { nombre: 'Emergencias (Rojo)', hex: '#D32F2F' },
   { nombre: 'Base (Blanco)', hex: '#FFFFFF' },
-];
-
-// Nueva paleta de colores actualizada - Sistema de Diseño Cuidarte EPS
-const brandColors = [
-  {
-    name: 'Primario',
-    hex: '#1F67A6',
-    label: 'Azul',
-    description: 'Bienestar, prevención, atención médica',
-    id: 'color-primary'
-  },
-  {
-    name: 'Secundario',
-    hex: '#20A86D',
-    label: 'Verde',
-    description: 'Confianza, salud, crecimiento',
-    id: 'color-secondary'
-  },
-  {
-    name: 'Secundario Alternativo',
-    hex: '#F4A820',
-    label: 'Amarillo',
-    description: 'Atención, advertencia, destacar',
-    id: 'color-secondary-alt'
-  },
-  {
-    name: 'Acento',
-    hex: '#DB2C28',
-    label: 'Rojo',
-    description: 'Emergencias, estados críticos',
-    id: 'color-accent-danger'
-  },
-  {
-    name: 'Neutral',
-    hex: '#0F0F0F',
-    label: 'Negro',
-    description: 'Texto principal, bordes',
-    id: 'color-black'
-  },
-  {
-    name: 'Neutral Claro',
-    hex: '#F2F2F2',
-    label: 'Blanco',
-    description: 'Fondo, superficies',
-    id: 'color-white'
-  },
 ];
 
 // Datos de ejemplo para demo de DataTable y probar paginación (columnas: nombre, documento, email, rol, estado)
@@ -110,11 +61,9 @@ const COLUMNAS_USUARIOS = [
   { key: 'documento', label: 'Documento', filterable: true },
   { key: 'email', label: 'Email', filterable: true },
   { key: 'rol', label: 'Rol', filterable: true, filterType: 'select', filterOptions: ROLES_OPCIONES },
-  {
-    key: 'estado', label: 'Estado', filterable: true, filterType: 'select', filterOptions: ESTADOS_OPCIONES, render: (valor) => (
-      <Badge variant={valor === 'Activo' ? 'success' : 'neutral'} size="sm">{valor}</Badge>
-    )
-  },
+  { key: 'estado', label: 'Estado', filterable: true, filterType: 'select', filterOptions: ESTADOS_OPCIONES, render: (valor) => (
+    <Badge variant={valor === 'Activo' ? 'success' : 'neutral'} size="sm">{valor}</Badge>
+  )},
 ];
 
 /*
@@ -196,217 +145,127 @@ function DataTableDemo() {
   );
 }
 
-export default function Components() {
+export default function ComponentsOld() {
   return (
     <MainLayout>
-      {/* SECCIÓN HERO / INTRO */}
-      <section
-        id="components-hero"
-        data-testid="components-hero-section"
-        className="bg-secondary-600 py-20"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1
-            id="page-title"
-            data-testid="page-main-title"
-            className="text-5xl md:text-8xl font-black text-white mb-4"
-          >
-            Componentes y<br />Sistema de Diseño
-          </h1>
-          <p
-            id="page-subtitle"
-            data-testid="page-subtitle"
-            className="text-xl text-blue-100"
-          >
-            Identidad de marca
-          </p>
+      <PageContainer>
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-neutral-800">Componentes y sistema de diseño</h1>
+          <Link to={ROUTES.HOME}>
+            <Button variant="outline" size="sm">← Volver al inicio</Button>
+          </Link>
         </div>
-      </section>
 
-      {/* SECCIÓN VERDE CON LOGO SHOWCASE */}
-      <section
-        id="brand-showcase"
-        data-testid="brand-showcase-section"
-        className="bg-primary-500 py-16"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            {/* Columna izquierda - Texto */}
-            <div id="brand-info" data-testid="brand-info-section" className="text-white">
-              <p className="text-5xl text-primary-100 mb-2">Nombre</p>
-              <h2 className="text-7xl font-bold mb-2 font-black text-white ">Cuidarte EPS</h2>
-              <p className="text-primary-100">Definido en <code className="bg-primary-600 px-2 py-1 rounded text-sm">constants/theme.js</code></p>
-            </div>
-
-            {/* Columna derecha - Logo Card */}
-            <div
-              id="logo-card"
-              data-testid="logo-card-container"
-              className="flex justify-center"
-            >
-              <div className="bg-white rounded-3xl p-12 shadow-xl max-w-sm w-full flex flex-col items-center">
-                <img
-                  src="/brand/Logo_Color_V.svg"
-                  alt="Cuidarte EPS Logo"
-                  className="h-44 w-auto object-contain mb-4"
-                  data-testid="showcase-logo"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CONTENIDO PRINCIPAL */}
-      <PageContainer className="py-12">
         {/* Sección: Identidad de marca / Sistema de diseño */}
         <section className="mb-16">
+          <h2 className="text-2xl font-bold text-neutral-800 mb-2">
+            Identidad de marca y sistema de diseño
+          </h2>
+          <p className="text-neutral-600 mb-8">
+            Elementos de identidad aplicados en el proyecto. Guía en <code className="bg-neutral-100 px-1 rounded text-sm">docs/brand/</code>.
+          </p>
 
-          {/* Sección: Disposición y usos cromáticos */}
-          <div className="mb-12">
-            <h3 className="text-5xl font-bold text-neutral-800 mb-2 text-center">
-              Disposición y usos cromáticos
-            </h3>
-            <p className="text-neutral-1000 mb-6 text-center">
-              Archivos en <code className="bg-neutral-100 px-1 rounded text-sm ">/public/brand</code>
-            </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <Card padding={true}>
+              <Card.Header>
+                <h3 className="text-lg font-semibold text-neutral-800">Nombre de la EPS</h3>
+              </Card.Header>
+              <Card.Body>
+                <p className="text-2xl font-bold text-primary-600">{BRAND_NAME}</p>
+                <p className="text-sm text-neutral-500 mt-1">Definido en <code className="bg-neutral-100 px-1 rounded">constants/theme.js</code> (BRAND_NAME).</p>
+              </Card.Body>
+            </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Isotipo */}
-              <div
-                id="isotipo-card"
-                data-testid="isotipo-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[200px] bg-neutral-50 hover:shadow-lg transition-shadow"
-              >
-                <img src="/brand/Simbolo_Color.svg" alt="Isotipo - Símbolo Cuidarte EPS" className="h-32 w-auto object-contain mb-4" />
-                <Badge variant="success" size="sm">Isotipo</Badge>
-              </div>
-
-              {/* Imagotipo */}
-              <div
-                id="imagotipo-card"
-                data-testid="imagotipo-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[200px] bg-neutral-50 hover:shadow-lg transition-shadow"
-              >
-                <img src="/brand/Logo_Color_V.svg" alt="Imagotipo - Logo Horizontal Color" className="h-25 w-auto object-contain mb-4" />
-                <Badge variant="success" size="sm">Imagotipo</Badge>
-              </div>
-
-              {/* Logo Horizontal - Color */}
-              <div
-                id="logo-horizontal-color-card"
-                data-testid="logo-horizontal-color-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[200px] bg-neutral-50 hover:shadow-lg transition-shadow col-span-1 md:col-span-2"
-              >
-                <img src="/brand/Logo_Color_H.svg" alt="Logo Horizontal Color" className="h-20 w-full object-contain mb-4" />
-                <Badge variant="success" size="sm">Horizontal - Color</Badge>
-              </div>
-
-              {/* Logo Horizontal - Negro */}
-              <div
-                id="logo-horizontal-black-card"
-                data-testid="logo-horizontal-black-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[200px] bg-neutral-50 hover:shadow-lg transition-shadow col-span-1 md:col-span-2"
-              >
-                <img src="/brand/Logo_Black_H.svg" alt="Logo Horizontal Negro" className="h-20 w-full object-contain mb-4" />
-                <Badge variant="neutral" size="sm">Horizontal - Negro</Badge>
-              </div>
-
-              {/* Logo Horizontal - Blanco */}
-              <div
-                id="logo-horizontal-white-card"
-                data-testid="logo-horizontal-white-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[200px] bg-neutral-900 hover:shadow-lg transition-shadow col-span-1 md:col-span-2"
-              >
-                <img src="/brand/Logo_White_H.svg" alt="Logo Horizontal Blanco" className="h-20 w-full object-contain mb-4" />
-                <Badge variant="neutral" size="sm" className="bg-white text-neutral-800">Horizontal - Blanco</Badge>
-              </div>
-
-              {/* Logo Vertical - Negro */}
-              <div
-                id="logo-vertical-black-card"
-                data-testid="logo-vertical-black-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[250px] bg-neutral-50 hover:shadow-lg transition-shadow"
-              >
-                <img src="/brand/Logo_Black_V.svg" alt="Logo Vertical Negro" className="h-40 w-auto object-contain mb-4" />
-                <Badge variant="neutral" size="sm">Vertical - Negro</Badge>
-              </div>
-
-              {/* Isotipo Negro */}
-              <div
-                id="logo-isotipo-black-card"
-                data-testid="logo-isotipo-black-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[250px] bg-neutral-50 hover:shadow-lg transition-shadow"
-              >
-                <img src="/brand/Simbolo_Black.svg" alt="Isotipo Negro" className="h-40 w-auto object-contain mb-4" />
-                <Badge variant="neutral" size="sm">Isotipo - Negro</Badge>
-              </div>
-
-              {/* Logo Vertical - Blanco */}
-              <div
-                id="logo-vertical-white-card"
-                data-testid="logo-vertical-white-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[250px] bg-neutral-900 hover:shadow-lg transition-shadow"
-              >
-                <img src="/brand/Logo_White_V.svg" alt="Logo Vertical Blanco" className="h-40 w-auto object-contain mb-4" />
-                <Badge variant="neutral" size="sm" className="bg-white text-neutral-800">Vertical - Blanco</Badge>
-              </div>
-
-              {/* isotipo Blanco */}
-              <div
-                id="logo-isotipo-white-card"
-                data-testid="logo-isotipo-white-card"
-                className="border-2 border-neutral-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[250px] bg-neutral-900 hover:shadow-lg transition-shadow"
-              >
-                <img src="/brand/Simbolo_White.svg" alt="Isotipo Blanco" className="h-40 w-auto object-contain mb-4" />
-                <Badge variant="neutral" size="sm" className="bg-white text-neutral-800">Isotipo - Blanco</Badge>
-              </div>
-
-
-            </div>
+            <Card padding={true}>
+              <Card.Header>
+                <h3 className="text-lg font-semibold text-neutral-800">Logo</h3>
+                <p className="text-sm text-neutral-500">Color, B/N, horizontal, vertical</p>
+              </Card.Header>
+              <Card.Body>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="flex flex-col items-center p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <img src="/logo-horizontal.svg" alt="Logo horizontal" className="h-24 w-auto object-contain" />
+                    <span className="text-sm text-neutral-600 mt-2">Horizontal</span>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <img src="/logo-bn.svg" alt="Logo blanco y negro" className="h-24 w-auto object-contain" />
+                    <span className="text-sm text-neutral-600 mt-2">B/N</span>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <img src="/logo-vertical.svg" alt="Logo vertical" className="h-32 w-auto object-contain" />
+                    <span className="text-sm text-neutral-600 mt-2">Vertical</span>
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 mt-4 text-center">
+                  Archivos en <code className="bg-neutral-100 px-1 rounded">public/</code>
+                </p>
+              </Card.Body>
+            </Card>
           </div>
+
+          <Card padding={true} className="mb-8">
+            <Card.Header>
+              <h3 className="text-lg font-semibold text-neutral-800">Paleta de colores (HEX)</h3>
+              <p className="text-sm text-neutral-500">Primario, secundario, acentos</p>
+            </Card.Header>
+            <Card.Body>
+              <div className="flex flex-wrap gap-6">
+                <div>
+                  <div className="w-16 h-16 rounded-lg shadow-inner mb-2" style={{ backgroundColor: PALETA_PRIMARIA.hex }} />
+                  <p className="font-medium text-neutral-800">{PALETA_PRIMARIA.nombre}</p>
+                  <p className="text-sm text-neutral-500">{PALETA_PRIMARIA.hex}</p>
+                </div>
+                <div>
+                  <div className="w-16 h-16 rounded-lg shadow-inner mb-2" style={{ backgroundColor: PALETA_SECUNDARIA.hex }} />
+                  <p className="font-medium text-neutral-800">{PALETA_SECUNDARIA.nombre}</p>
+                  <p className="text-sm text-neutral-500">{PALETA_SECUNDARIA.hex}</p>
+                </div>
+                {PALETA_ACENTOS.map((a) => (
+                  <div key={a.nombre}>
+                    <div
+                      className="w-12 h-12 rounded-lg shadow-inner mb-2"
+                      style={{
+                        backgroundColor: a.hex,
+                        ...(a.hex.toUpperCase() === '#FFFFFF' ? { border: '1px solid #e2e8f0' } : {}),
+                      }}
+                    />
+                    <p className="font-medium text-neutral-800 text-sm">{a.nombre}</p>
+                    <p className="text-xs text-neutral-500">{a.hex}</p>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <Card padding={true}>
+              <Card.Header>
+                <h3 className="text-lg font-semibold text-neutral-800">Tipografía</h3>
+                <p className="text-sm text-neutral-500">Títulos, texto, tamaños</p>
+              </Card.Header>
+              <Card.Body>
+                <p className="text-3xl font-bold text-neutral-800 mb-2">Título (h1)</p>
+                <p className="text-xl text-neutral-700 mb-2">Subtítulo (h2)</p>
+                <p className="text-base text-neutral-600 mb-2">Texto base</p>
+                <p className="text-sm text-neutral-500">Texto pequeño. Variables CSS: <code className="bg-neutral-100 px-1 rounded text-xs">--text-h1</code>, <code className="bg-neutral-100 px-1 rounded text-xs">--text-base</code>, etc.</p>
+              </Card.Body>
+            </Card>
+          </div>
+
+          <Card padding={true} className="mb-16">
+            <Card.Header>
+              <h3 className="text-lg font-semibold text-neutral-800">Recursos del sistema de diseño</h3>
+            </Card.Header>
+            <Card.Body>
+              <ul className="space-y-2 text-sm text-neutral-600">
+                <li><strong>Guía de aplicación en interfaces:</strong> <code className="bg-neutral-100 px-1 rounded">docs/brand/GUIA-APLICACION.md</code></li>
+                <li><strong>Assets de marca:</strong> <code className="bg-neutral-100 px-1 rounded">public/brand/</code></li>
+                <li><strong>Variables CSS generadas:</strong> <code className="bg-neutral-100 px-1 rounded">src/index.css</code> (<code className="bg-neutral-100 px-1 rounded">:root</code>)</li>
+              </ul>
+            </Card.Body>
+          </Card>
         </section>
-      </PageContainer>
 
-      {/* PALETA DE COLORES - Ancho completo de la pantalla */}
-      <section className="my-0 bg-neutral-50 py-12" style={{ marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)', width: '100vw' }}>
-        <ColorPaletteTable
-          colors={brandColors}
-          className="mb-0 w-full"
-          id="brand-color-palette-table"
-          data-testid="brand-color-palette-table"
-        />
-      </section>
-
-      {/* Tipografias */}
-
-      <section className="mb-16 ">
-
-        {/* TypographyShowcase Integration */}
-        <div className="mb-12">
-          <TypographyShowcase
-            className="mb-8"
-            id="typography-showcase-section"
-            data-testid="typography-showcase-section"
-          />
-        </div>
-
-
-      </section>
-
-      <PageContainer className="py-16">
-        <Card padding={true} className="mb-16">
-          <Card.Header>
-            <h3 className="text-lg font-semibold text-neutral-800">Recursos del sistema de diseño</h3>
-          </Card.Header>
-          <Card.Body>
-            <ul className="space-y-2 text-sm text-neutral-600">
-              <li><strong>Guía de aplicación en interfaces:</strong> <code className="bg-neutral-100 px-1 rounded">docs/brand/GUIA-APLICACION.md</code></li>
-              <li><strong>Assets de marca:</strong> <code className="bg-neutral-100 px-1 rounded">public/brand/</code></li>
-              <li><strong>Variables CSS generadas:</strong> <code className="bg-neutral-100 px-1 rounded">src/index.css</code> (<code className="bg-neutral-100 px-1 rounded">:root</code>)</li>
-            </ul>
-          </Card.Body>
-        </Card>
         {/* Sección: Componentes de layout */}
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-neutral-800 mb-2">
