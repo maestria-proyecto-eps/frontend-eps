@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect } from 'react';
 import { PageContainer } from '../../components/layout';
-import { DataTable, Badge } from '../../components/ui';
+import { DataTable, Badge, Input, Button } from '../../components/ui';
 import { http } from '../../services/api/http';
 import { endpoints } from '../../services/api/endpoints';
 
 // Roles quemados según los que aparecen en la respuesta del API
 const ROLES_OPCIONES = [
-  { value: 1, label: 'Administrador' },
   { value: 2, label: 'Médico' },
   { value: 3, label: 'Paciente' },
   { value: 4, label: 'Enfermero' },
@@ -22,7 +21,7 @@ const ESTADOS_OPCIONES = [
 
 const COLUMNAS_USUARIOS = [
   { key: 'id_usuario', label: 'ID', filterable: false },
-  { key: 'num_documento', label: 'Documento', filterable: true },
+  { key: 'num_documento', label: 'Documento', filterable: false },
   { key: 'nombres', label: 'Nombres', filterable: true },
   { key: 'apellidos', label: 'Apellidos', filterable: true },
   { key: 'rol_des', label: 'Rol', filterable: true, filterType: 'select', filterOptions: ROLES_OPCIONES.map((r) => ({ value: String(r.value), label: r.label })) },
@@ -61,9 +60,14 @@ export default function Usuarios() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [total, setTotal] = React.useState(0);
-  const [allDocLoaded, setAllDocLoaded] = React.useState(false);
+  const [docInput, setDocInput] = React.useState('');
 
-  const fetchUsers = useCallback(async ({ forceReload = false } = {}) => {
+  // Mantiene el input "Documento" sincronizado solo cuando el valor se aplica a filtros
+  useEffect(() => {
+    setDocInput(filters.num_documento ?? '');
+  }, [filters.num_documento]);
+
+  const fetchUsers = useCallback(async () => {
     const docFilter = filters.num_documento;
     const nombresFilter = filters.nombres;
     const apellidosFilter = filters.apellidos;
@@ -76,65 +80,8 @@ export default function Usuarios() {
     const hasEstadoFilter = estadoFilter != null && String(estadoFilter).trim() !== '';
     const hasRolFilter = rolFilter != null && String(rolFilter).trim() !== '';
 
-    // Si solo hay filtro por documento, queremos traer todas las páginas (cantidad 30)
-    const onlyDocFilter = hasDocFilter && !hasNombresFilter && !hasApellidosFilter && !hasEstadoFilter && !hasRolFilter;
-
-    // Si ya cargamos todo el universo para búsqueda por documento, no volvemos a llamar al backend
-    if (onlyDocFilter && allDocLoaded && !forceReload) {
-      return;
-    }
-
     setLoading(true);
     try {
-      if (onlyDocFilter) {
-        const pageSizeForDoc = 30;
-        let allData = [];
-
-        // Primera página: obtenemos datos y número total de páginas
-        const { data: firstRes } = await http.get(endpoints.users.list, {
-          params: { pag: 1, cantidad: pageSizeForDoc },
-        });
-        if (firstRes.hasError || !firstRes.data) {
-          setUsuarios([]);
-          setTotal(0);
-          return;
-        }
-        const { data: firstList = [], pages = 0 } = firstRes.data;
-        allData = Array.isArray(firstList) ? firstList : [];
-
-        const totalPages = Number(pages) || 0;
-
-        // Traemos el resto de páginas
-        for (let p = 2; p <= totalPages; p += 1) {
-          const { data: resPage } = await http.get(endpoints.users.list, {
-            params: { pag: p, cantidad: pageSizeForDoc },
-          });
-          if (!resPage.hasError && resPage.data?.data) {
-            const pageList = Array.isArray(resPage.data.data) ? resPage.data.data : [];
-            allData = allData.concat(pageList);
-          }
-        }
-
-        const mappedAllData = allData.map((u) => ({
-          ...u,
-          nombres: u?.persona?.nombres ?? '',
-          apellidos: u?.persona?.apellidos ?? '',
-          // Normalizamos estado a boolean para que DataTable pueda comparar con
-          // formConfig.activeValue/deactivatedValue (true/false).
-          estado:
-            u?.estado === true ||
-            u?.estado === 1 ||
-            u?.estado === '1' ||
-            u?.estado === 'true',
-        }));
-        setUsuarios(mappedAllData);
-        setTotal(allData.length);
-        setPage(1);
-        setPageSize(pageSizeForDoc);
-        setAllDocLoaded(true);
-        return;
-      }
-
       // Modo normal: paginación y filtros en el backend
       const params = {
         pag: page,
@@ -151,7 +98,8 @@ export default function Usuarios() {
         params.apellidos = String(apellidosFilter).trim();
       }
       if (hasEstadoFilter) {
-        params.estado = Number(estadoFilter);
+        // El backend espera estado como booleano en querystring: estado=true|false
+        params.estado = String(estadoFilter) === '1';
       }
       if (hasRolFilter) {
         params.rol = Number(rolFilter);
@@ -187,76 +135,20 @@ export default function Usuarios() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters, allDocLoaded]);
+  }, [page, pageSize, filters]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
   // Filtro adicional en el cliente (para soportar búsquedas por documento sobre el lote recibido)
-  const filtrado = usuarios.filter((row) => {
-    return Object.entries(filters).every(([key, val]) => {
-      if (val == null || String(val).trim() === '') return true;
-      const value = String(val).trim().toLowerCase();
-      const cell = row[key];
-      if (key === 'estado') {
-        // El select del UI manda valores '1'/'0', pero el backend puede devolver boolean.
-        // Convertimos ambos a 0/1 para comparar de forma consistente.
-        const cellNum =
-          cell === true || cell === 1 || cell === '1' || cell === 'true'
-            ? 1
-            : cell === false || cell === 0 || cell === '0' || cell === 'false'
-              ? 0
-              : Number(cell);
-        const valNum = val === 'true' ? 1 : val === 'false' ? 0 : Number(val);
-        return cellNum === valNum;
-      }
-      if (key === 'rol_des') {
-        const selectedRole = ROLES_OPCIONES.find((r) => String(r.value) === String(val));
-        return selectedRole ? String(cell ?? '').toLowerCase() === String(selectedRole.label).toLowerCase() : true;
-      }
-      // Para documento usamos "empieza por" en lugar de "contiene"
-      if (key === 'num_documento') {
-        const doc = String(cell ?? '').toLowerCase();
-        return doc.startsWith(value);
-      }
-      return String(cell ?? '').toLowerCase().includes(value);
-    });
-  });
-
-  // Cuando solo hay filtro por documento, la paginación se hace completamente en el cliente
-  const hasDocFilterView = filters.num_documento != null && String(filters.num_documento).trim() !== '';
-  const hasEstadoFilterView = filters.estado != null && String(filters.estado).trim() !== '';
-  const hasRolFilterView = filters.rol_des != null && String(filters.rol_des).trim() !== '';
-  const onlyDocFilterView = hasDocFilterView && !hasEstadoFilterView && !hasRolFilterView;
-
-  const dataForTable = onlyDocFilterView
-    ? filtrado.slice((page - 1) * pageSize, page * pageSize)
-    : filtrado;
-
-  const paginationTotal = onlyDocFilterView ? filtrado.length : total;
+  // La API hace filtrado y paginación; aquí solo renderizamos el resultado.
+  const dataForTable = usuarios;
+  const paginationTotal = total;
 
   const handleFiltersChange = (nextFilters) => {
-    // Al cambiar filtros, siempre arrancamos desde la primera página
     setFilters(nextFilters);
     setPage(1);
-
-    // Si salimos del modo "solo documento", la próxima vez que entremos recargamos todo el universo
-    const nextDoc = nextFilters.num_documento;
-    const nextNombres = nextFilters.nombres;
-    const nextApellidos = nextFilters.apellidos;
-    const nextEstado = nextFilters.estado;
-    const nextRol = nextFilters.rol_des;
-    const hasNextDoc = nextDoc != null && String(nextDoc).trim() !== '';
-    const hasNextNombres = nextNombres != null && String(nextNombres).trim() !== '';
-    const hasNextApellidos = nextApellidos != null && String(nextApellidos).trim() !== '';
-    const hasNextEstado = nextEstado != null && String(nextEstado).trim() !== '';
-    const hasNextRol = nextRol != null && String(nextRol).trim() !== '';
-
-    const nextOnlyDoc = hasNextDoc && !hasNextNombres && !hasNextApellidos && !hasNextEstado && !hasNextRol;
-    if (!nextOnlyDoc) {
-      setAllDocLoaded(false);
-    }
   };
 
   const handleCreate = async (newRow) => {
@@ -275,7 +167,7 @@ export default function Usuarios() {
       password: newRow.password,
       id_rol: Number(newRow.id_rol),
     });
-    await fetchUsers({ forceReload: true });
+    await fetchUsers();
   };
 
   const handleEdit = async (id, updatedRow) => {
@@ -293,17 +185,17 @@ export default function Usuarios() {
       id_rol: Number(updatedRow.id_rol),
     });
 
-    await fetchUsers({ forceReload: true });
+    await fetchUsers();
   };
 
   const handleDeactivate = async (id) => {
     await http.put(endpoints.users.changeStatus(id), { estado: 0 });
-    await fetchUsers({ forceReload: true });
+    await fetchUsers();
   };
 
   const handleActivate = async (id) => {
     await http.put(endpoints.users.changeStatus(id), { estado: 1 });
-    await fetchUsers({ forceReload: true });
+    await fetchUsers();
   };
 
   return (
@@ -311,6 +203,51 @@ export default function Usuarios() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-neutral-800">Gestión de usuarios</h1>
           <div />
+        </div>
+        <div className="mb-4 flex items-end gap-2 rounded-lg border border-neutral-200 bg-neutral-50/80 p-4">
+          <Input
+            label="Documento"
+            value={docInput}
+            onChange={(e) => setDocInput(e.target.value)}
+            placeholder="Documento exacto"
+            className="w-[260px]"
+          />
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              const value = docInput.trim();
+              setFilters((prev) => ({ ...prev, num_documento: value }));
+              setPage(1);
+            }}
+            disabled={!docInput.trim()}
+            className="h-[38px] w-[38px] p-0"
+            title="Buscar por documento"
+            aria-label="Buscar por documento"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 17.5a7.5 7.5 0 006.15-2.85z" />
+            </svg>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDocInput('');
+              setFilters((prev) => ({ ...prev, num_documento: '' }));
+              setPage(1);
+            }}
+            className="h-[38px] w-[38px] p-0"
+            title="Recargar"
+            aria-label="Recargar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 0115.55-6.36" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.55 5.64V2.5m0 3.14h-3.14" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-15.55 6.36" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5.45 18.36v3.14m0-3.14h3.14" />
+            </svg>
+          </Button>
         </div>
         <DataTable
           columns={COLUMNAS_USUARIOS}
