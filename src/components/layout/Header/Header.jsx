@@ -80,8 +80,9 @@ export default function Header({ className = '', showAuth = true }) {
                   variant="outline"
                   size="md"
                   className="hidden sm:inline-flex whitespace-nowrap"
+                  rightIcon={<span className="material-icons text-m">account_circle</span>}
                 >
-                  Iniciar sesión →
+                  Iniciar sesión
                 </Button>
               </Link>
             )}

@@ -109,6 +109,16 @@ export default function Footer({ className = '' }) {
             </h3>
             <ul className="space-y-2 text-sm">
               <li>
+                <Link 
+                  to={ROUTES.COMPONENTS}
+                  id="footer-link-brand"
+                  data-testid="footer-link-brand"
+                  className="text-neutral-400 hover:text-primary-400 transition-colors duration-200"
+                >
+                  Marca
+                </Link>
+              </li>
+              <li>
                 <a 
                   href="#privacy"
                   id="footer-link-privacy"

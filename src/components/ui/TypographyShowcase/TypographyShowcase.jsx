@@ -15,19 +15,14 @@ export function TypographyShowcase({ className = '', ...props }) {
       data-testid="typography-showcase"
       {...props}
     >
-      {/* Encabezado con fondo azul */}
-      <div className="bg-primary-600 text-white py-12 px-8 rounded-t-lg">
-        <h2 className="text-4xl font-bold text-center">Tipografías</h2>
-      </div>
-
       {/* Contenedor con dos tarjetas */}
-      <div className="bg-neutral-100 px-8 py-12 rounded-b-lg">
+      <div className="bg-white px-8 py-12 rounded-b-lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Font Body - Roboto */}
           <div
             id="font-body-card"
             data-testid="font-body-card"
-            className="bg-white rounded-3xl p-8 shadow-lg text-center"
+            className="bg-primary-100 rounded-3xl p-8 shadow-lg text-center"
           >
             <label className="text-sm font-semibold text-neutral-600 uppercase tracking-wide mb-6 block">
               Font Body
@@ -93,7 +88,7 @@ export function TypographyShowcase({ className = '', ...props }) {
           <div
             id="font-heading-card"
             data-testid="font-heading-card"
-            className="bg-white rounded-3xl p-8 shadow-lg flex flex-col justify-center items-center text-center"
+            className="bg-secondary-100 rounded-3xl p-8 shadow-lg flex flex-col justify-center items-center text-center"
           >
             <label className="text-sm font-semibold text-neutral-600 uppercase tracking-wide mb-4">
               Font Heading

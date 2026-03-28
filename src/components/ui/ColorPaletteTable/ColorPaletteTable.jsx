@@ -26,23 +26,8 @@ export function ColorPaletteTable({ colors = [], className = '', ...props }) {
             data-testid="color-palette-table"
             {...props}
         >
-            {/* Encabezado */}
-            <div
-                className="w-full"
-                id="palette-header"
-                data-testid="palette-header"
-            >
-                <div className="bg-secondary-600 text-white py-6 px-8 text-center text-5xl font-bold mb-2">
-                    <h3 className="text-2xl font-bold">Paleta de colores</h3>
-                </div>
-            </div>
-
             {/* Tabla visual con colores */}
             <div className="border-b border-l border-r border-neutral-300 overflow-hidden">
-                {/* Row de etiquetas de opacidad */}
-                <div className="grid grid-cols-6 gap-0 bg-neutral-100 border-b border-neutral-300">
-                    <div className="p-4 text-right font-semibold text-neutral-800 col-span-1"></div>
-                </div>
 
                 {/* Filas de colores */}
                 {colors.map((color, index) => {
