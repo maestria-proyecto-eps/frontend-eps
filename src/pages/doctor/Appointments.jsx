@@ -1,13 +1,48 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
+import {
+  Alert,
+  Button,
+  Card,
+  DatePicker,
+  Spinner,
+} from "../../components/ui";
 
-function getTodayISO() {
-  const now = new Date();
-  const tzOffset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
-}
+/**
+ * Appointments.jsx
+ *
+ * Enfoque:
+ * - Cumple la HU como planner/agenda de citas del doctor.
+ * - Usa componentes UI actualizados del proyecto.
+ * - Queda preparado para backend real.
+ * - Consume consultation-context al iniciar consulta.
+ *
+ * Importante:
+ * - No hay endpoint verificado para LISTAR citas del doctor.
+ * - Por eso la lista usa fallback MOCK, pero la estructura queda lista
+ *   para cambiar a backend real apenas exista el endpoint.
+ */
+
+/* -------------------------------------------------------------------------- */
+/*                                 API CONFIG                                 */
+/* -------------------------------------------------------------------------- */
+
+const APPOINTMENT_API = {
+  list:
+    endpoints?.doctor_appointments?.list ||
+    endpoints?.appointments?.list ||
+    null,
+
+  consultationContext:
+    endpoints?.appointment?.consultationContext ||
+    ((id) => `/api/appointment/${id}/consultation-context`),
+};
+
+/* -------------------------------------------------------------------------- */
+/*                                   MOCK                                     */
+/* -------------------------------------------------------------------------- */
 
 const MOCK_APPOINTMENTS = [
   {
@@ -60,6 +95,16 @@ const MOCK_APPOINTMENTS = [
   },
 ];
 
+/* -------------------------------------------------------------------------- */
+/*                                  HELPERS                                   */
+/* -------------------------------------------------------------------------- */
+
+function getTodayISO() {
+  const now = new Date();
+  const tzOffset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
 function sortByHour(a, b) {
   return String(a.hora_inicio).localeCompare(String(b.hora_inicio));
 }
@@ -76,27 +121,36 @@ function isActiveStatus(status) {
   ].includes(normalized);
 }
 
-function getStatusClasses(status) {
+function getStatusVariant(status) {
   const normalized = String(status).toLowerCase();
 
-  if (
-    [
-      "activa",
-      "activo",
-      "programada",
-      "confirmada",
-      "scheduled",
-      "confirmed",
-    ].includes(normalized)
-  ) {
-    return "bg-primary-50 text-primary-700 border border-primary-100";
+  if (["activa", "activo", "programada", "confirmada", "scheduled", "confirmed"].includes(normalized)) {
+    return "success";
   }
 
   if (["cancelada", "cancelado", "cancelled"].includes(normalized)) {
-    return "bg-emergency-50 text-emergency-500 border border-emergency-500/20";
+    return "error";
   }
 
   if (["finalizada", "finalizado", "completed"].includes(normalized)) {
+    return "info";
+  }
+
+  return "neutral";
+}
+
+function getStatusClasses(status) {
+  const variant = getStatusVariant(status);
+
+  if (variant === "success") {
+    return "bg-primary-50 text-primary-700 border border-primary-100";
+  }
+
+  if (variant === "error") {
+    return "bg-emergency-50 text-emergency-700 border border-emergency-200";
+  }
+
+  if (variant === "info") {
     return "bg-secondary-50 text-secondary-700 border border-secondary-100";
   }
 
@@ -104,81 +158,107 @@ function getStatusClasses(status) {
 }
 
 function normalizeAppointment(raw, index) {
-  const paciente = raw.paciente || raw.patient || raw.persona || {};
+  const paciente = raw?.paciente || raw?.patient || raw?.persona || {};
 
   const nombres =
-    paciente.nombres ||
-    paciente.nombre ||
-    raw.nombres_paciente ||
-    raw.patient_name ||
+    paciente?.nombres ||
+    paciente?.nombre ||
+    raw?.nombres_paciente ||
+    raw?.patient_name ||
     "";
 
   const apellidos =
-    paciente.apellidos ||
-    paciente.apellido ||
-    raw.apellidos_paciente ||
-    raw.patient_lastname ||
+    paciente?.apellidos ||
+    paciente?.apellido ||
+    raw?.apellidos_paciente ||
+    raw?.patient_lastname ||
     "";
 
   const nombreCompleto =
     `${nombres} ${apellidos}`.trim() ||
-    raw.nombre_paciente ||
-    raw.patient_full_name ||
+    raw?.nombre_paciente ||
+    raw?.patient_full_name ||
     "Paciente sin nombre";
 
   const numDocumento =
-    paciente.num_documento ||
-    paciente.documento ||
-    raw.num_documento ||
-    raw.patient_document ||
+    paciente?.num_documento ||
+    paciente?.documento ||
+    raw?.num_documento ||
+    raw?.patient_document ||
     "Sin documento";
 
   return {
-    id_cita: raw.id_cita || raw.id || raw.appointment_id || index,
-    fecha: raw.fecha || raw.date || getTodayISO(),
-    hora_inicio: raw.hora_inicio || raw.start_time || "00:00",
-    hora_fin: raw.hora_fin || raw.end_time || "00:00",
-    estado: raw.estado || raw.status || "pendiente",
+    id_cita: raw?.id_cita || raw?.id || raw?.appointment_id || index,
+    fecha: raw?.fecha || raw?.date || getTodayISO(),
+    hora_inicio: raw?.hora_inicio || raw?.start_time || "00:00",
+    hora_fin: raw?.hora_fin || raw?.end_time || "00:00",
+    estado: raw?.estado || raw?.status || "pendiente",
     nombre_paciente: nombreCompleto,
     num_documento: String(numDocumento),
   };
 }
 
+async function fetchAppointmentsByDate(dateValue) {
+  // Cuando exista endpoint real, este bloque será la fuente principal.
+  if (APPOINTMENT_API.list) {
+    const { data } = await http.get(APPOINTMENT_API.list, {
+      params: { fecha: dateValue },
+    });
+
+    return Array.isArray(data)
+      ? data.map((item, index) => normalizeAppointment(item, index))
+      : [];
+  }
+
+  // Fallback temporal controlado
+  return MOCK_APPOINTMENTS
+    .filter((item) => item.fecha === dateValue)
+    .map((item, index) => normalizeAppointment(item, index));
+}
+
+async function fetchConsultationContext(appointmentId) {
+  const endpoint =
+    typeof APPOINTMENT_API.consultationContext === "function"
+      ? APPOINTMENT_API.consultationContext(appointmentId)
+      : `/api/appointment/${appointmentId}/consultation-context`;
+
+  const { data } = await http.get(endpoint);
+  return data;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                 COMPONENT                                  */
+/* -------------------------------------------------------------------------- */
+
 export default function Appointments() {
-  const [appointments, setAppointments] = useState([]);
+  const navigate = useNavigate();
+
   const [selectedDate, setSelectedDate] = useState(getTodayISO());
+  const [appointments, setAppointments] = useState([]);
+
   const [loading, setLoading] = useState(false);
+  const [loadingContextId, setLoadingContextId] = useState(null);
+
   const [error, setError] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
 
   const loadAppointments = async (dateValue = selectedDate) => {
     setLoading(true);
     setError("");
+    setInfoMessage("");
 
     try {
-      const hasEndpoint =
-        endpoints?.doctor_appointments &&
-        typeof endpoints.doctor_appointments.list === "string";
+      const result = await fetchAppointmentsByDate(dateValue);
+      setAppointments(result.sort(sortByHour));
 
-      if (hasEndpoint) {
-        const { data } = await http.get(endpoints.doctor_appointments.list, {
-          params: { fecha: dateValue },
-        });
-
-        const normalized = Array.isArray(data)
-          ? data.map((item, index) => normalizeAppointment(item, index))
-          : [];
-
-        setAppointments(normalized.sort(sortByHour));
-      } else {
-        const filteredMock = MOCK_APPOINTMENTS.filter(
-          (item) => item.fecha === dateValue
-        ).map((item, index) => normalizeAppointment(item, index));
-
-        setAppointments(filteredMock.sort(sortByHour));
+      if (!APPOINTMENT_API.list) {
+        setInfoMessage(
+          "La agenda se muestra con datos temporales porque aún no se ha configurado el endpoint de listado de citas."
+        );
       }
     } catch (err) {
-      setError("Error cargando citas del doctor");
       setAppointments([]);
+      setError("No fue posible cargar la agenda de citas del doctor.");
     } finally {
       setLoading(false);
     }
@@ -188,60 +268,90 @@ export default function Appointments() {
     loadAppointments(selectedDate);
   }, [selectedDate]);
 
-  const sortedAppointments = useMemo(() => {
-    return [...appointments].sort(sortByHour);
-  }, [appointments]);
+  const sortedAppointments = useMemo(
+    () => [...appointments].sort(sortByHour),
+    [appointments]
+  );
 
   const totalAppointments = sortedAppointments.length;
-
   const activeAppointments = sortedAppointments.filter((item) =>
     isActiveStatus(item.estado)
   ).length;
 
+  const handleStartConsultation = async (appointment) => {
+    setLoadingContextId(appointment.id_cita);
+    setError("");
+
+    try {
+      const response = await fetchConsultationContext(appointment.id_cita);
+
+      const hasError = response?.hasError;
+      const context = response?.data;
+
+      if (hasError || !context?.id_cita) {
+        throw new Error("No fue posible obtener el contexto de la consulta.");
+      }
+
+      navigate(`/doctor/consultation/new?appointment_id=${context.id_cita}`);
+    } catch (err) {
+      setError(
+        "No fue posible iniciar la consulta para la cita seleccionada."
+      );
+    } finally {
+      setLoadingContextId(null);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* HEADER */}
-      <section className="rounded-2xl border border-neutral-200 bg-white shadow-sm p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-medium text-secondary-600">
-              Dashboard de citas
-            </p>
-            <h1 className="mt-1 text-2xl md:text-3xl font-bold text-neutral-900">
-              Citas del doctor
-            </h1>
-            <p className="mt-2 text-neutral-600">
-              Consulta la agenda del día, filtra por fecha y accede rápidamente
-              al inicio de consulta.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+      <Card>
+        <Card.Body className="p-0">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <label
-                htmlFor="appointment-date"
-                className="block text-sm font-medium text-neutral-700 mb-2"
-              >
-                Filtrar por fecha
-              </label>
-              <input
-                id="appointment-date"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full sm:w-52 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
+              <p className="text-sm font-medium text-secondary-600">
+                Planner de citas
+              </p>
+              <h1 className="mt-1 text-2xl md:text-3xl font-bold text-neutral-900">
+                Agenda del doctor
+              </h1>
+              <p className="mt-2 text-neutral-600">
+                Consulta las citas del día, filtra por fecha y accede rápidamente
+                al inicio de consulta.
+              </p>
             </div>
 
-            <button
-              onClick={() => loadAppointments(selectedDate)}
-              className="rounded-xl bg-primary-500 px-4 py-2 text-white font-medium hover:bg-primary-600 transition"
-            >
-              Recargar
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+              <DatePicker
+                label="Filtrar por fecha"
+                value={selectedDate}
+                onChange={(value) => setSelectedDate(value)}
+                className="sm:w-56"
+              />
+
+              <Button
+                variant="primary"
+                onClick={() => loadAppointments(selectedDate)}
+              >
+                Recargar
+              </Button>
+            </div>
           </div>
-        </div>
-      </section>
+        </Card.Body>
+      </Card>
+
+      {/* ALERTAS */}
+      {infoMessage && (
+        <Alert variant="info" title="Modo temporal">
+          {infoMessage}
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="error" title="Error">
+          {error}
+        </Alert>
+      )}
 
       {/* RESUMEN */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -262,31 +372,23 @@ export default function Appointments() {
         />
       </section>
 
-      {/* ESTADOS */}
-      {loading && (
-        <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm text-neutral-600">
-          Cargando citas...
-        </section>
-      )}
+      {/* LISTADO */}
+      <Card padding={false}>
+        <Card.Header className="px-6 py-4 mb-0">
+          <h2 className="text-lg font-semibold text-neutral-900">
+            Agenda del día
+          </h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Las citas se muestran ordenadas por hora de inicio.
+          </p>
+        </Card.Header>
 
-      {error && (
-        <section className="rounded-2xl border border-emergency-500/20 bg-emergency-50 p-6 shadow-sm text-emergency-500">
-          {error}
-        </section>
-      )}
-
-      {!loading && !error && (
-        <section className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-neutral-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-neutral-900">
-              Agenda del día
-            </h2>
-            <p className="mt-1 text-sm text-neutral-600">
-              Las citas se muestran ordenadas por hora de inicio.
-            </p>
-          </div>
-
-          {sortedAppointments.length === 0 ? (
+        <Card.Body className="p-0">
+          {loading ? (
+            <div className="px-6 py-10 flex items-center justify-center">
+              <Spinner />
+            </div>
+          ) : sortedAppointments.length === 0 ? (
             <div className="px-6 py-10 text-center text-neutral-500">
               No hay citas registradas para la fecha seleccionada.
             </div>
@@ -296,15 +398,21 @@ export default function Appointments() {
                 <AppointmentRow
                   key={appointment.id_cita}
                   appointment={appointment}
+                  isLoadingContext={loadingContextId === appointment.id_cita}
+                  onStartConsultation={handleStartConsultation}
                 />
               ))}
             </div>
           )}
-        </section>
-      )}
+        </Card.Body>
+      </Card>
     </div>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/*                            SUBCOMPONENTES UI                               */
+/* -------------------------------------------------------------------------- */
 
 function SummaryCard({ title, value, tone = "primary" }) {
   const styles = {
@@ -321,7 +429,11 @@ function SummaryCard({ title, value, tone = "primary" }) {
   );
 }
 
-function AppointmentRow({ appointment }) {
+function AppointmentRow({
+  appointment,
+  isLoadingContext,
+  onStartConsultation,
+}) {
   const canStartConsultation = isActiveStatus(appointment.estado);
 
   return (
@@ -351,20 +463,17 @@ function AppointmentRow({ appointment }) {
 
         <div className="flex justify-start xl:justify-end">
           {canStartConsultation ? (
-            <Link
-              to={`/doctor/consultation/new?appointment_id=${appointment.id_cita}`}
-              className="inline-flex items-center justify-center rounded-xl bg-primary-500 px-4 py-2 text-white font-medium hover:bg-primary-600 transition"
+            <Button
+              variant="primary"
+              onClick={() => onStartConsultation(appointment)}
+              disabled={isLoadingContext}
             >
-              Iniciar consulta
-            </Link>
+              {isLoadingContext ? "Iniciando..." : "Iniciar consulta"}
+            </Button>
           ) : (
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center justify-center rounded-xl bg-neutral-200 px-4 py-2 text-neutral-500 font-medium cursor-not-allowed"
-            >
+            <Button variant="ghost" disabled>
               No disponible
-            </button>
+            </Button>
           )}
         </div>
       </div>
