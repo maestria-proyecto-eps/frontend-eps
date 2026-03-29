@@ -16,13 +16,12 @@ import {
  * Enfoque:
  * - Cumple la HU como planner/agenda de citas del doctor.
  * - Usa componentes UI actualizados del proyecto.
- * - Queda preparado para backend real.
+ * - Integrado con backend real en Render.
  * - Consume consultation-context al iniciar consulta.
  *
- * Importante:
- * - No hay endpoint verificado para LISTAR citas del doctor.
- * - Por eso la lista usa fallback MOCK, pero la estructura queda lista
- *   para cambiar a backend real apenas exista el endpoint.
+ * Integración Backend:
+ * - GET /api/appointments - Obtiene citas del doctor (filtrado por fecha)
+ * - GET /api/appointments/{id}/consultation-context - Obtiene contexto de consulta
  */
 
 /* -------------------------------------------------------------------------- */
@@ -30,14 +29,9 @@ import {
 /* -------------------------------------------------------------------------- */
 
 const APPOINTMENT_API = {
-  list:
-    endpoints?.doctor_appointments?.list ||
-    endpoints?.appointments?.list ||
-    null,
+  list: endpoints?.appointments?.list || null,
 
-  consultationContext:
-    endpoints?.appointment?.consultationContext ||
-    ((id) => `/api/appointment/${id}/consultation-context`),
+  consultationContext: endpoints?.appointments?.consultationContext || ((id) => `/api/appointments/${id}/consultation-context`),
 };
 
 /* -------------------------------------------------------------------------- */
@@ -178,28 +172,40 @@ function normalizeAppointment(raw, index) {
     `${nombres} ${apellidos}`.trim() ||
     raw?.nombre_paciente ||
     raw?.patient_full_name ||
-    "Paciente sin nombre";
+    `Paciente ${raw?.id_paciente || "sin ID"}`;
 
   const numDocumento =
     paciente?.num_documento ||
     paciente?.documento ||
     raw?.num_documento ||
     raw?.patient_document ||
-    "Sin documento";
+    String(raw?.id_paciente || "");
+
+  // Mapear estado_agenda (0/1) a estado legible
+  const mapearEstado = (estadoAgenda, asistio) => {
+    if (asistio === true) return "completada";
+    if (asistio === false) return "no_asistio";
+    return estadoAgenda === 1 ? "activa" : "cancelada";
+  };
 
   return {
     id_cita: raw?.id_cita || raw?.id || raw?.appointment_id || index,
+    id_paciente: raw?.id_paciente || null,
+    id_doctor: raw?.id_doctor || null,
+    id_especialidad: raw?.id_especialidad || null,
     fecha: raw?.fecha || raw?.date || getTodayISO(),
     hora_inicio: raw?.hora_inicio || raw?.start_time || "00:00",
     hora_fin: raw?.hora_fin || raw?.end_time || "00:00",
-    estado: raw?.estado || raw?.status || "pendiente",
+    estado: mapearEstado(raw?.estado_agenda, raw?.asistio),
+    estado_agenda: raw?.estado_agenda,
+    asistio: raw?.asistio,
     nombre_paciente: nombreCompleto,
     num_documento: String(numDocumento),
+    id_remision: raw?.id_remision || null,
   };
 }
 
 async function fetchAppointmentsByDate(dateValue) {
-  // Cuando exista endpoint real, este bloque será la fuente principal.
   if (APPOINTMENT_API.list) {
     const { data } = await http.get(APPOINTMENT_API.list, {
       params: { fecha: dateValue },
@@ -210,19 +216,27 @@ async function fetchAppointmentsByDate(dateValue) {
       : [];
   }
 
-  // Fallback temporal controlado
-  return MOCK_APPOINTMENTS
-    .filter((item) => item.fecha === dateValue)
-    .map((item, index) => normalizeAppointment(item, index));
+  // Si no hay endpoint configurado, retornar vacío en lugar de MOCK
+  return [];
 }
 
 async function fetchConsultationContext(appointmentId) {
   const endpoint =
     typeof APPOINTMENT_API.consultationContext === "function"
       ? APPOINTMENT_API.consultationContext(appointmentId)
-      : `/api/appointment/${appointmentId}/consultation-context`;
+      : `/api/appointments/${appointmentId}/consultation-context`;
 
   const { data } = await http.get(endpoint);
+  return data;
+}
+
+async function updateAppointmentStatus(appointmentId, newStatus) {
+  const endpoint =
+    typeof APPOINTMENT_API.updateStatus === "function"
+      ? APPOINTMENT_API.updateStatus(appointmentId)
+      : `/api/appointments/${appointmentId}/status`;
+
+  const { data } = await http.patch(endpoint, { estado_agenda: newStatus });
   return data;
 }
 
@@ -238,6 +252,7 @@ export default function Appointments() {
 
   const [loading, setLoading] = useState(false);
   const [loadingContextId, setLoadingContextId] = useState(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
@@ -250,12 +265,6 @@ export default function Appointments() {
     try {
       const result = await fetchAppointmentsByDate(dateValue);
       setAppointments(result.sort(sortByHour));
-
-      if (!APPOINTMENT_API.list) {
-        setInfoMessage(
-          "La agenda se muestra con datos temporales porque aún no se ha configurado el endpoint de listado de citas."
-        );
-      }
     } catch (err) {
       setAppointments([]);
       setError("No fue posible cargar la agenda de citas del doctor.");
@@ -302,6 +311,23 @@ export default function Appointments() {
     }
   };
 
+  const handleChangeStatus = async (appointment, newStatus) => {
+    setUpdatingStatusId(appointment.id_cita);
+    setError("");
+
+    try {
+      await updateAppointmentStatus(appointment.id_cita, newStatus);
+      
+      // Recargar citas después de cambiar estado
+      await loadAppointments(selectedDate);
+      setInfoMessage(`Estado de la cita actualizado a: ${newStatus === 1 ? "activa" : "cancelada"}`);
+    } catch (err) {
+      setError("No fue posible cambiar el estado de la cita.");
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* HEADER */}
@@ -342,7 +368,7 @@ export default function Appointments() {
 
       {/* ALERTAS */}
       {infoMessage && (
-        <Alert variant="info" title="Modo temporal">
+        <Alert variant="info" title="Actualización">
           {infoMessage}
         </Alert>
       )}
@@ -400,6 +426,8 @@ export default function Appointments() {
                   appointment={appointment}
                   isLoadingContext={loadingContextId === appointment.id_cita}
                   onStartConsultation={handleStartConsultation}
+                  isUpdatingStatus={updatingStatusId === appointment.id_cita}
+                  onChangeStatus={handleChangeStatus}
                 />
               ))}
             </div>
@@ -433,19 +461,22 @@ function AppointmentRow({
   appointment,
   isLoadingContext,
   onStartConsultation,
+  isUpdatingStatus,
+  onChangeStatus,
 }) {
   const canStartConsultation = isActiveStatus(appointment.estado);
 
   return (
     <div className="px-6 py-5 hover:bg-neutral-50 transition">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 flex-1">
           <InfoBlock
             label="Horario"
             value={`${appointment.hora_inicio} - ${appointment.hora_fin}`}
           />
           <InfoBlock label="Paciente" value={appointment.nombre_paciente} />
           <InfoBlock label="Documento" value={appointment.num_documento} />
+          <InfoBlock label="Especialidad" value={`ID: ${appointment.id_especialidad}`} />
 
           <div>
             <p className="text-xs uppercase tracking-wide text-neutral-500">
@@ -461,17 +492,42 @@ function AppointmentRow({
           </div>
         </div>
 
-        <div className="flex justify-start xl:justify-end">
-          {canStartConsultation ? (
+        <div className="flex flex-col sm:flex-row gap-2 justify-start xl:justify-end">
+          {canStartConsultation && (
             <Button
               variant="primary"
               onClick={() => onStartConsultation(appointment)}
               disabled={isLoadingContext}
+              className="text-sm"
             >
               {isLoadingContext ? "Iniciando..." : "Iniciar consulta"}
             </Button>
-          ) : (
-            <Button variant="ghost" disabled>
+          )}
+          
+          {appointment.estado_agenda === 1 && (
+            <Button
+              variant="secondary"
+              onClick={() => onChangeStatus(appointment, 0)}
+              disabled={isUpdatingStatus}
+              className="text-sm"
+            >
+              {isUpdatingStatus ? "Cancelando..." : "Cancelar cita"}
+            </Button>
+          )}
+
+          {appointment.estado_agenda === 0 && (
+            <Button
+              variant="ghost"
+              onClick={() => onChangeStatus(appointment, 1)}
+              disabled={isUpdatingStatus}
+              className="text-sm"
+            >
+              {isUpdatingStatus ? "Activando..." : "Reactivar"}
+            </Button>
+          )}
+
+          {!canStartConsultation && appointment.estado_agenda === 1 && (
+            <Button variant="ghost" disabled className="text-sm">
               No disponible
             </Button>
           )}

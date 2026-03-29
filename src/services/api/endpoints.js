@@ -32,7 +32,10 @@ export const endpoints = {
   },
   // ── Appointments Service ──────────────────────────
   appointments: {
-    // list: "/api/appointments/",
+    list: "/api/appointments",
+    create: "/api/appointments",
+    consultationContext: (id) => `/api/appointments/${id}/consultation-context`,
+    updateStatus: (id) => `/api/appointments/${id}/status`,
   },
 
   // ── Emergency Service ─────────────────────────────
