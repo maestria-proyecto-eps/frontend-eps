@@ -1,0 +1,1 @@
+export { TypographyShowcase } from './TypographyShowcase';

@@ -1,0 +1,1 @@
+export { ColorPaletteTable } from './ColorPaletteTable';

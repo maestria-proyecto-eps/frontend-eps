@@ -1,90 +1,103 @@
 import React, { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../services/auth/AuthContext';
+import { Button, Badge } from '../../ui';
 import { cn } from '../../../utils/cn';
+import { ROUTES } from '../../../constants';
 
 const ROLE_LABELS = {
-  doctor: 'Doctor',
-  nurse: 'Enfermera',
-  patient: 'Paciente',
-  hr: 'Recursos Humanos',
-  pharmacist: 'Farmacéutico',
-  receptionist: 'Recepcionista',
-};
-
-const ROLE_COLORS = {
-  doctor: 'bg-blue-100 text-blue-700',
-  nurse: 'bg-pink-100 text-pink-700',
-  patient: 'bg-green-100 text-green-700',
-  hr: 'bg-purple-100 text-purple-700',
-  pharmacist: 'bg-orange-100 text-orange-700',
-  receptionist: 'bg-teal-100 text-teal-700',
+  'Médico': 'Médico',
+  'Enfermero': 'Enfermero',
+  'Paciente': 'Paciente',
+  'Talento Humano': 'Talento Humano',
+  'Farmaceuta': 'Farmaceuta',
+  'Recepcionista': 'Recepcionista',
 };
 
 export default function AuthenticatedHeader({ className = '' }) {
   const auth = useContext(AuthContext);
   const nav = useNavigate();
 
-  const role = auth?.role || 'patient';
-  const payload = auth?.payload || {};
-  const documento = payload.num_documento || '—';
-
+  const role = auth?.role || 'Paciente';
   const roleLabel = ROLE_LABELS[role] || role;
-  const roleColor = ROLE_COLORS[role] || 'bg-neutral-100 text-neutral-700';
 
   const handleLogout = () => {
-    auth.logout();
-    nav('/login');
+    auth?.logout?.();
+    nav(ROUTES.LOGIN);
   };
 
   return (
     <header
+      id="authenticated-header"
+      data-testid="authenticated-header"
       className={cn(
-        'bg-white border-b border-neutral-200 shadow-sm sticky top-0 z-50',
+        'w-full bg-white border-b border-neutral-200 shadow-sm sticky top-0 z-50',
         className
       )}
     >
       <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-
-          {/* Logo + nombre EPS */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => nav('/')}>
-            <img
-              src="/logo-horizontal.svg"
-              alt="Logo EPS"
-              className="h-15 w-auto object-contain"
-              onError={(e) => { e.target.style.display = 'none'; }}
+        <div className="flex items-center justify-between h-20">
+          {/* Logo - Izquierda */}
+          <Link 
+            to={ROUTES.HOME} 
+            id="auth-header-logo"
+            data-testid="auth-header-logo-link"
+            className="flex items-center gap-2 flex-shrink-0"
+            title="Ir a inicio"
+          >
+            <img 
+              src="/brand/Logo_Color_H.svg" 
+              alt="Cuidarte EPS Logo" 
+              className="h-12 w-auto object-contain"
+              data-testid="auth-header-logo-image"
             />
-            <div className="flex flex-col leading-tight">
-              <span className="text-xs text-neutral-400 hidden sm:inline">Salud y Bienestar</span>
-            </div>
-          </div>
+          </Link>
 
-          {/* Usuario, rol, logout */}
-          <div className="flex items-center gap-3">
-            {/* Info usuario */}
-            <div className="hidden sm:flex flex-col items-end leading-tight">
-              <span className="text-sm font-semibold text-neutral-700">
-                Doc. {documento}
-              </span>
-              <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full mt-0.5', roleColor)}>
-                {roleLabel}
-              </span>
-            </div>
-
-
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-medium text-sm px-3 py-1.5 rounded-lg transition-colors border border-red-200"
+          {/* Navegación + Rol + Logout - Derecha */}
+          <div 
+            id="auth-header-actions"
+            data-testid="auth-header-actions-section"
+            className="flex items-center gap-4 ml-auto"
+          >
+            {/* Identificación del usuario (rol + ID) */}
+            <div 
+              id="user-identification"
+              data-testid="user-identification"
+              className="hidden md:flex"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-              </svg>
-              <span className="hidden sm:inline">Cerrar sesión</span>
-            </button>
-          </div>
+              <Badge 
+                variant="primary"
+                size="md"
+              >
+                {auth?.payload?.num_documento ? `${auth.payload.num_documento} • ${roleLabel}` : roleLabel}
+              </Badge>
+            </div>
 
+            {/* Botón Cerrar Sesión */}
+            <Button
+              onClick={handleLogout}
+              id="btn-logout"
+              data-testid="auth-header-logout-button"
+              variant="outline-danger"
+              size="sm"
+              rightIcon={<span className="material-icons text-base">logout</span>}
+              className="whitespace-nowrap hidden sm:inline-flex"
+            >
+              Cerrar sesión
+            </Button>
+
+            {/* Botón Cerrar Sesión - Solo icono en móvil */}
+            <Button
+              onClick={handleLogout}
+              id="btn-logout-mobile"
+              data-testid="auth-header-logout-button-mobile"
+              variant="outline-danger"
+              size="sm"
+              rightIcon={<span className="material-icons text-base">logout</span>}
+              className="sm:hidden"
+            >
+            </Button>
+          </div>
         </div>
       </div>
     </header>
