@@ -7,6 +7,7 @@ const variants = {
   outline: 'bg-transparent border-2 border-primary-600 text-primary-700 hover:bg-primary-50 hover:border-primary-700 hover:shadow-lg transition-all',
   ghost: 'bg-transparent hover:bg-neutral-100 hover:shadow-lg text-neutral-700 border-transparent',
   danger: 'bg-red-600 hover:bg-red-700 hover:shadow-lg text-white border-transparent',
+  'outline-danger': 'bg-transparent border-2 border-red-600 text-red-600 hover:bg-red-50 hover:border-red-700 hover:shadow-lg transition-all',
   disabled: 'bg-neutral-300 hover:bg-neutral-300 text-neutral-600 border-transparent cursor-not-allowed',
   highlight: 'bg-amber-500 hover:bg-amber-600 hover:shadow-lg text-white border-transparent',
 };

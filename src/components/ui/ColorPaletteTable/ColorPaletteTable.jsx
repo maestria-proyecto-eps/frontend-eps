@@ -55,8 +55,8 @@ export function ColorPaletteTable({ colors = [], className = '', ...props }) {
                                 id={`color-label-${color.id || index}`}
                                 data-testid={`color-label-${color.id || index}`}
                             >
-                                <p className={`font-bold text-lg ${labelColor}`}>{color.name}</p>
-                                <p className={`font-mono text-xs ${labelColor}`}>HEX. {color.hex}</p>
+                                <p className={`font-bold text-lg ${labelColor} text-right`}>{color.name}</p>
+                                <p className={`font-mono text-xs ${labelColor} text-right`}>HEX. {color.hex}</p>
                             </div>
 
 
