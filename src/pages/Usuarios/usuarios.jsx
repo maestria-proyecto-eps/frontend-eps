@@ -1,53 +1,33 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MainLayout, PageContainer } from '../../components/layout';
+import { PageContainer } from '../../components/layout';
 import { DataTable, Badge, Button } from '../../components/ui';
 import { ROUTES } from '../../constants';
+import { http } from '../../services/api/http';
+import { endpoints } from '../../services/api/endpoints';
 
-
-
-// Datos de ejemplo (luego vendrán del API)
-const USUARIOS_INICIALES = [
-  { id: 1, nombre: 'María García', documento: '12345678', email: 'maria.garcia@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 2, nombre: 'Juan Pérez', documento: '87654321', email: 'juan.perez@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 3, nombre: 'Ana López', documento: '11223344', email: 'ana.lopez@ejemplo.com', rol: 'HR', estado: 'Inactivo' },
-  { id: 4, nombre: 'Carlos Ruiz', documento: '44332211', email: 'carlos.ruiz@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 5, nombre: 'Laura Martínez', documento: '55667788', email: 'laura.martinez@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 6, nombre: 'Pedro Sánchez', documento: '99887766', email: 'pedro.sanchez@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 7, nombre: 'Sofía Ramírez', documento: '55443322', email: 'sofia.ramirez@ejemplo.com', rol: 'HR', estado: 'Activo' },
-  { id: 8, nombre: 'Diego Fernández', documento: '11224455', email: 'diego.fernandez@ejemplo.com', rol: 'Usuario', estado: 'Inactivo' },
-  { id: 9, nombre: 'Elena Torres', documento: '66778899', email: 'elena.torres@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 10, nombre: 'Miguel Díaz', documento: '33445566', email: 'miguel.diaz@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 11, nombre: 'Isabel Moreno', documento: '77889900', email: 'isabel.moreno@ejemplo.com', rol: 'HR', estado: 'Inactivo' },
-  { id: 12, nombre: 'Roberto Castro', documento: '22334455', email: 'roberto.castro@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 13, nombre: 'Carmen Ortiz', documento: '88990011', email: 'carmen.ortiz@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 14, nombre: 'Andrés Vargas', documento: '44556677', email: 'andres.vargas@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 15, nombre: 'Patricia Reyes', documento: '99001122', email: 'patricia.reyes@ejemplo.com', rol: 'HR', estado: 'Inactivo' },
-  { id: 16, nombre: 'Fernando Mora', documento: '55667788', email: 'fernando.mora@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-  { id: 17, nombre: 'Lucía Herrera', documento: '12341234', email: 'lucia.herrera@ejemplo.com', rol: 'Admin', estado: 'Activo' },
-  { id: 18, nombre: 'Jorge Jiménez', documento: '56785678', email: 'jorge.jimenez@ejemplo.com', rol: 'Usuario', estado: 'Inactivo' },
-  { id: 19, nombre: 'Rosa Navarro', documento: '90129012', email: 'rosa.navarro@ejemplo.com', rol: 'HR', estado: 'Activo' },
-  { id: 20, nombre: 'Antonio Romero', documento: '34563456', email: 'antonio.romero@ejemplo.com', rol: 'Usuario', estado: 'Activo' },
-];
-
+// Roles quemados según los que aparecen en la respuesta del API
 const ROLES_OPCIONES = [
-  { value: 'Admin', label: 'Admin' },
-  { value: 'Usuario', label: 'Usuario' },
-  { value: 'HR', label: 'HR' },
+  { value: 1, label: 'Administrador' },
+  { value: 2, label: 'Médico' },
+  { value: 3, label: 'Paciente' },
+  { value: 4, label: 'Enfermero' },
+  { value: 5, label: 'Farmaceuta' },
+  { value: 6, label: 'Recepcionista' },
+  { value: 7, label: 'Talento Humano' },
 ];
 
 const ESTADOS_OPCIONES = [
-  { value: 'Activo', label: 'Activo' },
-  { value: 'Inactivo', label: 'Inactivo' },
+  { value: 1, label: 'Activo' },
+  { value: 0, label: 'Inactivo' },
 ];
 
 const COLUMNAS_USUARIOS = [
-  { key: 'nombre', label: 'Nombre', filterable: true },
-  { key: 'documento', label: 'Documento', filterable: true },
-  { key: 'email', label: 'Email', filterable: true },
-  { key: 'rol', label: 'Rol', filterable: true, filterType: 'select', filterOptions: ROLES_OPCIONES },
-  { key: 'estado', label: 'Estado', filterable: true, filterType: 'select', filterOptions: ESTADOS_OPCIONES, render: (valor) => (
-    <Badge variant={valor === 'Activo' ? 'success' : 'neutral'} size="sm">{valor}</Badge>
+  { key: 'id_usuario', label: 'ID', filterable: false },
+  { key: 'num_documento', label: 'Documento', filterable: true },
+  { key: 'rol_des', label: 'Rol', filterable: true, filterType: 'select', filterOptions: ROLES_OPCIONES.map((r) => ({ value: r.label, label: r.label })) },
+  { key: 'estado', label: 'Estado', filterable: true, filterType: 'select', filterOptions: ESTADOS_OPCIONES.map((e) => ({ value: String(e.value), label: e.label })), render: (valor) => (
+    <Badge variant={valor === 1 ? 'success' : 'neutral'} size="sm">{valor === 1 ? 'Activo' : 'Inactivo'}</Badge>
   )},
 ];
 
@@ -59,67 +39,218 @@ const FORM_CONFIG_USUARIOS = {
   editSubmitLabel: 'Guardar',
   confirmDeactivateTitle: 'Confirmar desactivación',
   confirmDeactivateMessage: (row) => (
-    <>¿Está seguro que desea desactivar a <strong>{row?.nombre}</strong>? El usuario no podrá acceder al sistema.</>
+    <>¿Está seguro que desea desactivar al usuario con documento <strong>{row?.num_documento}</strong>?</>
   ),
   statusKey: 'estado',
-  activeValue: 'Activo',
-  deactivatedValue: 'Inactivo',
+  activeValue: 1,
+  deactivatedValue: 0,
   fields: [
-    { key: 'nombre', label: 'Nombre', type: 'text', placeholder: 'Nombre completo', validation: ['required'] },
-    { key: 'documento', label: 'Documento', type: 'text', placeholder: 'Número de documento', validation: ['required', 'document'] },
-    { key: 'email', label: 'Email', type: 'email', placeholder: 'correo@ejemplo.com', validation: ['required', 'email'] },
-    { key: 'rol', label: 'Rol', type: 'select', options: ROLES_OPCIONES },
-    { key: 'estado', label: 'Estado', type: 'select', options: ESTADOS_OPCIONES, defaultValue: 'Activo' },
+    { key: 'num_documento', label: 'Número de documento', type: 'text', placeholder: 'Documento', validation: ['required', 'document'] },
+    { key: 'password', label: 'Contraseña', type: 'password', placeholder: 'Contraseña', validation: ['required'], createOnly: true },
+    { key: 'password_confirm', label: 'Confirmar contraseña', type: 'password', placeholder: 'Repetir contraseña', validation: ['required', 'passwordMatch'], createOnly: true },
+    { key: 'id_rol', label: 'Rol', type: 'select', options: ROLES_OPCIONES },
   ],
 };
 
 export default function Usuarios() {
-  const [usuarios, setUsuarios] = React.useState(() => [...USUARIOS_INICIALES]);
+  const [usuarios, setUsuarios] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState({});
   const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(5);
+  const [pageSize, setPageSize] = React.useState(10);
+  const [total, setTotal] = React.useState(0);
+  const [allDocLoaded, setAllDocLoaded] = React.useState(false);
 
+  const fetchUsers = useCallback(async () => {
+    const docFilter = filters.num_documento;
+    const estadoFilter = filters.estado;
+    const rolFilter = filters.rol_des;
+
+    const hasDocFilter = docFilter != null && String(docFilter).trim() !== '';
+    const hasEstadoFilter = estadoFilter != null && String(estadoFilter).trim() !== '';
+    const hasRolFilter = rolFilter != null && String(rolFilter).trim() !== '';
+
+    // Si solo hay filtro por documento, queremos traer todas las páginas (cantidad 30)
+    const onlyDocFilter = hasDocFilter && !hasEstadoFilter && !hasRolFilter;
+
+    // Si ya cargamos todo el universo para búsqueda por documento, no volvemos a llamar al backend
+    if (onlyDocFilter && allDocLoaded) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (onlyDocFilter) {
+        const pageSizeForDoc = 30;
+        let allData = [];
+
+        // Primera página: obtenemos datos y número total de páginas
+        const { data: firstRes } = await http.get(endpoints.users.list, {
+          params: { pag: 1, cantidad: pageSizeForDoc },
+        });
+        if (firstRes.hasError || !firstRes.data) {
+          setUsuarios([]);
+          setTotal(0);
+          return;
+        }
+        const { data: firstList = [], pages = 0 } = firstRes.data;
+        allData = Array.isArray(firstList) ? firstList : [];
+
+        const totalPages = Number(pages) || 0;
+
+        // Traemos el resto de páginas
+        for (let p = 2; p <= totalPages; p += 1) {
+          const { data: resPage } = await http.get(endpoints.users.list, {
+            params: { pag: p, cantidad: pageSizeForDoc },
+          });
+          if (!resPage.hasError && resPage.data?.data) {
+            const pageList = Array.isArray(resPage.data.data) ? resPage.data.data : [];
+            allData = allData.concat(pageList);
+          }
+        }
+
+        setUsuarios(allData);
+        setTotal(allData.length);
+        setPage(1);
+        setPageSize(pageSizeForDoc);
+        setAllDocLoaded(true);
+        return;
+      }
+
+      // Modo normal: paginación y filtros en el backend
+      const params = {
+        pag: page,
+        cantidad: pageSize,
+      };
+
+      if (hasDocFilter) {
+        params.num_documento = String(docFilter).trim();
+      }
+      if (hasEstadoFilter) {
+        params.estado = Number(estadoFilter);
+      }
+      if (hasRolFilter) {
+        const rolOpcion = ROLES_OPCIONES.find((r) => r.label === String(rolFilter).trim());
+        if (rolOpcion) {
+          params.rol = rolOpcion.value;
+        }
+      }
+
+      const { data: res } = await http.get(endpoints.users.list, {
+        params,
+      });
+      if (res.hasError || !res.data) {
+        setUsuarios([]);
+        setTotal(0);
+        return;
+      }
+      const { data: list = [], pages = 0 } = res.data;
+      setUsuarios(Array.isArray(list) ? list : []);
+      setTotal(pages * pageSize);
+    } catch (err) {
+      console.error('Error al cargar usuarios:', err);
+      setUsuarios([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize, filters, allDocLoaded]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // Filtro adicional en el cliente (para soportar búsquedas por documento sobre el lote recibido)
   const filtrado = usuarios.filter((row) => {
     return Object.entries(filters).every(([key, val]) => {
       if (val == null || String(val).trim() === '') return true;
-      return String(row[key] ?? '').toLowerCase().includes(String(val).toLowerCase());
+      const value = String(val).trim().toLowerCase();
+      const cell = row[key];
+      if (key === 'estado') return String(cell) === String(val);
+      // Para documento usamos "empieza por" en lugar de "contiene"
+      if (key === 'num_documento') {
+        const doc = String(cell ?? '').toLowerCase();
+        return doc.startsWith(value);
+      }
+      return String(cell ?? '').toLowerCase().includes(value);
     });
   });
-  const total = filtrado.length;
-  const paginados = filtrado.slice((page - 1) * pageSize, page * pageSize);
 
-  const handleCreate = (newRow) => {
-    const nuevoId = Math.max(0, ...usuarios.map((u) => u.id)) + 1;
-    setUsuarios((prev) => [...prev, { id: nuevoId, ...newRow }]);
+  // Cuando solo hay filtro por documento, la paginación se hace completamente en el cliente
+  const hasDocFilterView = filters.num_documento != null && String(filters.num_documento).trim() !== '';
+  const hasEstadoFilterView = filters.estado != null && String(filters.estado).trim() !== '';
+  const hasRolFilterView = filters.rol_des != null && String(filters.rol_des).trim() !== '';
+  const onlyDocFilterView = hasDocFilterView && !hasEstadoFilterView && !hasRolFilterView;
+
+  const dataForTable = onlyDocFilterView
+    ? filtrado.slice((page - 1) * pageSize, page * pageSize)
+    : filtrado;
+
+  const paginationTotal = onlyDocFilterView ? filtrado.length : total;
+
+  const handleFiltersChange = (nextFilters) => {
+    // Al cambiar filtros, siempre arrancamos desde la primera página
+    setFilters(nextFilters);
+    setPage(1);
+
+    // Si salimos del modo "solo documento", la próxima vez que entremos recargamos todo el universo
+    const nextDoc = nextFilters.num_documento;
+    const nextEstado = nextFilters.estado;
+    const nextRol = nextFilters.rol_des;
+    const hasNextDoc = nextDoc != null && String(nextDoc).trim() !== '';
+    const hasNextEstado = nextEstado != null && String(nextEstado).trim() !== '';
+    const hasNextRol = nextRol != null && String(nextRol).trim() !== '';
+
+    const nextOnlyDoc = hasNextDoc && !hasNextEstado && !hasNextRol;
+    if (!nextOnlyDoc) {
+      setAllDocLoaded(false);
+    }
   };
 
-  const handleEdit = (id, updatedRow) => {
-    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, ...updatedRow } : u)));
+  const handleCreate = async (newRow) => {
+    await http.post(endpoints.users.create, {
+      num_documento: Number(newRow.num_documento) || newRow.num_documento,
+      password: newRow.password,
+      id_rol: Number(newRow.id_rol),
+    });
+    await fetchUsers();
   };
 
-  const handleDeactivate = (id) => {
-    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, estado: 'Inactivo' } : u)));
+  const handleEdit = async (id, updatedRow) => {
+    await http.put(endpoints.users.updateById(id), {
+      num_documento: Number(updatedRow.num_documento) || updatedRow.num_documento,
+      id_rol: Number(updatedRow.id_rol),
+    });
+    await fetchUsers();
+  };
+
+  const handleDeactivate = async (id) => {
+    await http.put(endpoints.users.changeStatus(id), { estado: 0 });
+    await fetchUsers();
+  };
+
+  const handleActivate = async (id) => {
+    await http.put(endpoints.users.changeStatus(id), { estado: 1 });
+    await fetchUsers();
   };
 
   return (
-    <MainLayout>
       <PageContainer>
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-neutral-800">Gestión de usuarios</h1>
-          <Link to={ROUTES.HOME}>
-            <Button variant="outline" size="sm">← Volver al inicio</Button>
-          </Link>
+          <div />
         </div>
         <DataTable
           columns={COLUMNAS_USUARIOS}
-          data={paginados}
+          data={dataForTable}
           filters={filters}
-          onFiltersChange={setFilters}
+          onFiltersChange={handleFiltersChange}
+          loading={loading}
           pagination={{
             page,
             pageSize,
-            total,
-            pageSizeOptions: [5, 10, 25],
+            total: paginationTotal,
+            pageSizeOptions: [5, 10, 25, 30],
             onPageChange: setPage,
             onPageSizeChange: (size) => { setPageSize(size); setPage(1); },
           }}
@@ -127,10 +258,10 @@ export default function Usuarios() {
           onCreate={handleCreate}
           onEdit={handleEdit}
           onDeactivate={handleDeactivate}
-          keyExtractor={(row) => row.id}
-          emptyMessage="No hay usuarios que coincidan con los filtros"
+          onActivate={handleActivate}
+          keyExtractor={(row) => row.id_usuario}
+          emptyMessage={loading ? 'Cargando...' : 'No hay usuarios o no coinciden con los filtros'}
         />
       </PageContainer>
-    </MainLayout>
   );
 }

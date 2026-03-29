@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { cn } from '../../../utils/cn';
 import { Button } from '../Button';
 import { Input } from '../Input';
@@ -6,39 +6,7 @@ import { Card } from '../Card';
 import { Spinner } from '../Spinner';
 import { Modal } from '../Modal';
 import { Alert } from '../Alert';
-
-/**
- * Validadores de alto nivel reutilizables para campos habituales (email, documento, etc.).
- * La página puede usar estos nombres en field.validation o definir lógica propia en formConfig.validate.
- */
-export const VALIDATORS = {
-  required: (value, field) => {
-    if (value == null || String(value).trim() === '') {
-      return `${field.label || field.key} es obligatorio`;
-    }
-    return null;
-  },
-  email: (value, field) => {
-    if (value == null || String(value).trim() === '') return null;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      return 'Email no válido';
-    }
-    return null;
-  },
-  /** Identificación / documento: solo números y letras, longitud configurable (min/max por defecto 5-20). */
-  document: (value, field, _form, options = {}) => {
-    if (value == null || String(value).trim() === '') return null;
-    const min = options.min ?? 5;
-    const max = options.max ?? 20;
-    const str = String(value).trim();
-    if (str.length < min) return `Mínimo ${min} caracteres`;
-    if (str.length > max) return `Máximo ${max} caracteres`;
-    if (!/^[a-zA-Z0-9\-]+$/.test(str)) {
-      return 'Solo letras, números y guiones';
-    }
-    return null;
-  },
-};
+import { VALIDATORS } from './validators';
 
 /**
  * Construye el objeto vacío del formulario a partir de formConfig.fields.
@@ -74,7 +42,7 @@ function runFieldValidation(form, fields, context = {}) {
       const options = typeof rule === 'object' && rule != null ? rule.options : undefined;
       const fn = typeof rule === 'function' ? rule : VALIDATORS[name];
       if (!fn) continue;
-      const msg = fn(val, f, form, options ?? f.validationOptions?.[name]);
+      const msg = fn(val, f, form, options ?? f.validationOptions?.[name], context);
       if (msg) {
         err[f.key] = msg;
         break;
@@ -106,17 +74,18 @@ export default function DataTable({
   onCreate,
   onEdit,
   onDeactivate,
+  onActivate,
   keyExtractor = (row) => row.id ?? row.documento ?? JSON.stringify(row),
   loading = false,
   emptyMessage = 'No hay datos',
   renderRowActions,
   className = '',
 }) {
-  const hasCrud = formConfig && (onCreate || onEdit || onDeactivate);
-  const fields = formConfig?.fields ?? [];
+  const hasCrud = formConfig && (onCreate || onEdit || onDeactivate || onActivate);
+  const fields = useMemo(() => formConfig?.fields ?? [], [formConfig?.fields]);
   const statusKey = formConfig?.statusKey;
   const activeValue = formConfig?.activeValue ?? 'Activo';
-  const deactivatedValue = formConfig?.deactivatedValue ?? 'Inactivo';
+  const deactivatedValue = formConfig?.deactivatedValue;
 
   const [modalCreate, setModalCreate] = useState(false);
   const [modalEdit, setModalEdit] = useState(false);
@@ -129,12 +98,22 @@ export default function DataTable({
   const [submitting, setSubmitting] = useState(false);
 
   const getEmptyFormState = useCallback(() => getEmptyForm(fields), [fields]);
+  const fieldsForMode = useCallback(
+    (mode) =>
+      fields.filter(
+        (f) => (mode === 'create' && !f.editOnly) || (mode === 'edit' && !f.createOnly)
+      ),
+    [fields]
+  );
   const validate = useCallback(
-    (values, context = {}) =>
-      formConfig?.validate
-        ? formConfig.validate(values, fields, context)
-        : runFieldValidation(values, fields, context),
-    [formConfig, fields]
+    (values, context = {}) => {
+      const mode = context.mode ?? 'create';
+      const fieldsToValidate = fieldsForMode(mode);
+      return formConfig?.validate
+        ? formConfig.validate(values, fieldsToValidate, context)
+        : runFieldValidation(values, fieldsToValidate, context);
+    },
+    [formConfig, fieldsForMode]
   );
 
   const openCreate = () => {
@@ -242,6 +221,11 @@ export default function DataTable({
     [statusKey, activeValue]
   );
 
+  const showRowActivate = useCallback(
+    (row) => statusKey && deactivatedValue !== undefined && row[statusKey] === deactivatedValue,
+    [statusKey, deactivatedValue]
+  );
+
   const hasFilters = columns.some((col) => col.filterable);
   const page = pagination?.page ?? 1;
   const pageSize = pagination?.pageSize ?? 10;
@@ -261,14 +245,6 @@ export default function DataTable({
     pagination?.onPageSizeChange?.(size);
     pagination?.onPageChange?.(1);
   };
-
-  const fieldsForMode = useCallback(
-    (mode) =>
-      fields.filter(
-        (f) => (mode === 'create' && !f.editOnly) || (mode === 'edit' && !f.createOnly)
-      ),
-    [fields]
-  );
 
   const renderFormFields = (mode) =>
     fieldsForMode(mode).map((f) => {
@@ -297,7 +273,7 @@ export default function DataTable({
         <Input
           key={f.key}
           label={f.label}
-          type={f.type === 'email' ? 'email' : f.type === 'number' ? 'number' : 'text'}
+          type={f.type === 'email' ? 'email' : f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : 'text'}
           value={form[f.key] ?? ''}
           onChange={(e) => setField(f.key, e.target.value)}
           error={formErrors[f.key]}
@@ -309,14 +285,19 @@ export default function DataTable({
 
   const defaultRowActions = hasCrud
     ? (row) => (
-        <div className="flex justify-end gap-1">
+        <div className="flex justify-end items-center gap-2">
           {onEdit && (
             <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
               Editar
             </Button>
           )}
+          {onActivate && showRowActivate(row) && (
+            <Button variant="primary" size="sm" className="min-w-[110px]" onClick={() => onActivate(keyExtractor(row))}>
+              Activar
+            </Button>
+          )}
           {onDeactivate && showRowDeactivate(row) && (
-            <Button variant="deactivate" size="sm" onClick={() => openDeactivate(row)}>
+            <Button variant="deactivate" size="sm" className="min-w-[110px]" onClick={() => openDeactivate(row)}>
               Desactivar
             </Button>
           )}

@@ -1,0 +1,32 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/auth/:path*",
+      "destination": "https://backend-eps-auth-service-xzgs.onrender.com/api/auth/:path*"
+    },
+    {
+      "source": "/api/patients/:path*",
+      "destination": "https://backend-eps-auth-service-xzgs.onrender.com/api/patients/:path*"
+    },
+    {
+      "source": "/api/users/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/users/:path*"
+    },
+    {
+      "source": "/api/appointments/:path*",
+      "destination": "https://backend-eps-appointments-service.onrender.com/api/appointments/:path*"
+    },
+    {
+      "source": "/api/emergency/:path*",
+      "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/emergency/:path*"
+    },
+    {
+      "source": "/api/pharmacy/:path*",
+      "destination": "https://backend-eps-pharmacy-service.onrender.com/api/pharmacy/:path*"
+    },
+    {
+      "source": "/api/medical-records/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/medical-records/:path*"
+    }
+  ]
+}
