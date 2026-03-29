@@ -25,10 +25,8 @@ export default function HeroBanner() {
                     {/* Columna izquierda: Texto */}
                     <div className="flex flex-col justify-center">
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-neutral-900">
-                            Cuidando tu salud con{' '}
-                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-neutral-900">
-                                <span className="text-primary-600">confianza</span>
-                            </h1>
+                            Cuidando tu salud con <br />
+                            <span className="text-primary-600">confianza</span>
                         </h1>
 
                         <p className="mt-6 text-lg md:text-xl text-neutral-700 max-w-lg">
