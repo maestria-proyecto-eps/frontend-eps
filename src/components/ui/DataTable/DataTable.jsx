@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '../../../utils/cn';
 import { Button } from '../Button';
 import { Input } from '../Input';
+import { DatePicker } from '../DatePicker';
 import { Card } from '../Card';
 import { Spinner } from '../Spinner';
 import { Modal } from '../Modal';
@@ -60,9 +62,11 @@ function runFieldValidation(form, fields, context = {}) {
  *
  * - data: filas a mostrar (típicamente desde estado que la página llena con el API).
  * - loading: indica carga inicial o recarga.
+ * - columns[].filterType: 'select' | 'date' (DatePicker) | por defecto Input de texto.
  * - formConfig.fields: solo los campos que la página permite crear/editar; createOnly/editOnly controlan en qué modal aparecen.
  * - formConfig.validate: validación custom (ej. unicidad en API); si no se pasa, se usan las reglas por campo (VALIDATORS).
  * - onCreate/onEdit/onDeactivate: pueden ser async; el componente muestra carga en el botón y errores si fallan.
+ * - createHref: si se define, muestra el botón principal como enlace (p. ej. nueva cita) junto a Recargar; usa formConfig.createButtonLabel.
  */
 export default function DataTable({
   columns = [],
@@ -80,6 +84,10 @@ export default function DataTable({
   emptyMessage = 'No hay datos',
   renderRowActions,
   className = '',
+  /** Si se define, muestra botón superior derecho: limpia filtros, vuelve a página 1 y ejecuta este callback (p. ej. refetch). */
+  onReload,
+  /** Ruta interna (React Router): botón primario como Link, a la derecha de Recargar. Texto: formConfig.createButtonLabel. */
+  createHref,
 }) {
   const hasCrud = formConfig && (onCreate || onEdit || onDeactivate || onActivate);
   const fields = useMemo(() => formConfig?.fields ?? [], [formConfig?.fields]);
@@ -240,6 +248,12 @@ export default function DataTable({
     onFiltersChange({ ...filters, [columnKey]: value });
   };
 
+  const handleReload = useCallback(() => {
+    onFiltersChange?.({});
+    pagination?.onPageChange?.(1);
+    onReload?.();
+  }, [onFiltersChange, onReload, pagination]);
+
   const handlePageSizeChange = (e) => {
     const size = Number(e.target.value);
     pagination?.onPageSizeChange?.(size);
@@ -316,13 +330,43 @@ export default function DataTable({
         </Alert>
       )}
 
-      {hasCrud && onCreate && (
-        <div className="flex justify-end">
-          <Button variant="primary" onClick={openCreate}>
-            {formConfig?.createButtonLabel ?? 'Crear'}
-          </Button>
+      {(hasCrud && onCreate) || onReload || createHref ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {onReload && (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              disabled={loading}
+              onClick={handleReload}
+              title="Recargar datos y limpiar filtros"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor" aria-hidden>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                />
+              </svg>
+              <span>Recargar</span>
+            </Button>
+          )}
+          {createHref ? (
+            <Link to={createHref} className="inline-flex">
+              <Button variant="primary" size="sm" type="button">
+                {formConfig?.createButtonLabel ?? 'Crear'}
+              </Button>
+            </Link>
+          ) : (
+            hasCrud &&
+            onCreate && (
+              <Button variant="primary" onClick={openCreate}>
+                {formConfig?.createButtonLabel ?? 'Crear'}
+              </Button>
+            )
+          )}
         </div>
-      )}
+      ) : null}
 
       <Card padding={false} className={cn('overflow-hidden', className)}>
         {hasFilters && onFiltersChange && (
@@ -344,6 +388,13 @@ export default function DataTable({
                         ))}
                       </select>
                     </div>
+                  ) : col.filterType === 'date' ? (
+                    <DatePicker
+                      label={col.label}
+                      value={filters[col.key] ?? ''}
+                      onChange={(value) => handleFilterChange(col.key, value ?? '')}
+                      className="rounded-lg border-neutral-300 px-3 py-2"
+                    />
                   ) : (
                     <Input
                       label={col.label}

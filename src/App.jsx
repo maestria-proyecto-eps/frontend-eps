@@ -8,13 +8,14 @@ import Home from "./pages/Home";
 import Components from "./pages/Components";
 import ComponentsOld from "./pages/ComponentsOld";
 import Usuarios from "./pages/Usuarios/usuarios";
-import DoctorExample from "./pages/doctor/DoctorExample"
-import DoctorLayout from "./pages/doctor/DoctorLayout"
+import DoctorExample from "./pages/doctor/DoctorExample";
+import DoctorLayout from "./pages/doctor/DoctorLayout";
 import NewPatient from "./pages/receptionist/newpatient";
+import Appointments from "./pages/patient/Appointments";
 import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
 import { ROUTES } from "./constants";
-import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
+import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout";
 export default function App() {
   return (
     <AuthProvider>
@@ -24,7 +25,6 @@ export default function App() {
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
-          <Route path="/components_old" element={<ComponentsOld />} />
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
 
@@ -122,10 +122,11 @@ export default function App() {
             }
           >
             <Route index element={<Maintenance />} />
-            <Route path="citas" element={<Maintenance />} />
+            <Route path="citas" element={<Appointments />} />
             <Route path="historia" element={<Maintenance />} />
             <Route path="prescripciones" element={<Maintenance />} />
             <Route path="perfil" element={<Maintenance />} />
+            <Route path="appointments/new" element={<Maintenance />} />
           </Route>
 
           {/* Cualquier otra ruta → redirigir al home */}
