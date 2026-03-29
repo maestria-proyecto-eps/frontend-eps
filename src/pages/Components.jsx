@@ -447,7 +447,7 @@ function ModalShowcase() {
   );
 }
 
-export default function Components() {
+export default function Components() {  
   return (
     <MainLayout>
       {/* SECCIÓN HERO / INTRO */}

@@ -1,79 +1,86 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { PageContainer } from '../../components/layout';
-import { DataTable, Badge, Button } from '../../components/ui';
+import { DataTable, Badge } from '../../components/ui';
+import { http } from '../../services/api/http';
+import { endpoints } from '../../services/api/endpoints';
+import { AuthContext } from '../../services/auth/AuthContext';
 
-// Datos quemados de citas para diseño de UI
-const CITAS_MOCK = [
-  {
-    id_cita: 1,
-    fecha: '2026-03-25',
-    hora_inicio: '09:00',
-    doctor_nombre: 'Dra. Laura Méndez',
-    especialidad: 'Medicina General',
-    estado: 'Activa',
-  },
-  {
-    id_cita: 2,
-    fecha: '2026-03-28',
-    hora_inicio: '11:30',
-    doctor_nombre: 'Dr. Carlos Ruiz',
-    especialidad: 'Cardiología',
-    estado: 'Activa',
-  },
-  {
-    id_cita: 3,
-    fecha: '2026-02-10',
-    hora_inicio: '15:00',
-    doctor_nombre: 'Dra. Ana López',
-    especialidad: 'Dermatología',
-    estado: 'Atendida',
-  },
-  {
-    id_cita: 4,
-    fecha: '2026-02-15',
-    hora_inicio: '10:15',
-    doctor_nombre: 'Dr. Juan Pérez',
-    especialidad: 'Odontología',
-    estado: 'Cancelada',
-  },
-  {
-    id_cita: 5,
-    fecha: '2026-03-20',
-    hora_inicio: '08:30',
-    doctor_nombre: 'Dra. Marcela Gómez',
-    especialidad: 'Pediatría',
-    estado: 'Activa',
-  },
+/** Compara fecha+hora de la cita con el momento actual (para futuras vs pasadas). */
+function citaComoDate(cita) {
+  const fecha = cita.fecha;
+  const hora = (cita.hora_inicio || '00:00:00').toString();
+  const hhmmss = hora.length >= 8 ? hora.slice(0, 8) : `${hora.padEnd(8, '0')}`;
+  return new Date(`${fecha}T${hhmmss}`);
+}
+
+function mapEstadoAgenda(estadoAgenda) {
+  if (estadoAgenda === 1) return 'Activo';
+  if (estadoAgenda === 0) return 'Inactivo';
+  return String(estadoAgenda ?? '—');
+}
+
+const ESTADOS_FILTRO = [
+  { value: '1', label: 'Activo' },
+  { value: '0', label: 'Inactivo' },
 ];
 
-const ESTADOS_CITA = [
-  { value: 'Activa', label: 'Activa' },
-  { value: 'Cancelada', label: 'Cancelada' },
-  { value: 'Atendida', label: 'Atendida' },
-];
+function formatoHora(valor) {
+  if (valor == null || valor === '') return '—';
+  const s = String(valor);
+  return s.length >= 5 ? s.slice(0, 5) : s;
+}
 
 const COLUMNAS_CITAS = [
-  { key: 'fecha', label: 'Fecha', filterable: true },
-  { key: 'hora_inicio', label: 'Hora', filterable: false },
-  { key: 'doctor_nombre', label: 'Doctor', filterable: true },
-  { key: 'especialidad', label: 'Especialidad', filterable: true },
+  { key: 'fecha', label: 'Fecha', filterable: true, filterType: 'date' },
   {
-    key: 'estado',
+    key: 'hora_inicio',
+    label: 'Hora inicio',
+    filterable: false,
+    render: (valor) => formatoHora(valor),
+  },
+  {
+    key: 'hora_fin',
+    label: 'Hora fin',
+    filterable: false,
+    render: (valor) => formatoHora(valor),
+  },
+  {
+    key: 'asistio',
+    label: 'Asistió',
+    filterable: false,
+    render: (valor) => {
+      if (valor === true || valor === 1 || valor === '1') {
+        return (
+          <Badge variant="success" size="sm">
+            Sí
+          </Badge>
+        );
+      }
+      if (valor === false || valor === 0 || valor === '0') {
+        return (
+          <Badge variant="neutral" size="sm">
+            No
+          </Badge>
+        );
+      }
+      return '—';
+    },
+  },
+  { key: 'id_doctor', label: 'ID Doctor', filterable: true },
+  { key: 'id_especialidad', label: 'ID Especialidad', filterable: true },
+  {
+    key: 'estado_agenda',
     label: 'Estado',
     filterable: true,
     filterType: 'select',
-    filterOptions: ESTADOS_CITA.map((e) => ({ value: e.value, label: e.label })),
+    filterOptions: ESTADOS_FILTRO.map((e) => ({ value: e.value, label: e.label })),
     render: (valor) => {
-      const variant =
-        valor === 'Activa'
-          ? 'success'
-          : valor === 'Cancelada'
-          ? 'danger'
-          : 'neutral';
+      const v = Number(valor);
+      const variant = v === 1 ? 'success' : v === 0 ? 'neutral' : 'neutral';
+      const text = mapEstadoAgenda(v);
       return (
         <Badge variant={variant} size="sm">
-          {valor}
+          {text}
         </Badge>
       );
     },
@@ -81,44 +88,76 @@ const COLUMNAS_CITAS = [
 ];
 
 export default function Appointments() {
-  const [tab, setTab] = React.useState('futuras'); // 'futuras' | 'pasadas'
-  const [filters, setFilters] = React.useState({});
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(10);
+  const auth = useContext(AuthContext);
+  const idPaciente = auth?.payload?.num_documento;
 
-  const hoy = React.useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
+  const [tab, setTab] = useState('futuras');
+  const [filters, setFilters] = useState({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [citas, setCitas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const citasFiltradasPorTab = React.useMemo(() => {
-    return CITAS_MOCK.filter((cita) => {
-      const fechaCita = new Date(cita.fecha);
-      fechaCita.setHours(0, 0, 0, 0);
-      if (tab === 'futuras') {
-        return fechaCita >= hoy;
+  const fetchCitas = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = {};
+      if (idPaciente != null && String(idPaciente).trim() !== '') {
+        params.id_paciente = Number(idPaciente);
       }
-      return fechaCita < hoy;
-    });
-  }, [tab, hoy]);
 
-  const citasFiltradas = React.useMemo(() => {
-    return citasFiltradasPorTab.filter((row) => {
+      const { data } = await http.get(endpoints.appointments.list, { params });
+      const raw = Array.isArray(data) ? data : [];
+      const mine =
+        idPaciente != null && String(idPaciente).trim() !== ''
+          ? raw.filter((c) => String(c.id_paciente) === String(idPaciente))
+          : raw;
+      setCitas(mine);
+    } catch (e) {
+      console.error('Error cargando citas:', e);
+      setError('No se pudieron cargar las citas. Intenta de nuevo más tarde.');
+      setCitas([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [idPaciente]);
+
+  useEffect(() => {
+    fetchCitas();
+  }, [fetchCitas]);
+
+  const citasPorTab = useMemo(() => {
+    const ahora = new Date();
+    return citas.filter((cita) => {
+      const t = citaComoDate(cita);
+      if (tab === 'futuras') return t >= ahora;
+      return t < ahora;
+    });
+  }, [citas, tab]);
+
+  const citasFiltradas = useMemo(() => {
+    return citasPorTab.filter((row) => {
       return Object.entries(filters).every(([key, val]) => {
         if (val == null || String(val).trim() === '') return true;
         const value = String(val).trim().toLowerCase();
         const cell = row[key];
-        if (key === 'estado') {
+        if (key === 'estado_agenda') {
           return String(cell) === String(val);
+        }
+        if (key === 'fecha') {
+          const cellDay = String(cell ?? '').slice(0, 10);
+          const filterDay = String(val).trim().slice(0, 10);
+          return cellDay === filterDay;
         }
         return String(cell ?? '').toLowerCase().includes(value);
       });
     });
-  }, [citasFiltradasPorTab, filters]);
+  }, [citasPorTab, filters]);
 
   const total = citasFiltradas.length;
-  const dataPage = React.useMemo(
+  const dataPage = useMemo(
     () => citasFiltradas.slice((page - 1) * pageSize, page * pageSize),
     [citasFiltradas, page, pageSize]
   );
@@ -128,34 +167,20 @@ export default function Appointments() {
     setPage(1);
   };
 
-  const renderRowActions = (row) => {
-    const fechaCita = new Date(row.fecha);
-    fechaCita.setHours(0, 0, 0, 0);
-    const esFutura = fechaCita >= hoy;
-    const puedeCancelar = tab === 'futuras' && esFutura && row.estado === 'Activa';
-    if (!puedeCancelar) return null;
-    return (
-      <Button variant="deactivate" size="sm">
-        Cancelar
-      </Button>
-    );
-  };
-
   return (
     <PageContainer>
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-800">Mis citas</h1>
-          <p className="text-neutral-600 text-sm mt-1">
-            Como paciente puedes ver y gestionar tus citas médicas.
-          </p>
-        </div>
-        <Link to="/patient/appointments/new">
-          <Button variant="primary" size="sm">
-            Nueva cita
-          </Button>
-        </Link>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-neutral-800">Mis citas</h1>
+        <p className="text-neutral-600 text-sm mt-1">
+          Como paciente puedes ver y gestionar tus citas médicas.
+        </p>
       </div>
+
+      {error && (
+        <p className="mb-4 text-sm text-emergency-600" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="mb-4 flex gap-2 border-b border-neutral-200">
         <button
@@ -193,7 +218,10 @@ export default function Appointments() {
         data={dataPage}
         filters={filters}
         onFiltersChange={handleFiltersChange}
-        loading={false}
+        formConfig={{ createButtonLabel: 'Nueva cita' }}
+        createHref="/patient/appointments/new"
+        onReload={fetchCitas}
+        loading={loading}
         pagination={{
           page,
           pageSize,
@@ -205,11 +233,11 @@ export default function Appointments() {
             setPage(1);
           },
         }}
-        renderRowActions={renderRowActions}
         keyExtractor={(row) => row.id_cita}
-        emptyMessage="No tienes citas en esta pestaña o con estos filtros."
+        emptyMessage={
+          loading ? 'Cargando...' : 'No tienes citas en esta pestaña o con estos filtros.'
+        }
       />
     </PageContainer>
   );
 }
-

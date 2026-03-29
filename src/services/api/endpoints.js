@@ -32,7 +32,8 @@ export const endpoints = {
   },
   // ── Appointments Service ──────────────────────────
   appointments: {
-    // list: "/api/appointments/",
+    /** GET lista: ?fecha=&estado=&id_especialidad=&id_doctor=&id_paciente= */
+    list: "/api/appointments",
   },
 
   // ── Emergency Service ─────────────────────────────

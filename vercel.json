@@ -13,6 +13,10 @@
       "destination": "https://backend-eps-users-service.onrender.com/api/users/:path*"
     },
     {
+      "source": "/api/appointments",
+      "destination": "https://backend-eps-appointments-service.onrender.com/api/appointments"
+    },
+    {
       "source": "/api/appointments/:path*",
       "destination": "https://backend-eps-appointments-service.onrender.com/api/appointments/:path*"
     },

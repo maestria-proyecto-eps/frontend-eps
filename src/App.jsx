@@ -120,7 +120,14 @@ export default function App() {
                 <AuthenticatedLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Maintenance />} />
+            <Route path="citas" element={<Appointments />} />
+            <Route path="historia" element={<Maintenance />} />
+            <Route path="prescripciones" element={<Maintenance />} />
+            <Route path="perfil" element={<Maintenance />} />
+            <Route path="appointments/new" element={<Maintenance />} />
+          </Route>
 
           {/* Cualquier otra ruta → redirigir al home */}
           <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
