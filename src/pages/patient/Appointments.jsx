@@ -30,63 +30,6 @@ function formatoHora(valor) {
   return s.length >= 5 ? s.slice(0, 5) : s;
 }
 
-const COLUMNAS_CITAS = [
-  { key: 'fecha', label: 'Fecha', filterable: true, filterType: 'date' },
-  {
-    key: 'hora_inicio',
-    label: 'Hora inicio',
-    filterable: false,
-    render: (valor) => formatoHora(valor),
-  },
-  {
-    key: 'hora_fin',
-    label: 'Hora fin',
-    filterable: false,
-    render: (valor) => formatoHora(valor),
-  },
-  {
-    key: 'asistio',
-    label: 'Asistió',
-    filterable: false,
-    render: (valor) => {
-      if (valor === true || valor === 1 || valor === '1') {
-        return (
-          <Badge variant="success" size="sm">
-            Sí
-          </Badge>
-        );
-      }
-      if (valor === false || valor === 0 || valor === '0') {
-        return (
-          <Badge variant="neutral" size="sm">
-            No
-          </Badge>
-        );
-      }
-      return '—';
-    },
-  },
-  { key: 'id_doctor', label: 'ID Doctor', filterable: true },
-  { key: 'id_especialidad', label: 'ID Especialidad', filterable: true },
-  {
-    key: 'estado_agenda',
-    label: 'Estado',
-    filterable: true,
-    filterType: 'select',
-    filterOptions: ESTADOS_FILTRO.map((e) => ({ value: e.value, label: e.label })),
-    render: (valor) => {
-      const v = Number(valor);
-      const variant = v === 1 ? 'success' : v === 0 ? 'neutral' : 'neutral';
-      const text = mapEstadoAgenda(v);
-      return (
-        <Badge variant={variant} size="sm">
-          {text}
-        </Badge>
-      );
-    },
-  },
-];
-
 export default function Appointments() {
   const auth = useContext(AuthContext);
   const idPaciente = auth?.payload?.num_documento;
@@ -96,8 +39,111 @@ export default function Appointments() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [citas, setCitas] = useState([]);
+  const [especialidades, setEspecialidades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await http.get(endpoints.specialties.list);
+        const list = Array.isArray(data) ? data : [];
+        if (!cancelled) setEspecialidades(list);
+      } catch (e) {
+        console.error('Error cargando especialidades:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const columnasCitas = useMemo(() => {
+    const opts = [...especialidades]
+      .sort((a, b) =>
+        String(a.nombre_especialidad).localeCompare(String(b.nombre_especialidad), 'es')
+      )
+      .map((e) => ({
+        value: String(e.id_especialidad),
+        label: e.nombre_especialidad,
+      }));
+    const nombrePorId = Object.fromEntries(
+      especialidades.map((e) => [e.id_especialidad, e.nombre_especialidad])
+    );
+    const nombreEspecialidad = (id) => {
+      if (id == null || id === '') return null;
+      return nombrePorId[id] ?? nombrePorId[Number(id)] ?? null;
+    };
+
+    return [
+      { key: 'fecha', label: 'Fecha', filterable: true, filterType: 'date' },
+      {
+        key: 'hora_inicio',
+        label: 'Hora inicio',
+        filterable: false,
+        render: (valor) => formatoHora(valor),
+      },
+      {
+        key: 'hora_fin',
+        label: 'Hora fin',
+        filterable: false,
+        render: (valor) => formatoHora(valor),
+      },
+      {
+        key: 'asistio',
+        label: 'Asistió',
+        filterable: false,
+        render: (valor) => {
+          if (valor === true || valor === 1 || valor === '1') {
+            return (
+              <Badge variant="success" size="sm">
+                Sí
+              </Badge>
+            );
+          }
+          if (valor === false || valor === 0 || valor === '0') {
+            return (
+              <Badge variant="neutral" size="sm">
+                No
+              </Badge>
+            );
+          }
+          return '—';
+        },
+      },
+      { key: 'id_doctor', label: 'ID Doctor', filterable: true },
+      {
+        key: 'id_especialidad',
+        label: 'Especialidad',
+        filterable: true,
+        filterType: 'select',
+        filterOptions: opts,
+        render: (valor, row) => {
+          const id = row?.id_especialidad ?? valor;
+          const nombre = nombreEspecialidad(id);
+          return nombre ?? (id != null && id !== '' ? String(id) : '—');
+        },
+      },
+      {
+        key: 'estado_agenda',
+        label: 'Estado',
+        filterable: true,
+        filterType: 'select',
+        filterOptions: ESTADOS_FILTRO.map((e) => ({ value: e.value, label: e.label })),
+        render: (valor) => {
+          const v = Number(valor);
+          const variant = v === 1 ? 'success' : v === 0 ? 'neutral' : 'neutral';
+          const text = mapEstadoAgenda(v);
+          return (
+            <Badge variant={variant} size="sm">
+              {text}
+            </Badge>
+          );
+        },
+      },
+    ];
+  }, [especialidades]);
 
   const fetchCitas = useCallback(async () => {
     setLoading(true);
@@ -145,6 +191,9 @@ export default function Appointments() {
         const cell = row[key];
         if (key === 'estado_agenda') {
           return String(cell) === String(val);
+        }
+        if (key === 'id_especialidad') {
+          return String(cell ?? '') === String(val).trim();
         }
         if (key === 'fecha') {
           const cellDay = String(cell ?? '').slice(0, 10);
@@ -214,7 +263,7 @@ export default function Appointments() {
       </div>
 
       <DataTable
-        columns={COLUMNAS_CITAS}
+        columns={columnasCitas}
         data={dataPage}
         filters={filters}
         onFiltersChange={handleFiltersChange}

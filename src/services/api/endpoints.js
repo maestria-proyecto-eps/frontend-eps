@@ -26,7 +26,12 @@ export const endpoints = {
     /** DELETE desactivar/eliminar usuario (id numérico) - legacy, preferir changeStatus */
     deleteById: (id) => `/api/users/${id}`,
   },
-  
+
+  /** GET lista: nombre_especialidad, descripcion, id_especialidad */
+  specialties: {
+    list: '/api/specialties',
+  },
+
   patients: {
     create: "/api/patients",
   },
