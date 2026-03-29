@@ -6,6 +6,7 @@ import ProtectedRoute from "./services/auth/ProtectedRoute";
 import Login from "./pages/auth/Login";
 import Home from "./pages/Home";
 import Components from "./pages/Components";
+import ComponentsOld from "./pages/ComponentsOld";
 import Usuarios from "./pages/Usuarios/usuarios";
 import DoctorExample from "./pages/doctor/DoctorExample"
 import DoctorLayout from "./pages/doctor/DoctorLayout"
@@ -23,6 +24,7 @@ export default function App() {
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
+          <Route path="/components_old" element={<ComponentsOld />} />
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
 
