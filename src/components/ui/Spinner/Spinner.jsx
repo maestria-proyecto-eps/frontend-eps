@@ -73,7 +73,7 @@ export default function Spinner({
         );
 
       // 03: Dots (puntos ondulantes)
-      case 'dots':
+      case 'dots': {
         const dotSize =
           size === 'sm' ? '6px' : size === 'md' ? '8px' : '12px';
         const dotGap =
@@ -99,9 +99,10 @@ export default function Spinner({
             ))}
           </div>
         );
+      }
 
       // 04: Bars (barras verticales)
-      case 'bars':
+      case 'bars': {
         const barWidth =
           size === 'sm' ? '2px' : size === 'md' ? '4px' : '6px';
         const barHeight =
@@ -132,6 +133,7 @@ export default function Spinner({
             ))}
           </div>
         );
+      }
 
       // 05: Pulse (punto pulsante)
       case 'pulse':
