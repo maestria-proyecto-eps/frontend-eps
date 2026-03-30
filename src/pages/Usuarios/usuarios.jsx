@@ -221,7 +221,7 @@ export default function Usuarios() {
               setPage(1);
             }}
             disabled={!docInput.trim()}
-            className="h-[38px] w-[38px] p-0"
+            className="h-[44px] w-[44px] p-0"
             title="Buscar por documento"
             aria-label="Buscar por documento"
           >
@@ -237,7 +237,7 @@ export default function Usuarios() {
               setFilters((prev) => ({ ...prev, num_documento: '' }));
               setPage(1);
             }}
-            className="h-[38px] w-[38px] p-0"
+            className="h-[44px] w-[44px] p-0"
             title="Recargar"
             aria-label="Recargar"
           >
