@@ -144,7 +144,7 @@ export default function Bridge() {
             <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
               <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-white">
                 <img
-                  src="/general.svg.png"
+                  src="/images/general.svg.png"
                   alt="Ilustración de bienvenida"
                   className="h-full w-full object-contain"
                   loading="eager"

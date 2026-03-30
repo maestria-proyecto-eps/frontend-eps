@@ -85,7 +85,7 @@ export default function AuthenticatedSideBar({ className = '' }) {
   return (
     <aside
       className={cn(
-        'flex flex-col bg-neutral-200 text-neutral-300 transition-all duration-300 min-h-full',
+        'flex flex-col bg-primary-50 text-neutral-700 transition-all duration-300 min-h-full rounded-2xl border-2 border-primary-500 p-1.5 m-2 shadow-sm hover:shadow-lg',
         collapsed ? 'w-16' : 'w-56',
         className
       )}
@@ -93,7 +93,7 @@ export default function AuthenticatedSideBar({ className = '' }) {
       {/* Toggle collapse */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-end p-3 text-neutral-500 hover:text-white transition-colors border-b border-neutral-800"
+        className="flex items-center justify-end p-3 text-neutral-500 hover:text-primary-700 transition-colors border-b border-primary-200"
         title={collapsed ? 'Expandir' : 'Colapsar'}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -105,16 +105,17 @@ export default function AuthenticatedSideBar({ className = '' }) {
       </button>
 
       {/* Botón superior fijo para volver a bienvenida */}
-      <div className="px-2 py-3 border-b border-neutral-300">
+      <div className="px-2 py-3 border-b border-primary-200">
         <NavLink
           to="/bridge"
           end
           className={({ isActive }) =>
             cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors',
+              collapsed ? 'rounded-full justify-center' : 'rounded-lg',
               isActive
                 ? 'bg-primary-600 text-white'
-                : 'text-neutral-700 hover:bg-neutral-400 hover:text-white'
+                : 'text-neutral-700 hover:bg-primary-100 hover:text-primary-700'
             )
           }
           title={collapsed ? 'Inicio' : undefined}
@@ -153,7 +154,7 @@ export default function AuthenticatedSideBar({ className = '' }) {
             return (
               <div key={moduleName} className="mb-4">
                 {!collapsed && (
-                  <div className="px-3 mb-2 text-xs font-semibold text-neutral-600">
+                  <div className="px-3 mb-2 text-xs font-semibold text-primary-700">
                     {moduleName}
                   </div>
                 )}
@@ -167,10 +168,11 @@ export default function AuthenticatedSideBar({ className = '' }) {
                         end={!!item.end}
                         className={({ isActive }) =>
                           cn(
-                            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                            'flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors',
+                            collapsed ? 'rounded-full justify-center' : 'rounded-lg',
                             isActive
                               ? 'bg-primary-600 text-white'
-                              : 'text-neutral-700 hover:bg-neutral-400 hover:text-white'
+                              : 'text-neutral-700 hover:bg-primary-100 hover:text-primary-700'
                           )
                         }
                         title={collapsed ? item.label : undefined}

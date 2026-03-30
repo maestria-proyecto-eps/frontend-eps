@@ -9,3 +9,6 @@ export { DatePicker } from './DatePicker';
 export { default as DataTable } from './DataTable/DataTable.jsx';
 export { VALIDATORS } from './DataTable/validators.js';
 export { Modal } from './Modal';
+export { ColorPalette } from './ColorPalette';
+export { ColorPaletteTable } from './ColorPaletteTable';
+export { TypographyShowcase } from './TypographyShowcase';
