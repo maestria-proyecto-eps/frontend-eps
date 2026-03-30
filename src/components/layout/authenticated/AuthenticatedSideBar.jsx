@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../../../services/auth/AuthContext';
 import { cn } from '../../../utils/cn';
 
@@ -64,7 +64,6 @@ const MENUS = {
 /* ── Componente ────────────────────────────────────────────────── */
 export default function AuthenticatedSideBar({ className = '' }) {
   const auth  = useContext(AuthContext);
-  const location = useLocation();
   const roles = (Array.isArray(auth?.enabledRoles) && auth.enabledRoles.length)
     ? auth.enabledRoles
     : (auth?.role ? [auth.role] : ['patient']);
