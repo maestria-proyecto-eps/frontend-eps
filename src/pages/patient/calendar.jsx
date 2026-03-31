@@ -7,14 +7,9 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from "@fullcalendar/interaction";
 import esLocale from '@fullcalendar/core/locales/es';
-import React from "react";
-
-
-const SPECIALTIES = [
-  { value: "Medicina General", label: "Medicina General" },
-  { value: "Cardiología", label: "Cardiología" },
-  { value: "Otro", label: "Otro" },
-];
+import { http } from "../../services/api/http";
+import { endpoints } from "../../services/api/endpoints";
+import { useState, useEffect, useRef } from "react";
 
 const SCHEDULES = [
   { value: "8:00 AM a 9:00 AM", label: "8:00 AM a 9:00 AM" },
@@ -23,22 +18,41 @@ const SCHEDULES = [
 ];
 
 const EVENTS = [
-  { title: 'Alberto García', date: '2026-03-01', extendedProps: { specialty: 'Cardiología' } },
-  { title: 'María López', date: '2026-03-02', extendedProps: { specialty: 'Medicina General' } },
-  { title: 'Juan Pérez', date: '2026-03-03', extendedProps: { specialty: 'Otro' } }
+  { title: 'Alberto García', date: '2026-03-01', extendedProps: { specialty: 'Cardiología', schedule: '8:00 AM a 9:00 AM' } },
+  { title: 'María López', date: '2026-03-02', extendedProps: { specialty: 'Medicina General', schedule: '9:00 AM a 10:00 AM' } },
+  { title: 'Juan Pérez', date: '2026-03-03', extendedProps: { specialty: 'Otro', schedule: '10:00 AM a 11:00 AM' } }
 ];
 
 export default function Calendar() {
-  const [form, setForm] = React.useState({
-    especialidad: "Medicina General",
+  const [form, setForm] = useState({
+    especialidad: "",
     nombre: "",
     fecha: "",
   });
-  const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [isVisible, setIsVisible] = React.useState(false);
-  const [animStatus, setAnimStatus] = React.useState('idle');
-  const [events, setEvents] = React.useState({});
-  const formRef = React.useRef();
+  const [events, setEvents] = useState([]);
+  const [specialties, setSpecialties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [animStatus, setAnimStatus] = useState('idle');
+  const formRef = useRef();
+
+  useEffect(() => {
+    const loadSpecialties = async () => {
+      try {
+        const { data } = await http.get(endpoints.specialties.list);
+        const options = data.map(s => ({ value: s.id_especialidad, label: s.nombre_especialidad }));
+        setSpecialties(options);
+        setForm(prev => ({ ...prev, especialidad: options[0]?.value || "" }));
+        setLoading(false);
+      }
+      catch (e) {
+        console.error("Error al cargar especialidades:", e);
+        return;
+      }
+    };
+    loadSpecialties();
+  }, []);
 
   const loadEvents = () => {
     if (!events.length) {
@@ -100,13 +114,21 @@ export default function Calendar() {
             <select
               onChange={update("especialidad")}
               value={form.especialidad}
-              className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              disabled={loading}
+              className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200 
+           disabled:bg-neutral-200 disabled:text-neutral-600 disabled:cursor-not-allowed disabled:border-neutral-200"
             >
-              {SPECIALTIES.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
+              {loading ? (
+                <option value="" disabled>Cargando...</option>
+              ) : (
+                <>
+                  {specialties.map((esp) => (
+                    <option key={esp.value} value={esp.value}>
+                      {esp.label}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </div>
 
@@ -171,7 +193,7 @@ export default function Calendar() {
           initialView="dayGridMonth"
           eventClick={handleEventClick}
           locale={esLocale}
-          events={loadEvents()}
+          events={events.length ? loadEvents() : []}
         />
       </div>
 

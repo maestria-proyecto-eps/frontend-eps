@@ -10,8 +10,9 @@ export default defineConfig({
     // Ajusta los puertos según tu setup local.
     proxy: {
       '/api/auth':            'https://backend-eps-auth-service-xzgs.onrender.com',
-      '/api/patients':         'https://backend-eps-auth-service-xzgs.onrender.com',
+      '/api/patients':        'https://backend-eps-auth-service-xzgs.onrender.com',
       '/api/users':           'https://backend-eps-users-service.onrender.com',
+      '/api/specialties':     'https://backend-eps-users-service.onrender.com',
       '/api/appointments':    'https://backend-eps-appointments-service.onrender.com',
       '/api/emergency':       'https://backend-eps-emergency-service-xqll.onrender.com',
       '/api/pharmacy':        'https://backend-eps-pharmacy-service.onrender.com',
