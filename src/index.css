@@ -4,48 +4,45 @@
 
 /* ========== Variables CSS – Sistema de diseño / Identidad de marca ========== */
 :root {
-  /* Primario – Verde #009E7A (bienestar, prevención, atención médica) */
-  --color-primary-50: #e6f7f4;
-  --color-primary-100: #b3ebdf;
-  --color-primary-200: #80dfca;
-  --color-primary-300: #4dd3b5;
-  --color-primary-400: #26c79e;
-  --color-primary-500: #009E7A;
-  --color-primary-600: #008566;
-  --color-primary-700: #006b52;
-  --color-primary-800: #00523e;
-  --color-primary-900: #00382a;
+  /* ===== PALETA PRINCIPAL DE COLORES ===== */
+  
+  /* Primario – Azul #1F67A6 (bienestar, prevención, atención médica) */
+  --color-primary: #1F67A6;
+  --color-primary-75: rgba(31, 103, 166, 0.75);
+  --color-primary-50: rgba(31, 103, 166, 0.50);
+  --color-primary-25: rgba(31, 103, 166, 0.25);
 
-  /* Secundario – Azul #1E5AA8 (respaldo, seguridad, formalidad) */
-  --color-secondary-50: #e8eef7;
-  --color-secondary-100: #c5d4eb;
-  --color-secondary-200: #9eb9df;
-  --color-secondary-300: #769ed3;
-  --color-secondary-400: #4a82c4;
-  --color-secondary-500: #1E5AA8;
-  --color-secondary-600: #1a4d91;
-  --color-secondary-700: #16407a;
-  --color-secondary-800: #123363;
-  --color-secondary-900: #0d264b;
+  /* Secundario 1 – Verde #20A86D (salud activa, bienestar) */
+  --color-secondary: #20A86D;
+  --color-secondary-75: rgba(32, 168, 109, 0.75);
+  --color-secondary-50: rgba(32, 168, 109, 0.50);
+  --color-secondary-25: rgba(32, 168, 109, 0.25);
 
-  /* Acento – Amarillo #F4B400 (alertas preventivas, notificaciones, destacados) */
-  --color-accent: #F4B400;
+  /* Secundario 2 – Amarillo/Naranja #F4A820 (alertas, notificaciones, destacados) */
+  --color-secondary-alt: #F4A820;
+  --color-secondary-alt-75: rgba(244, 168, 32, 0.75);
+  --color-secondary-alt-50: rgba(244, 168, 32, 0.50);
+  --color-secondary-alt-25: rgba(244, 168, 32, 0.25);
 
-  /* Emergencias – Rojo #D32F2F (urgencias, estados críticos) */
-  --color-emergency: #D32F2F;
+  /* Secundario 3 – Rojo #DB2C28 (urgencias, estados críticos) */
+  --color-accent-danger: #DB2C28;
+  --color-accent-danger-75: rgba(219, 44, 40, 0.75);
+  --color-accent-danger-50: rgba(219, 44, 40, 0.50);
+  --color-accent-danger-25: rgba(219, 44, 40, 0.25);
 
   /* Base neutra */
-  --color-white: #FFFFFF;
+  --color-black: #0F0F0F;
+  --color-white: #F2F2F2;
 
-  /* Semánticos */
-  --color-accent-success: #009E7A;
-  --color-accent-warning: #F4B400;
-  --color-accent-error: #D32F2F;
-  --color-accent-info: #1E5AA8;
+  /* Semánticos (alias de colores principales) */
+  --color-accent-success: #20A86D;
+  --color-accent-warning: #F4A820;
+  --color-accent-error: #DB2C28;
+  --color-accent-info: #1F67A6;
 
   /* Tipografía – familias */
-  --font-heading: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-heading: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   /* Tipografía – tamaños (títulos y texto) */
   --text-h1: 2.25rem;   /* 36px */
@@ -70,28 +67,96 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  a {
-    font-weight: 500;
-    color: var(--color-primary-500);
-    text-decoration: inherit;
-  }
-  a:hover {
-    color: var(--color-primary-600);
-  }
-
+  /* Aplicar tipografía global */
   body {
+    font-family: var(--font-body);
+    color: var(--color-black);
+    background-color: var(--color-white);
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
   }
 
-  h1, h2, h3 {
+  /* Encabezados con Archivo (font-heading) */
+  h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
+    font-weight: font-black;
     line-height: 1.2;
+    color: var(--color-black);
   }
-  h1 { font-size: var(--text-h1); }
-  h2 { font-size: var(--text-h2); }
-  h3 { font-size: var(--text-h3); }
+
+  h1 { 
+    font-size: var(--text-h1);
+    font-weight: 900;
+  }
+  h2 { 
+    font-size: var(--text-h2);
+    font-weight: 700;
+  }
+  h3 { 
+    font-size: var(--text-h3);
+    font-weight: 700;
+  }
+  h4 {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  h5 {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  h6 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  /* Párrafos con Roboto (font-body) */
+  p {
+    font-family: var(--font-body);
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--color-black);
+  }
+
+  /* Enlaces con colores primarios */
+  a {
+    font-weight: 500;
+    color: var(--color-primary);
+    text-decoration: inherit;
+    transition: color 0.2s ease-in-out;
+  }
+  a:hover {
+    color: var(--color-primary-75);
+  }
+
+  /* Textos pequeños */
+  small, .text-small {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+  }
+
+  /* Código */
+  code, pre {
+    font-family: 'Courier New', monospace;
+  }
+
+  /* Listas */
+  ul, ol, li {
+    font-family: var(--font-body);
+    color: var(--color-black);
+  }
+
+  /* Tabla */
+  table {
+    font-family: var(--font-body);
+    color: var(--color-black);
+  }
+
+  /* Formularios */
+  input, textarea, select, button {
+    font-family: var(--font-body);
+    color: var(--color-black);
+  }
 }
 
 @layer components {
@@ -99,5 +164,120 @@
 }
 
 @layer utilities {
-  /* Utilidades personalizadas */
+  /* ===== CLASES DE TEXTO POR COLOR – Generadas automáticamente por Tailwind ===== */
+  
+  /* TEXTO PRIMARIO - Verde #20A86D */
+  .text-primary-50 { @apply text-[#e8f5f0]; }
+  .text-primary-100 { @apply text-[#c5e5d9]; }
+  .text-primary-150 { @apply text-[#b2ddd0]; }
+  .text-primary-200 { @apply text-[#9ed5bf]; }
+  .text-primary-250 { @apply text-[#8bcdb8]; }
+  .text-primary-300 { @apply text-[#78c5b1]; }
+  .text-primary-350 { @apply text-[#65bdaa]; }
+  .text-primary-400 { @apply text-[#52b5a3]; }
+  .text-primary-450 { @apply text-[#3fad9c]; }
+  .text-primary-500 { @apply text-[#20A86D]; }
+  .text-primary-550 { @apply text-[#1d9f65]; }
+  .text-primary-600 { @apply text-[#1a915e]; }
+  .text-primary-650 { @apply text-[#178756]; }
+  .text-primary-700 { @apply text-[#157a4f]; }
+  .text-primary-750 { @apply text-[#137047]; }
+  .text-primary-800 { @apply text-[#0f6340]; }
+  .text-primary-850 { @apply text-[#0d5938]; }
+  .text-primary-900 { @apply text-[#0b4f30]; }
+
+  /* TEXTO SECUNDARIO - Azul #1F67A6 */
+  .text-secondary-50 { @apply text-[#eef4fb]; }
+  .text-secondary-100 { @apply text-[#d5e4f5]; }
+  .text-secondary-150 { @apply text-[#c3d9f0]; }
+  .text-secondary-200 { @apply text-[#b0cded]; }
+  .text-secondary-250 { @apply text-[#9ec1e8]; }
+  .text-secondary-300 { @apply text-[#8cb5e3]; }
+  .text-secondary-350 { @apply text-[#7aa9de]; }
+  .text-secondary-400 { @apply text-[#689dd9]; }
+  .text-secondary-450 { @apply text-[#5691d4]; }
+  .text-secondary-500 { @apply text-[#1F67A6]; }
+  .text-secondary-550 { @apply text-[#1d5f9d]; }
+  .text-secondary-600 { @apply text-[#1a5291]; }
+  .text-secondary-650 { @apply text-[#185088]; }
+  .text-secondary-700 { @apply text-[#15427c]; }
+  .text-secondary-750 { @apply text-[#133a73]; }
+  .text-secondary-800 { @apply text-[#103267]; }
+  .text-secondary-850 { @apply text-[#0e2a5e]; }
+  .text-secondary-900 { @apply text-[#0c2255]; }
+
+  /* TEXTO ACENTO/WARNING - Amarillo #F4A820 */
+  .text-accent-25 { @apply text-[#fffef5]; }
+  .text-accent-40 { @apply text-[#fffce0]; }
+  .text-accent-50 { @apply text-[#fffde7]; }
+  .text-accent-100 { @apply text-[#fff9c4]; }
+  .text-accent-150 { @apply text-[#fff8b8]; }
+  .text-accent-200 { @apply text-[#fff59d]; }
+  .text-accent-250 { @apply text-[#fff392]; }
+  .text-accent-300 { @apply text-[#ffed87]; }
+  .text-accent-350 { @apply text-[#ffe97c]; }
+  .text-accent-400 { @apply text-[#ffe571]; }
+  .text-accent-450 { @apply text-[#ffe166]; }
+  .text-accent-500 { @apply text-[#F4A820]; }
+  .text-accent-550 { @apply text-[#daa01c]; }
+  .text-accent-600 { @apply text-[#c09818]; }
+  .text-accent-650 { @apply text-[#a69014]; }
+  .text-accent-700 { @apply text-[#8c8810]; }
+  .text-accent-750 { @apply text-[#72800c]; }
+  .text-accent-800 { @apply text-[#b38f00]; }
+  .text-accent-850 { @apply text-[#8b6b00]; }
+  .text-accent-900 { @apply text-[#634700]; }
+
+  /* TEXTO EMERGENCIA/DANGER - Rojo #DB2C28 */
+  .text-emergency-25 { @apply text-[#fff5f5]; }
+  .text-emergency-50 { @apply text-[#ffebee]; }
+  .text-emergency-100 { @apply text-[#ffcdd2]; }
+  .text-emergency-150 { @apply text-[#f8aaae]; }
+  .text-emergency-200 { @apply text-[#ef9a9a]; }
+  .text-emergency-250 { @apply text-[#e68886]; }
+  .text-emergency-300 { @apply text-[#dd7672]; }
+  .text-emergency-350 { @apply text-[#d6645e]; }
+  .text-emergency-400 { @apply text-[#cf524a]; }
+  .text-emergency-450 { @apply text-[#c84036]; }
+  .text-emergency-500 { @apply text-[#DB2C28]; }
+  .text-emergency-550 { @apply text-[#c92822]; }
+  .text-emergency-600 { @apply text-[#c62823]; }
+  .text-emergency-650 { @apply text-[#b8231d]; }
+  .text-emergency-700 { @apply text-[#8e1e1b]; }
+  .text-emergency-750 { @apply text-[#7a1a17]; }
+  .text-emergency-800 { @apply text-[#8e1e1b]; }
+  .text-emergency-850 { @apply text-[#6d150f]; }
+  .text-emergency-900 { @apply text-[#4a0d0a]; }
+
+  /* TEXTO SUCCESS - Verde para éxito #4caf50 */
+  .text-success-50 { @apply text-[#e8f5e9]; }
+  .text-success-100 { @apply text-[#c8e6c9]; }
+  .text-success-200 { @apply text-[#a5d6a7]; }
+  .text-success-300 { @apply text-[#81c784]; }
+  .text-success-400 { @apply text-[#66bb6a]; }
+  .text-success-500 { @apply text-[#4caf50]; }
+  .text-success-600 { @apply text-[#43a047]; }
+  .text-success-700 { @apply text-[#388e3c]; }
+  .text-success-800 { @apply text-[#2e7d32]; }
+  .text-success-900 { @apply text-[#1b5e20]; }
+
+  /* TEXTO NEUTRAL - Grises para neutral #737373 */
+  .text-neutral-50 { @apply text-[#fafafa]; }
+  .text-neutral-100 { @apply text-[#f5f5f5]; }
+  .text-neutral-150 { @apply text-[#f0f0f0]; }
+  .text-neutral-200 { @apply text-[#e5e5e5]; }
+  .text-neutral-250 { @apply text-[#dadadada]; }
+  .text-neutral-300 { @apply text-[#d4d4d4]; }
+  .text-neutral-350 { @apply text-[#cecece]; }
+  .text-neutral-400 { @apply text-[#a3a3a3]; }
+  .text-neutral-450 { @apply text-[#8f8f8f]; }
+  .text-neutral-500 { @apply text-[#737373]; }
+  .text-neutral-550 { @apply text-[#696969]; }
+  .text-neutral-600 { @apply text-[#525252]; }
+  .text-neutral-650 { @apply text-[#484848]; }
+  .text-neutral-700 { @apply text-[#404040]; }
+  .text-neutral-750 { @apply text-[#363636]; }
+  .text-neutral-800 { @apply text-[#262626]; }
+  .text-neutral-850 { @apply text-[#1c1c1c]; }
+  .text-neutral-900 { @apply text-[#0c0c0c]; }
 }

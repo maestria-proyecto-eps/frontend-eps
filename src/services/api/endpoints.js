@@ -27,6 +27,11 @@ export const endpoints = {
     deleteById: (id) => `/api/users/${id}`,
   },
 
+  /** GET lista: nombre_especialidad, descripcion, id_especialidad */
+  specialties: {
+    list: '/api/specialties',
+  },
+
   patients: {
     create: "/api/patients",
   },
@@ -36,13 +41,10 @@ export const endpoints = {
     listBySpecialty: (id) => `/api/doctors/by-specialty/${id}`,
   },
   
-  specialties: {
-    /** GET lista de especialidades */
-    list: "/api/specialties",
-  },
   // ── Appointments Service ──────────────────────────
   appointments: {
-    // list: "/api/appointments/",
+    /** GET lista: ?fecha=&estado=&id_especialidad=&id_doctor=&id_paciente= */
+    list: "/api/appointments",
   },
 
   // ── Emergency Service ─────────────────────────────
