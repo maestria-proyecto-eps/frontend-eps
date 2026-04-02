@@ -1,37 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout, PageContainer } from "../../components/layout";
 import { Alert, Badge, Button, Card, Input, Modal } from "../../components/ui";
-
-const CONSULTATION_CONTEXT_MOCK = {
-  cita: { id: 25 },
-  paciente: {
-    id: 102,
-    nombre: "María",
-    apellido: "Gómez",
-    documento: "1020304050",
-    edad: 34,
-    sexo: "Femenino",
-  },
-  especialidad: { id: 8, nombre: "Medicina General" },
-  historiaClinica: {
-    antecedentes: ["Hipertensión arterial"],
-    alergias: ["Penicilina"],
-  },
-};
-
-const DIAGNOSTICOS_MOCK = [
-  { id_diagnostico: 1, nombre_enfermedad: "Gastritis" },
-  { id_diagnostico: 2, nombre_enfermedad: "Migraña" },
-  { id_diagnostico: 3, nombre_enfermedad: "Hipertensión arterial" },
-];
-
-const MEDICAMENTOS_MOCK = [
-  { id: 1, nombre: "Acetaminofén 500 mg" },
-  { id: 2, nombre: "Ibuprofeno 400 mg" },
-  { id: 3, nombre: "Amoxicilina 500 mg" },
-  { id: 4, nombre: "Loratadina 10 mg" },
-  { id: 5, nombre: "Omeprazol 20 mg" },
-];
+import { http } from "../../services/api/http";
+import { endpoints } from "../../services/api/endpoints";
 
 function createPrescriptionItem() {
   return {
@@ -104,97 +76,54 @@ function unwrapBackendResponse(responseJson) {
   };
 }
 
-function mapHistoriaClinicaResponse(historiaList) {
-  if (!Array.isArray(historiaList) || historiaList.length === 0) {
+function mapHistoriaClinicaResponse(historiaData) {
+  if (!historiaData) {
     return {
       antecedentes: [],
       alergias: [],
-      registros: [],
-      ultimoRegistro: null,
     };
   }
 
-  const primeraHistoria = historiaList[0];
-  const registros = Array.isArray(primeraHistoria.registros_historia)
-    ? primeraHistoria.registros_historia
-    : [];
-
-  const ultimoRegistro =
-    registros.length > 0 ? registros[registros.length - 1] : null;
-
-  return {
-    antecedentes: registros.map((r) => r.nombre_enfermedad).filter(Boolean),
-    alergias: [],
-    registros,
-    ultimoRegistro,
-  };
-}
-
-function mapAppointmentToUi(appointmentData, historiaClinicaMap) {
-  const paciente = appointmentData?.paciente || appointmentData?.patient || {};
-  const especialidad =
-    appointmentData?.especialidad || appointmentData?.specialty || {};
-  const cita =
-    appointmentData?.cita ||
-    appointmentData?.appointment ||
-    appointmentData ||
-    {};
+  // Soportar múltiples formatos de respuesta del API
+  const antecedentes = Array.isArray(historiaData.antecedentes) 
+    ? historiaData.antecedentes 
+    : (Array.isArray(historiaData.antecedentes_medicos) ? historiaData.antecedentes_medicos : []);
+    
+  const alergias = Array.isArray(historiaData.alergias) 
+    ? historiaData.alergias 
+    : (Array.isArray(historiaData.alergias_conocidas) ? historiaData.alergias_conocidas : []);
 
   return {
-    cita: {
-      id: cita.id_cita ?? cita.id ?? "",
-    },
-    paciente: {
-      id: paciente.id_paciente ?? paciente.id ?? "",
-      nombre: paciente.nombre ?? paciente.first_name ?? "",
-      apellido: paciente.apellido ?? paciente.last_name ?? "",
-      documento: paciente.documento ?? paciente.documento_identidad ?? "",
-      edad: paciente.edad ?? paciente.age ?? "",
-      sexo: paciente.sexo ?? paciente.gender ?? "",
-    },
-    especialidad: {
-      id: especialidad.id_especialidad ?? especialidad.id ?? "",
-      nombre:
-        especialidad.nombre_especialidad ??
-        especialidad.nombre ??
-        especialidad.name ??
-        "",
-    },
-    historiaClinica: historiaClinicaMap,
+    antecedentes,
+    alergias,
   };
 }
 
 function mapMedicamentosToUi(medicamentosData) {
   if (!Array.isArray(medicamentosData)) return [];
 
-  return medicamentosData.map((m) => ({
-    id: m.codigo,
-    nombre: m.nombre_medicamento,
-    reg_invima: m.reg_invima,
-    principio_activo: m.principio_activo,
-    presentacion: m.presentacion,
-  }));
-}
-
-function mapDiagnosticosToUi(diagnosticosData) {
-  if (!Array.isArray(diagnosticosData)) return [];
-
-  return diagnosticosData.map((d) => ({
-    id: d.id_diagnostico,
-    nombre: d.nombre_enfermedad,
-  }));
+  return medicamentosData.map((m) => {
+    // Soportar múltiples formatos de respuesta del API
+    const id = m.id || m.codigo || m.id_medicamento;
+    const nombre = m.nombre || m.nombre_medicamento || m.descripcion;
+    
+    return {
+      id: id || crypto.randomUUID(),
+      nombre: nombre || "Medicamento desconocido",
+    };
+  });
 }
 
 export default function ConsultationForm() {
-  const [context, setContext] = useState(CONSULTATION_CONTEXT_MOCK);
-  const [medicamentos, setMedicamentos] = useState(MEDICAMENTOS_MOCK);
-  const [diagnosticos, setDiagnosticos] = useState(
-    DIAGNOSTICOS_MOCK.map((d) => ({
-      id: d.id_diagnostico,
-      nombre: d.nombre_enfermedad,
-    }))
-  );
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [context, setContext] = useState({
+    cita: { id_cita: 0 },
+    paciente: { id_paciente: 0, nombres: "", apellidos: "", num_documento: "", edad: 0, sexo: "" },
+    especialidad: { id_especialidad: 0, nombre_especialidad: "" },
+    historiaClinica: { antecedentes: [], alergias: [] },
+  });
+  const [medicamentos, setMedicamentos] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
     observaciones: "",
@@ -213,6 +142,7 @@ export default function ConsultationForm() {
   });
   const [errors, setErrors] = useState({});
   const [feedback, setFeedback] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -221,64 +151,86 @@ export default function ConsultationForm() {
       );
 
       if (!appointmentId) {
+        setFeedback({
+          type: "error",
+          text: "No se especificó ID de cita. Retornando...",
+        });
+        setTimeout(() => navigate("/doctor/citas"), 2000);
         return;
       }
 
       try {
         setLoading(true);
 
-        const [appointmentRes, historiaRes, medicamentosRes, diagnosticosRes] =
-          await Promise.all([
-            fetch(`/appointments/${appointmentId}`),
-            fetch(
-              `/medical-records/patient/${CONSULTATION_CONTEXT_MOCK.paciente.id}`
-            ),
-            fetch(`/medications`),
-            fetch(`/diagnostics`),
-          ]);
+        // Crear contexto base con ID de cita
+        let consultationData = {
+          cita: { id_cita: parseInt(appointmentId) },
+          paciente: {
+            id_paciente: 0,
+            nombres: "Cargando...",
+            apellidos: "",
+            num_documento: "",
+            edad: 0,
+            sexo: "",
+          },
+          especialidad: { id_especialidad: 0, nombre_especialidad: "" },
+          historiaClinica: {
+            antecedentes: [],
+            alergias: [],
+          },
+        };
 
-        const appointmentJson = await appointmentRes.json();
-        const historiaJson = await historiaRes.json();
-        const medicamentosJson = await medicamentosRes.json();
-        const diagnosticosJson = await diagnosticosRes.json();
-
-        const appointmentWrapped = unwrapBackendResponse(appointmentJson);
-        const historiaWrapped = unwrapBackendResponse(historiaJson);
-        const medicamentosWrapped = unwrapBackendResponse(medicamentosJson);
-        const diagnosticosWrapped = unwrapBackendResponse(diagnosticosJson);
-
-        const historiaClinicaMap = mapHistoriaClinicaResponse(
-          historiaWrapped.data
-        );
-        const appointmentUi = mapAppointmentToUi(
-          appointmentWrapped.data,
-          historiaClinicaMap
-        );
-        const medicamentosUi = mapMedicamentosToUi(medicamentosWrapped.data);
-        const diagnosticosUi = mapDiagnosticosToUi(diagnosticosWrapped.data);
-
-        setContext(appointmentUi);
-
-        if (medicamentosUi.length > 0) {
-          setMedicamentos(medicamentosUi);
+        // Intentar obtener detalles de la cita
+        try {
+          const appointmentUrl = endpoints.appointments.getById(appointmentId);
+          const appointmentRes = await http.get(appointmentUrl);
+          const appointmentWrapped = unwrapBackendResponse(appointmentRes);
+          const appointmentData = appointmentWrapped.data;
+          
+          // Enriquecer con datos de la cita si existen
+          if (appointmentData) {
+            if (appointmentData.cita) consultationData.cita = appointmentData.cita;
+            if (appointmentData.paciente) consultationData.paciente = appointmentData.paciente;
+            if (appointmentData.especialidad) consultationData.especialidad = appointmentData.especialidad;
+          }
+        } catch (err) {
+          // Silenciar error - se usa contexto por defecto
         }
 
-        if (diagnosticosUi.length > 0) {
-          setDiagnosticos(diagnosticosUi);
+        // Obtener medicamentos desde pharmacy service
+        let medicamentosData = [];
+        try {
+          const medicamentosUrl = endpoints.pharmacy.listMedications;
+          const medicamentosRes = await http.get(medicamentosUrl);
+          const medicamentosWrapped = unwrapBackendResponse(medicamentosRes);
+          medicamentosData = medicamentosWrapped.data || [];
+        } catch (err) {
+          // Silenciar error - medicamentos opcionales
         }
 
-        if (appointmentWrapped.message) {
-          setFeedback({
-            type: "info",
-            text: appointmentWrapped.message,
-          });
+        // Enriquecer historia clínica si tenemos ID de paciente
+        if (consultationData.paciente && consultationData.paciente.id_paciente) {
+          try {
+            const medicalHistoryUrl = endpoints.medicalRecords.getPatientHistory(
+              consultationData.paciente.id_paciente
+            );
+            const historyRes = await http.get(medicalHistoryUrl);
+            const historyWrapped = unwrapBackendResponse(historyRes);
+            const enrichedHistory = mapHistoriaClinicaResponse(historyWrapped.data);
+            
+            // Enriquecer el contexto con historia clínica real
+            consultationData.historiaClinica = enrichedHistory;
+          } catch (err) {
+            // Silenciar error - historia clínica por defecto vacía
+          }
         }
+
+        setContext(consultationData);
+        setMedicamentos(mapMedicamentosToUi(medicamentosData));
       } catch (error) {
         setFeedback({
-          type: "warning",
-          text:
-            error.message ||
-            "No fue posible cargar datos reales del backend. Se usarán datos de prueba.",
+          type: "error",
+          text: error.message || "No fue posible cargar los datos de la consulta.",
         });
       } finally {
         setLoading(false);
@@ -286,10 +238,10 @@ export default function ConsultationForm() {
     }
 
     loadInitialData();
-  }, []);
+  }, [navigate]);
 
   const patientName = useMemo(
-    () => `${context.paciente.nombre} ${context.paciente.apellido}`,
+    () => `${context.paciente.nombres || ""} ${context.paciente.apellidos || ""}`.trim(),
     [context]
   );
 
@@ -358,7 +310,7 @@ export default function ConsultationForm() {
     return Object.keys(newErrors).length === 0;
   }
 
-  function handleFinalize() {
+  async function handleFinalize() {
     if (!validate()) {
       setFeedback({
         type: "warning",
@@ -367,16 +319,19 @@ export default function ConsultationForm() {
       return;
     }
 
-    const payload = {
-      consulta: {
-        id_cita: context.cita.id,
+    setIsSaving(true);
+
+    try {
+      const consultationPayload = {
+        id_cita: context.cita.id_cita,
         observaciones: form.observaciones,
         tratamiento: form.tratamiento,
         diagnostico: form.diagnostico,
-      },
-      prescripciones: {
-        id_atencion: context.cita.id,
-        tipo: 1,
+      };
+
+      const prescriptionPayload = {
+        id_atencion: context.cita.id_cita,
+        tipo: 1, // "cita"
         items: prescriptionItems
           .filter(
             (item) =>
@@ -391,15 +346,31 @@ export default function ConsultationForm() {
             dosis: item.dosis,
             duracion: item.duracion,
           })),
-      },
-      asistencia: true,
-    };
+      };
 
-    console.log("Payload final:", payload);
-    setFeedback({
-      type: "success",
-      text: "Frontend listo para conectar con backend.",
-    });
+      // Guardar consulta y prescripciones en paralelo
+      const [consultationRes, prescriptionRes] = await Promise.all([
+        http.post(endpoints.consultations.create, consultationPayload),
+        http.post(endpoints.prescriptions.create, prescriptionPayload),
+      ]);
+
+      const consultationWrapped = unwrapBackendResponse(consultationRes);
+      const prescriptionWrapped = unwrapBackendResponse(prescriptionRes);
+
+      setFeedback({
+        type: "success",
+        text: "Consulta y prescripciones guardadas correctamente. Retornando...",
+      });
+
+      setTimeout(() => navigate("/doctor/citas"), 2000);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        text: error.message || "No fue posible guardar la consulta.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function handleSaveReferral() {
@@ -413,22 +384,14 @@ export default function ConsultationForm() {
       }
 
       const payload = {
-        id_paciente: context.paciente.id,
+        id_paciente: context.paciente.id_paciente,
         id_especialidad: Number(referral.especialidadDestino),
         motivo: referral.motivo,
         observaciones: referral.observaciones,
       };
 
-      const response = await fetch(`/referrals`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await response.json();
-      const wrapped = unwrapBackendResponse(json);
+      const response = await http.post(endpoints.referrals.create, payload);
+      const wrapped = unwrapBackendResponse(response);
 
       setShowReferralModal(false);
       setReferral({
@@ -476,20 +439,24 @@ export default function ConsultationForm() {
     <MainLayout showHeader={false} showFooter={false}>
       <PageContainer maxWidth="full" className="py-6 md:py-8">
         <div className="space-y-6">
-          <div className="rounded-2xl bg-gradient-to-r from-primary-500 to-secondary-500 px-6 py-5 text-white">
-            <h1 className="text-3xl font-bold">Formulario de Consulta</h1>
-            <p className="mt-2 text-sm opacity-95">Registro de atención médica</p>
-          </div>
+          <section className="mb-8">
+            <h2 className="text-4xl font-bold text-neutral-800 mb-2">
+              Formulario de Consulta
+            </h2>
+            <p className="text-neutral-600 mb-4">
+              Registro de atención médica - Cita #{context.cita.id_cita}
+            </p>
+          </section>
 
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" size="sm">
-              Cita #{context.cita.id}
+              Cita #{context.cita.id_cita}
             </Badge>
             <Badge variant="success" size="sm">
-              Paciente #{context.paciente.id}
+              Paciente #{context.paciente.id_paciente}
             </Badge>
             <Badge variant="warning" size="sm">
-              Esp. #{context.especialidad.id}
+              Esp. #{context.especialidad.id_especialidad}
             </Badge>
           </div>
 
@@ -507,11 +474,11 @@ export default function ConsultationForm() {
                   <div className="grid grid-cols-1 gap-4 text-sm text-neutral-700 md:grid-cols-2">
                     <div>
                       <span className="font-semibold">ID cita:</span>{" "}
-                      {context.cita.id}
+                      {context.cita.id_cita}
                     </div>
                     <div>
                       <span className="font-semibold">ID paciente:</span>{" "}
-                      {context.paciente.id}
+                      {context.paciente.id_paciente}
                     </div>
                     <div>
                       <span className="font-semibold">Paciente:</span>{" "}
@@ -519,15 +486,15 @@ export default function ConsultationForm() {
                     </div>
                     <div>
                       <span className="font-semibold">Documento:</span>{" "}
-                      {context.paciente.documento}
+                      {context.paciente.num_documento}
                     </div>
                     <div>
                       <span className="font-semibold">ID especialidad:</span>{" "}
-                      {context.especialidad.id}
+                      {context.especialidad.id_especialidad}
                     </div>
                     <div>
                       <span className="font-semibold">Especialidad:</span>{" "}
-                      {context.especialidad.nombre}
+                      {context.especialidad.nombre_especialidad}
                     </div>
                   </div>
                 </Card.Body>
@@ -568,31 +535,6 @@ export default function ConsultationForm() {
                       error={errors.diagnostico}
                       rows={4}
                     />
-
-                    <div className="mt-2">
-                      <label className="block text-sm font-medium text-neutral-700">
-                        Diagnósticos sugeridos
-                      </label>
-                      <select
-                        className="block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 bg-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        onChange={(e) => {
-                          const selected = diagnosticos.find(
-                            (d) => String(d.id) === e.target.value
-                          );
-                          if (selected) {
-                            updateField("diagnostico", selected.nombre);
-                          }
-                        }}
-                        defaultValue=""
-                      >
-                        <option value="">Seleccione diagnóstico sugerido</option>
-                        {diagnosticos.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
                   </div>
                 </Card.Body>
               </Card>
@@ -752,10 +694,16 @@ export default function ConsultationForm() {
                 <Button
                   variant="outline"
                   onClick={() => setShowReferralModal(true)}
+                  disabled={isSaving}
                 >
                   Crear Remisión
                 </Button>
-                <Button onClick={handleFinalize}>Finalizar Consulta</Button>
+                <Button 
+                  onClick={handleFinalize}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Guardando..." : "Finalizar Consulta"}
+                </Button>
               </div>
             </div>
 
@@ -773,7 +721,7 @@ export default function ConsultationForm() {
                     </div>
                     <div>
                       <span className="font-semibold">Documento:</span>{" "}
-                      {context.paciente.documento}
+                      {context.paciente.num_documento}
                     </div>
                     <div>
                       <span className="font-semibold">Edad:</span>{" "}
@@ -786,25 +734,33 @@ export default function ConsultationForm() {
                     <div>
                       <p className="mb-1 font-semibold">Antecedentes</p>
                       <ul className="list-disc space-y-1 pl-5 text-neutral-600">
-                        {context.historiaClinica.antecedentes.map(
-                          (item, index) => (
-                            <li key={`${item}-${index}`}>{item}</li>
+                        {context.historiaClinica.antecedentes && context.historiaClinica.antecedentes.length > 0 ? (
+                          context.historiaClinica.antecedentes.map(
+                            (item, index) => (
+                              <li key={`${item}-${index}`}>{item}</li>
+                            )
                           )
+                        ) : (
+                          <li>Sin antecedentes registrados</li>
                         )}
                       </ul>
                     </div>
                     <div>
                       <p className="mb-1 font-semibold">Alergias</p>
                       <div className="flex flex-wrap gap-2">
-                        {context.historiaClinica.alergias.map((item, index) => (
-                          <Badge
-                            key={`${item}-${index}`}
-                            variant="error"
-                            size="sm"
-                          >
-                            {item}
-                          </Badge>
-                        ))}
+                        {context.historiaClinica.alergias && context.historiaClinica.alergias.length > 0 ? (
+                          context.historiaClinica.alergias.map((item, index) => (
+                            <Badge
+                              key={`${item}-${index}`}
+                              variant="error"
+                              size="sm"
+                            >
+                              {item}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-neutral-500">Sin alergias registradas</span>
+                        )}
                       </div>
                     </div>
                   </div>

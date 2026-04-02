@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
+import { AuthContext } from "../../services/auth/AuthContext";
 import {
   Alert,
   Button,
@@ -13,81 +14,10 @@ import {
 /**
  * Appointments.jsx
  *
- * Enfoque:
- * - Cumple la HU como planner/agenda de citas del doctor.
- * - Usa componentes UI actualizados del proyecto.
- * - Integrado con backend real en Render.
- * - Consume consultation-context al iniciar consulta.
- *
- * Integración Backend:
+ * Agenda de citas del doctor.
  * - GET /api/appointments - Obtiene citas del doctor (filtrado por fecha)
- * - GET /api/appointments/{id}/consultation-context - Obtiene contexto de consulta
+ * - GET /api/appointments/{id} - Obtiene detalles de una cita
  */
-
-/* -------------------------------------------------------------------------- */
-/*                                 API CONFIG                                 */
-/* -------------------------------------------------------------------------- */
-
-const APPOINTMENT_API = {
-  list: endpoints?.appointments?.list || null,
-
-  consultationContext: endpoints?.appointments?.consultationContext || ((id) => `/api/appointments/${id}/consultation-context`),
-};
-
-/* -------------------------------------------------------------------------- */
-/*                                   MOCK                                     */
-/* -------------------------------------------------------------------------- */
-
-const MOCK_APPOINTMENTS = [
-  {
-    id_cita: 101,
-    fecha: getTodayISO(),
-    hora_inicio: "08:00",
-    hora_fin: "08:30",
-    estado: "activa",
-    paciente: {
-      nombres: "Laura",
-      apellidos: "Rojas",
-      num_documento: "1012345678",
-    },
-  },
-  {
-    id_cita: 102,
-    fecha: getTodayISO(),
-    hora_inicio: "09:00",
-    hora_fin: "09:20",
-    estado: "activa",
-    paciente: {
-      nombres: "Camila",
-      apellidos: "Díaz",
-      num_documento: "1098765432",
-    },
-  },
-  {
-    id_cita: 103,
-    fecha: getTodayISO(),
-    hora_inicio: "10:30",
-    hora_fin: "11:00",
-    estado: "cancelada",
-    paciente: {
-      nombres: "Andrés",
-      apellidos: "Vargas",
-      num_documento: "99887766",
-    },
-  },
-  {
-    id_cita: 104,
-    fecha: getTodayISO(),
-    hora_inicio: "14:00",
-    hora_fin: "14:30",
-    estado: "finalizada",
-    paciente: {
-      nombres: "Sofía",
-      apellidos: "Ramírez",
-      num_documento: "55443322",
-    },
-  },
-];
 
 /* -------------------------------------------------------------------------- */
 /*                                  HELPERS                                   */
@@ -115,73 +45,38 @@ function isActiveStatus(status) {
   ].includes(normalized);
 }
 
-function getStatusVariant(status) {
-  const normalized = String(status).toLowerCase();
-
-  if (["activa", "activo", "programada", "confirmada", "scheduled", "confirmed"].includes(normalized)) {
-    return "success";
-  }
-
-  if (["cancelada", "cancelado", "cancelled"].includes(normalized)) {
-    return "error";
-  }
-
-  if (["finalizada", "finalizado", "completed"].includes(normalized)) {
-    return "info";
-  }
-
-  return "neutral";
-}
+const STATUS_CONFIG = {
+  success: {
+    variants: ["activa", "activo", "programada", "confirmada", "scheduled", "confirmed"],
+    classes: "bg-primary-50 text-primary-700 border border-primary-100",
+  },
+  error: {
+    variants: ["cancelada", "cancelado", "cancelled"],
+    classes: "bg-emergency-50 text-emergency-700 border border-emergency-200",
+  },
+  info: {
+    variants: ["finalizada", "finalizado", "completed"],
+    classes: "bg-secondary-50 text-secondary-700 border border-secondary-100",
+  },
+  neutral: {
+    variants: [],
+    classes: "bg-neutral-100 text-neutral-700 border border-neutral-200",
+  },
+};
 
 function getStatusClasses(status) {
-  const variant = getStatusVariant(status);
-
-  if (variant === "success") {
-    return "bg-primary-50 text-primary-700 border border-primary-100";
+  const normalized = String(status).toLowerCase();
+  
+  for (const [, config] of Object.entries(STATUS_CONFIG)) {
+    if (config.variants.includes(normalized)) {
+      return config.classes;
+    }
   }
-
-  if (variant === "error") {
-    return "bg-emergency-50 text-emergency-700 border border-emergency-200";
-  }
-
-  if (variant === "info") {
-    return "bg-secondary-50 text-secondary-700 border border-secondary-100";
-  }
-
-  return "bg-neutral-100 text-neutral-700 border border-neutral-200";
+  
+  return STATUS_CONFIG.neutral.classes;
 }
 
-function normalizeAppointment(raw, index) {
-  const paciente = raw?.paciente || raw?.patient || raw?.persona || {};
-
-  const nombres =
-    paciente?.nombres ||
-    paciente?.nombre ||
-    raw?.nombres_paciente ||
-    raw?.patient_name ||
-    "";
-
-  const apellidos =
-    paciente?.apellidos ||
-    paciente?.apellido ||
-    raw?.apellidos_paciente ||
-    raw?.patient_lastname ||
-    "";
-
-  const nombreCompleto =
-    `${nombres} ${apellidos}`.trim() ||
-    raw?.nombre_paciente ||
-    raw?.patient_full_name ||
-    `Paciente ${raw?.id_paciente || "sin ID"}`;
-
-  const numDocumento =
-    paciente?.num_documento ||
-    paciente?.documento ||
-    raw?.num_documento ||
-    raw?.patient_document ||
-    String(raw?.id_paciente || "");
-
-  // Mapear estado_agenda (0/1) a estado legible
+function normalizeAppointment(raw) {
   const mapearEstado = (estadoAgenda, asistio) => {
     if (asistio === true) return "completada";
     if (asistio === false) return "no_asistio";
@@ -189,56 +84,93 @@ function normalizeAppointment(raw, index) {
   };
 
   return {
-    id_cita: raw?.id_cita || raw?.id || raw?.appointment_id || index,
+    id_cita: raw?.id_cita || raw?.id || null,
     id_paciente: raw?.id_paciente || null,
     id_doctor: raw?.id_doctor || null,
     id_especialidad: raw?.id_especialidad || null,
-    fecha: raw?.fecha || raw?.date || getTodayISO(),
-    hora_inicio: raw?.hora_inicio || raw?.start_time || "00:00",
-    hora_fin: raw?.hora_fin || raw?.end_time || "00:00",
+    fecha: raw?.fecha || getTodayISO(),
+    hora_inicio: raw?.hora_inicio || "00:00",
+    hora_fin: raw?.hora_fin || "00:00",
     estado: mapearEstado(raw?.estado_agenda, raw?.asistio),
     estado_agenda: raw?.estado_agenda,
     asistio: raw?.asistio,
-    nombre_paciente: nombreCompleto,
-    num_documento: String(numDocumento),
+    nombre_paciente: "Paciente sin información",
+    num_documento: String(raw?.id_paciente || ""),
     id_remision: raw?.id_remision || null,
   };
 }
 
-async function fetchAppointmentsByDate(dateValue) {
-  if (APPOINTMENT_API.list) {
-    const { data } = await http.get(APPOINTMENT_API.list, {
-      params: { fecha: dateValue },
-    });
+// ═══════════════════════════════════════════════════════════════════════════
 
-    return Array.isArray(data)
-      ? data.map((item, index) => normalizeAppointment(item, index))
-      : [];
+async function fetchPersonByDocument(numDocumento) {
+  try {
+    const { data: response } = await http.get(`/api/persons/${numDocumento}`);
+    
+    if (!response?.hasError && response?.data) {
+      return {
+        num_documento: response.data?.num_documento,
+        nombres: response.data?.nombres,
+        apellidos: response.data?.apellidos,
+      };
+    }
+    
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function enrichAppointmentWithPatientData(appointment) {
+  if (!appointment.id_paciente) return appointment;
+
+  try {
+    const personData = await fetchPersonByDocument(appointment.id_paciente);
+    
+    if (personData?.nombres && personData?.apellidos) {
+      const nombreCompleto = `${personData.nombres} ${personData.apellidos}`.trim();
+      appointment.nombre_paciente = nombreCompleto;
+      appointment.num_documento = personData.num_documento;
+    }
+  } catch (err) {
+    // Silenciar errores - se muestra "Paciente sin información"
   }
 
-  // Si no hay endpoint configurado, retornar vacío en lugar de MOCK
-  return [];
+  return appointment;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function fetchAppointmentsByDate(dateValue, doctorId) {
+  try {
+    const params = { fecha: dateValue };
+    if (doctorId) params.id_doctor = doctorId;
+    
+    const { data } = await http.get(endpoints.appointments.list, { params });
+    let results = Array.isArray(data) ? data.map(normalizeAppointment) : [];
+    
+    // Enriquecer datos del paciente en paralelo
+    results = await Promise.all(results.map(enrichAppointmentWithPatientData));
+    
+    // Filtrar por doctor ID si está disponible
+    if (doctorId) {
+      const doctorIdNum = parseInt(String(doctorId).trim());
+      results = results.filter(
+        (apt) => parseInt(String(apt.id_doctor || "0").trim()) === doctorIdNum
+      );
+    }
+    
+    return results;
+  } catch (err) {
+    return [];
+  }
 }
 
 async function fetchConsultationContext(appointmentId) {
-  const endpoint =
-    typeof APPOINTMENT_API.consultationContext === "function"
-      ? APPOINTMENT_API.consultationContext(appointmentId)
-      : `/api/appointments/${appointmentId}/consultation-context`;
-
-  const { data } = await http.get(endpoint);
+  const { data } = await http.get(endpoints.appointments.getById(appointmentId));
   return data;
 }
 
-async function updateAppointmentStatus(appointmentId, newStatus) {
-  const endpoint =
-    typeof APPOINTMENT_API.updateStatus === "function"
-      ? APPOINTMENT_API.updateStatus(appointmentId)
-      : `/api/appointments/${appointmentId}/status`;
 
-  const { data } = await http.patch(endpoint, { estado_agenda: newStatus });
-  return data;
-}
 
 /* -------------------------------------------------------------------------- */
 /*                                 COMPONENT                                  */
@@ -246,13 +178,17 @@ async function updateAppointmentStatus(appointmentId, newStatus) {
 
 export default function Appointments() {
   const navigate = useNavigate();
+  const { payload } = useContext(AuthContext);
+  
+  // Obtener ID del doctor del payload del JWT
+  // El campo correcto es "num_documento"
+  const doctorId = payload?.num_documento || null;
 
   const [selectedDate, setSelectedDate] = useState(getTodayISO());
   const [appointments, setAppointments] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [loadingContextId, setLoadingContextId] = useState(null);
-  const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
@@ -263,7 +199,7 @@ export default function Appointments() {
     setInfoMessage("");
 
     try {
-      const result = await fetchAppointmentsByDate(dateValue);
+      const result = await fetchAppointmentsByDate(dateValue, doctorId);
       setAppointments(result.sort(sortByHour));
     } catch (err) {
       setAppointments([]);
@@ -275,7 +211,7 @@ export default function Appointments() {
 
   useEffect(() => {
     loadAppointments(selectedDate);
-  }, [selectedDate]);
+  }, [selectedDate, doctorId]);
 
   const sortedAppointments = useMemo(
     () => [...appointments].sort(sortByHour),
@@ -292,39 +228,11 @@ export default function Appointments() {
     setError("");
 
     try {
-      const response = await fetchConsultationContext(appointment.id_cita);
-
-      const hasError = response?.hasError;
-      const context = response?.data;
-
-      if (hasError || !context?.id_cita) {
-        throw new Error("No fue posible obtener el contexto de la consulta.");
-      }
-
-      navigate(`/doctor/consultation/new?appointment_id=${context.id_cita}`);
+      navigate(`/doctor/consultation/new?appointment_id=${appointment.id_cita}`);
     } catch (err) {
-      setError(
-        "No fue posible iniciar la consulta para la cita seleccionada."
-      );
+      setError("No fue posible iniciar la consulta.");
     } finally {
       setLoadingContextId(null);
-    }
-  };
-
-  const handleChangeStatus = async (appointment, newStatus) => {
-    setUpdatingStatusId(appointment.id_cita);
-    setError("");
-
-    try {
-      await updateAppointmentStatus(appointment.id_cita, newStatus);
-      
-      // Recargar citas después de cambiar estado
-      await loadAppointments(selectedDate);
-      setInfoMessage(`Estado de la cita actualizado a: ${newStatus === 1 ? "activa" : "cancelada"}`);
-    } catch (err) {
-      setError("No fue posible cambiar el estado de la cita.");
-    } finally {
-      setUpdatingStatusId(null);
     }
   };
 
@@ -426,8 +334,6 @@ export default function Appointments() {
                   appointment={appointment}
                   isLoadingContext={loadingContextId === appointment.id_cita}
                   onStartConsultation={handleStartConsultation}
-                  isUpdatingStatus={updatingStatusId === appointment.id_cita}
-                  onChangeStatus={handleChangeStatus}
                 />
               ))}
             </div>
@@ -461,22 +367,19 @@ function AppointmentRow({
   appointment,
   isLoadingContext,
   onStartConsultation,
-  isUpdatingStatus,
-  onChangeStatus,
 }) {
   const canStartConsultation = isActiveStatus(appointment.estado);
 
   return (
     <div className="px-6 py-5 hover:bg-neutral-50 transition">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 flex-1">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
           <InfoBlock
             label="Horario"
             value={`${appointment.hora_inicio} - ${appointment.hora_fin}`}
           />
           <InfoBlock label="Paciente" value={appointment.nombre_paciente} />
           <InfoBlock label="Documento" value={appointment.num_documento} />
-          <InfoBlock label="Especialidad" value={`ID: ${appointment.id_especialidad}`} />
 
           <div>
             <p className="text-xs uppercase tracking-wide text-neutral-500">
@@ -492,7 +395,7 @@ function AppointmentRow({
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 justify-start xl:justify-end">
+        <div className="flex flex-col md:flex-row gap-2 justify-start md:justify-end">
           {canStartConsultation && (
             <Button
               variant="primary"
@@ -503,30 +406,8 @@ function AppointmentRow({
               {isLoadingContext ? "Iniciando..." : "Iniciar consulta"}
             </Button>
           )}
-          
-          {appointment.estado_agenda === 1 && (
-            <Button
-              variant="secondary"
-              onClick={() => onChangeStatus(appointment, 0)}
-              disabled={isUpdatingStatus}
-              className="text-sm"
-            >
-              {isUpdatingStatus ? "Cancelando..." : "Cancelar cita"}
-            </Button>
-          )}
 
-          {appointment.estado_agenda === 0 && (
-            <Button
-              variant="ghost"
-              onClick={() => onChangeStatus(appointment, 1)}
-              disabled={isUpdatingStatus}
-              className="text-sm"
-            >
-              {isUpdatingStatus ? "Activando..." : "Reactivar"}
-            </Button>
-          )}
-
-          {!canStartConsultation && appointment.estado_agenda === 1 && (
+          {!canStartConsultation && (
             <Button variant="ghost" disabled className="text-sm">
               No disponible
             </Button>

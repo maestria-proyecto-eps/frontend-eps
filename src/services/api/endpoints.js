@@ -17,6 +17,8 @@ export const endpoints = {
     doctorExample: "/api/users/doctor/example",
     /** GET lista paginada: ?pag=1&cantidad=30 */
     list: "/api/users",
+    /** GET usuario por ID */
+    getById: (id) => `/api/users/${id}`,
     /** POST crear usuario */
     create: "/api/users",
     /** PUT actualizar usuario (id numérico) */
@@ -26,6 +28,12 @@ export const endpoints = {
     /** DELETE desactivar/eliminar usuario (id numérico) - legacy, preferir changeStatus */
     deleteById: (id) => `/api/users/${id}`,
   },
+
+  // ── Persons Service ───────────────────────────────
+  persons: {
+    /** GET persona por número de documento */
+    getByDocument: (num_documento) => `/api/persons/${num_documento}`,
+  },
   
   patients: {
     create: "/api/patients",
@@ -34,8 +42,10 @@ export const endpoints = {
   appointments: {
     list: "/api/appointments",
     create: "/api/appointments",
+    /** GET cita específica por ID */
+    getById: (id) => `/api/appointments/${id}`,
     consultationContext: (id) => `/api/appointments/${id}/consultation-context`,
-    updateStatus: (id) => `/api/appointments/${id}/status`,
+    cancel: (id) => `/api/appointments/${id}/cancel`,
   },
 
   // ── Emergency Service ─────────────────────────────
@@ -45,11 +55,44 @@ export const endpoints = {
 
   // ── Pharmacy Service ──────────────────────────────
   pharmacy: {
-    // list: "/api/pharmacy/",
+    /** GET lista de medicamentos */
+    listMedications: "/api/pharmacy/medications",
+    /** GET inventario de medicamento específico */
+    getInventory: (codigo) => `/api/pharmacy/medications/inventory/${codigo}`,
+    /** GET alertas de bajo stock */
+    getLowStock: "/api/pharmacy/medications/low-stock",
+    /** GET alertas de medicamentos que vencen próximamente */
+    getExpiringSoon: "/api/pharmacy/medications/expiring-soon",
   },
 
   // ── Medical Records Service ───────────────────────
   medicalRecords: {
-    // list: "/api/medical-records/",
+    /** GET historial médico del paciente (nota: endpoint tiene typo "pattient") */
+    getPatientHistory: (patientId) => `/api/medical-records/pattient/${patientId}/medical-history`,
+    /** GET búsqueda de diagnósticos */
+    searchDiagnosticos: "/api/medical-records/diagnosticos/search",
+    /** GET búsqueda de medicamentos */
+    searchMedicamentos: "/api/medical-records/medicamentos/search",
+  },
+
+  // ── Consultations Service ──────────────────────────
+  consultations: {
+    create: "/api/consultations",
+  },
+
+  // ── Prescriptions Service ──────────────────────────
+  prescriptions: {
+    create: "/api/prescriptions",
+  },
+
+  // ── Medications Service (legacy - use pharmacy.listMedications) ──────────
+  medications: {
+    /** @deprecated Use pharmacy.listMedications instead */
+    list: "/api/pharmacy/medications",
+  },
+
+  // ── Referrals Service ──────────────────────────────
+  referrals: {
+    create: "/api/referrals",
   },
 };
