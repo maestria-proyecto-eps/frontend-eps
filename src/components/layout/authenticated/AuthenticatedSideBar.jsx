@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../../../services/auth/AuthContext';
 import { cn } from '../../../utils/cn';
 
@@ -64,7 +64,6 @@ const MENUS = {
 /* ── Componente ────────────────────────────────────────────────── */
 export default function AuthenticatedSideBar({ className = '' }) {
   const auth  = useContext(AuthContext);
-  const location = useLocation();
   const roles = (Array.isArray(auth?.enabledRoles) && auth.enabledRoles.length)
     ? auth.enabledRoles
     : (auth?.role ? [auth.role] : ['patient']);
@@ -162,17 +161,15 @@ export default function AuthenticatedSideBar({ className = '' }) {
                   {items.map((item) => (
                     <li key={item.path}>
                       {(() => {
-                        const itemTarget = item.end ? '/bridge' : item.path;
-                        const preventActiveOnBridge = item.end && location.pathname === '/bridge';
                         return (
                       <NavLink
-                        to={itemTarget}
+                        to={item.path}
                         end={!!item.end}
                         className={({ isActive }) =>
                           cn(
                             'flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors',
                             collapsed ? 'rounded-full justify-center' : 'rounded-lg',
-                            isActive && !preventActiveOnBridge
+                            isActive
                               ? 'bg-primary-600 text-white'
                               : 'text-neutral-700 hover:bg-primary-100 hover:text-primary-700'
                           )
