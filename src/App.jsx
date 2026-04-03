@@ -127,11 +127,8 @@ export default function App() {
             <Route path="historia" element={<Maintenance />} />
             <Route path="prescripciones" element={<Maintenance />} />
             <Route path="perfil" element={<Maintenance />} />
-            <Route path="appointments/new" element={<Maintenance />} />
+            <Route path="appointments/new" element={<Calendar />} />
           </Route>
-
-          {/* Ruta de prueba del calendario */}
-          <Route path="/patient/appointments/new" element={<Calendar />} />
 
           {/* Cualquier otra ruta → redirigir al home */}
           <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
