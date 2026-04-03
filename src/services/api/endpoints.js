@@ -32,6 +32,13 @@ export const endpoints = {
     list: '/api/specialties',
   },
 
+  persons: {
+    /** POST crear persona */
+    create: "/api/persons",
+    /** PUT actualizar persona por número de documento */
+    updateById: (num_documento) => `/api/persons/${num_documento}`,
+  },
+
   patients: {
     create: "/api/patients",
   },
