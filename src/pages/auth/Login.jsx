@@ -36,20 +36,7 @@ export default function Login() {
       }
 
       auth.login(data.Data.access_token);
-
-      const payload = JSON.parse(atob(data.Data.access_token.split(".")[1]));
-      const role = payload.role;
-
-      if (role === "Médico") nav("/doctor");
-      else if (role === "Paciente") nav("/patient");
-      else if (role === "Enfermero") nav("/nurse");
-      else if (role === "Farmaceuta") nav("/pharmacy");
-      else if (role === "Recepcionista") nav("/receptionist");
-      else if (role === "Talento Humano") nav("/hr");
-      else {
-        auth.logout();
-        setMsg("Tu role no tiene permisos para acceder.");
-      }
+      nav("/bridge");
 
     } catch {
       setMsg("Error de conexión. Intente nuevamente.");

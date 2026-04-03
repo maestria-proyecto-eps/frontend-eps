@@ -55,7 +55,9 @@ El cumplimiento de estas pautas garantiza reconocimiento y consistencia de marca
 
 ---
 
-## 4. Paleta de colores
+<h2 style="text-align: center; font-size: 1.875rem; font-weight: bold; color: #262626; margin-bottom: 1.5rem;">
+  Paleta de colores
+</h2>
 
 ### 4.1 Color primario – Verde
 

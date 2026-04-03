@@ -9,13 +9,16 @@ export default defineConfig({
     // Redirige /api/* a los microservicios levantados en localhost.
     // Ajusta los puertos según tu setup local.
     proxy: {
-      '/api/auth':            'https://backend-eps-auth-service.onrender.com',
-      '/api/patients':         'https://backend-eps-auth-service.onrender.com',
-      '/api/users':           'https://backend-eps-users-service-dev.onrender.com',
-      '/api/appointments':    'https://backend-eps-appointments-service-dev.onrender.com',
-      '/api/emergency':       'https://backend-eps-emergency-service.onrender.com',
-      '/api/pharmacy':        'https://backend-eps-pharmacy-service-dev.onrender.com',
-      '/api/medical-records': 'https://backend-eps-medical-records-service-dev.onrender.com',
+      '/api/auth':            'https://backend-eps-auth-service-xzgs.onrender.com',
+      '/api/patients':         'https://backend-eps-auth-service-xzgs.onrender.com',
+      '/api/users':           'https://backend-eps-users-service.onrender.com',
+      '/api/doctors':         'https://backend-eps-users-service.onrender.com',
+      '/api/persons':         'https://backend-eps-users-service.onrender.com',
+      '/api/specialties':     'https://backend-eps-users-service.onrender.com',
+      '/api/appointments':    'https://backend-eps-appointments-service.onrender.com',
+      '/api/emergency':       'https://backend-eps-emergency-service-xqll.onrender.com',
+      '/api/pharmacy':        'https://backend-eps-pharmacy-service.onrender.com',
+      '/api/medical-records': 'https://backend-eps-medical-records-service.onrender.com',
     },
   },
     test: {
