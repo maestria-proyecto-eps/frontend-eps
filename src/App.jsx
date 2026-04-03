@@ -12,6 +12,7 @@ import DoctorLayout from "./pages/doctor/DoctorLayout"
 import NewPatient from "./pages/receptionist/newpatient";
 import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
+import DoctorSchedule from "./pages/hr/DoctorSchedule";
 export default function App() {
   return (
     <AuthProvider>
@@ -23,6 +24,8 @@ export default function App() {
           <Route path="/components" element={<Components />} />
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
+          {/* HR: Horario de médico (público por ahora) */}
+          <Route path="/admin/doctors/:id/schedule" element={<DoctorSchedule />} />
 
           {/* DOCTOR ROLE EXAMPLE */}
           <Route

@@ -30,6 +30,29 @@ export const endpoints = {
   patients: {
     create: "/api/patients",
   },
+
+  // ── Agenda (horarios de médicos) ──────────────────
+  agenda: {
+    /** GET bloques de agenda por médico */
+    getByDoctor: (idDoctor) => `/api/appointments/agenda/doctor/${idDoctor}`,
+    /** POST insertar múltiples bloques: { blocks: [...] } */
+    createBulk: '/api/appointments/agenda/bulk',
+    /** PUT actualizar estado de un bloque: { estado } */
+    updateEstado: (idAgenda) => `/api/appointments/agenda/${idAgenda}`,
+  },
+
+  // ── Especialidades ────────────────────────────────
+  especialidades: {
+    /** GET lista de especialidades */
+    list: '/api/users/especialidades',
+  },
+
+  // ── Citas ─────────────────────────────────────────
+  citas: {
+    /** GET citas asociadas a un bloque de agenda */
+    getByAgenda: (idAgenda) => `/api/appointments/citas/agenda/${idAgenda}`,
+  },
+
   // ── Appointments Service ──────────────────────────
   appointments: {
     // list: "/api/appointments/",
