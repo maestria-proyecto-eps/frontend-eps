@@ -21,24 +21,31 @@ export default function AuthProvider({ children }) {
   const payload = token ? decodeJwt(token) : null;
 
   const role = payload?.role || null;
+  const [enabledRoles, setEnabledRoles] = useState(role ? [role] : []);
 
   const login = useCallback((newToken) => {
     localStorage.setItem("access_token", newToken);
+    const nextPayload = newToken ? decodeJwt(newToken) : null;
+    const nextRole = nextPayload?.role || null;
+    setEnabledRoles(nextRole ? [nextRole] : []);
     setToken(newToken);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem("access_token");
     setToken("");
+    setEnabledRoles([]);
   }, []);
 
   const value = useMemo(() => ({
     token,
     role,
+    enabledRoles,
+    setEnabledRoles,
     payload,           // ← agregar esto
     isAuthenticated: !!token && !isTokenExpired(payload),
     logout,
     login,
-  }), [token, role, payload, logout, login]);
+  }), [token, role, enabledRoles, payload, logout, login]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

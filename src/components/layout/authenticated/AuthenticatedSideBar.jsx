@@ -46,12 +46,8 @@ const MENUS = {
     { label: 'Perfil',         path: '/patient/perfil',         icon: Icon.profile   },
   ],
   "Talento Humano": [
-    { label: 'Dashboard',     path: '/hr',               icon: Icon.dashboard  , end: true },
-    { label: 'Usuarios',      path: '/hr/usuarios',      icon: Icon.users      },
-    { label: 'Doctores',      path: '/hr/doctores',      icon: Icon.profile    },
-    { label: 'Enfermeras',    path: '/hr/enfermeras',    icon: Icon.users      },
-    { label: 'Farmacéuticos', path: '/hr/farmaceuticos', icon: Icon.pill       },
-    { label: 'Secretarios',   path: '/hr/secretarios',   icon: Icon.clipboard  },
+    { label: 'Dashboard', path: '/hr', icon: Icon.dashboard, end: true },
+    { label: 'Usuarios',  path: '/hr/usuarios', icon: Icon.users },
   ],
   "Farmaceuta": [
     { label: 'Dashboard',    path: '/pharmacist',              icon: Icon.dashboard , end: true },
@@ -68,14 +64,27 @@ const MENUS = {
 /* ── Componente ────────────────────────────────────────────────── */
 export default function AuthenticatedSideBar({ className = '' }) {
   const auth  = useContext(AuthContext);
-  const role  = auth?.role || 'patient';
-  const menu  = MENUS[role] || [];
+  const roles = (Array.isArray(auth?.enabledRoles) && auth.enabledRoles.length)
+    ? auth.enabledRoles
+    : (auth?.role ? [auth.role] : ['patient']);
+
+  const menu = [];
+  const seenPaths = new Set();
+  roles.forEach((r) => {
+    const items = MENUS[r] || [];
+    items.forEach((item) => {
+      if (seenPaths.has(item.path)) return;
+      seenPaths.add(item.path);
+      // Guardamos la "fuente" del item para poder agruparlo por módulos.
+      menu.push({ ...item, _role: r });
+    });
+  });
   const [collapsed, setCollapsed] = useState(false);
 
   return (
     <aside
       className={cn(
-        'flex flex-col bg-neutral-200 text-neutral-300 transition-all duration-300 min-h-full',
+        'flex flex-col bg-primary-50 text-neutral-700 transition-all duration-300 min-h-full rounded-2xl border-2 border-primary-500 p-1.5 m-2 shadow-sm hover:shadow-lg',
         collapsed ? 'w-16' : 'w-56',
         className
       )}
@@ -83,7 +92,7 @@ export default function AuthenticatedSideBar({ className = '' }) {
       {/* Toggle collapse */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-end p-3 text-neutral-500 hover:text-white transition-colors border-b border-neutral-800"
+        className="flex items-center justify-end p-3 text-neutral-500 hover:text-primary-700 transition-colors border-b border-primary-200"
         title={collapsed ? 'Expandir' : 'Colapsar'}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -94,30 +103,91 @@ export default function AuthenticatedSideBar({ className = '' }) {
         </svg>
       </button>
 
-      {/* Nav items */}
+      {/* Botón superior fijo para volver a bienvenida */}
+      <div className="px-2 py-3 border-b border-primary-200">
+        <NavLink
+          to="/bridge"
+          end
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors',
+              collapsed ? 'rounded-full justify-center' : 'rounded-lg',
+              isActive
+                ? 'bg-primary-600 text-white'
+                : 'text-neutral-700 hover:bg-primary-100 hover:text-primary-700'
+            )
+          }
+          title={collapsed ? 'Inicio' : undefined}
+        >
+          <SvgIcon d={Icon.dashboard} className="shrink-0" />
+          {!collapsed && <span className="truncate">Inicio</span>}
+        </NavLink>
+      </div>
+
+      {/* Nav items (agrupados por módulos) */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        <ul className="space-y-1 px-2">
-          {menu.map((item) => (
-            <li key={item.path}>
-              <NavLink
-                to={item.path}
-                end={!!item.end}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary-600 text-white'
-                      : 'text-neutral-700 hover:bg-neutral-400 hover:text-white'
-                  )
-                }
-                title={collapsed ? item.label : undefined}
-              >
-                <SvgIcon d={item.icon} className="shrink-0" />
-                {!collapsed && <span className="truncate">{item.label}</span>}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+        {(() => {
+          const moduleOrder = [];
+          const moduleMap = new Map();
+
+          const getModuleName = (item) => {
+            // Talento Humano -> módulo único "Talento Humano" con submenú Usuarios.
+            if (item._role === 'Talento Humano') {
+              return 'Talento Humano';
+            }
+            // Por defecto: agrupamos por el rol origen.
+            return item._role ?? 'Módulos';
+          };
+
+          menu.forEach((item) => {
+            const moduleName = getModuleName(item);
+            if (!moduleMap.has(moduleName)) {
+              moduleOrder.push(moduleName);
+              moduleMap.set(moduleName, []);
+            }
+            moduleMap.get(moduleName).push(item);
+          });
+
+          return moduleOrder.map((moduleName) => {
+            const items = moduleMap.get(moduleName) ?? [];
+            return (
+              <div key={moduleName} className="mb-4">
+                {!collapsed && (
+                  <div className="px-3 mb-2 text-xs font-semibold text-primary-700">
+                    {moduleName}
+                  </div>
+                )}
+                <ul className="space-y-1 px-2">
+                  {items.map((item) => (
+                    <li key={item.path}>
+                      {(() => {
+                        return (
+                      <NavLink
+                        to={item.path}
+                        end={!!item.end}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors',
+                            collapsed ? 'rounded-full justify-center' : 'rounded-lg',
+                            isActive
+                              ? 'bg-primary-600 text-white'
+                              : 'text-neutral-700 hover:bg-primary-100 hover:text-primary-700'
+                          )
+                        }
+                        title={collapsed ? item.label : undefined}
+                      >
+                        <SvgIcon d={item.icon} className="shrink-0" />
+                        {!collapsed && <span className="truncate">{item.label}</span>}
+                      </NavLink>
+                        );
+                      })()}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          });
+        })()}
       </nav>
     </aside>
   );
