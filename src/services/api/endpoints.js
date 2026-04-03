@@ -29,7 +29,17 @@ export const endpoints = {
 
   /** GET lista: nombre_especialidad, descripcion, id_especialidad */
   specialties: {
-    list: '/api/specialties',
+    list:      '/api/specialties',
+    remissions: '/api/specialties/remission',
+  },
+
+  doctors: {
+    /** GET lista: ?id_especialidad=&num_licencia= */
+    list:            '/api/doctors',
+    /** POST crear médico */
+    create:          '/api/doctors',
+    /** PUT cambiar especialidad */
+    updateSpecialty: (id) => `/api/doctors/${id}/specialty`,
   },
 
   persons: {

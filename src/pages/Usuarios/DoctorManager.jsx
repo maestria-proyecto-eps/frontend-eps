@@ -1,109 +1,147 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { DataTable, Badge, Button } from '../../components/ui';
-
-// ─── Datos simulados ──────────────────────────────────────────────────────────
-const MOCK_ESPECIALIDADES = [
-  { id_especialidad: 1, nombre_especialidad: 'Cardiología'       },
-  { id_especialidad: 2, nombre_especialidad: 'Medicina General'  },
-  { id_especialidad: 3, nombre_especialidad: 'Neurología'        },
-  { id_especialidad: 4, nombre_especialidad: 'Pediatría'         },
-  { id_especialidad: 5, nombre_especialidad: 'Ortopedia'         },
-];
-
-const MOCK_DOCTORS = [
-  { id_medico: 1, nombres: 'Carlos',   apellidos: 'Ramírez',  num_documento: '10234567', num_licencia: 'LIC-001', id_especialidad: 1, nombre_especialidad: 'Cardiología',      estado: 1 },
-  { id_medico: 2, nombres: 'Laura',    apellidos: 'Gómez',    num_documento: '20345678', num_licencia: 'LIC-002', id_especialidad: 2, nombre_especialidad: 'Medicina General', estado: 1 },
-  { id_medico: 3, nombres: 'Andrés',   apellidos: 'Torres',   num_documento: '30456789', num_licencia: 'LIC-003', id_especialidad: 3, nombre_especialidad: 'Neurología',       estado: 0 },
-  { id_medico: 4, nombres: 'Patricia', apellidos: 'Herrera',  num_documento: '40567890', num_licencia: 'LIC-004', id_especialidad: 4, nombre_especialidad: 'Pediatría',        estado: 1 },
-  { id_medico: 5, nombres: 'Jorge',    apellidos: 'Castillo', num_documento: '50678901', num_licencia: 'LIC-005', id_especialidad: 5, nombre_especialidad: 'Ortopedia',        estado: 1 },
-];
-
-// ─── Columnas ────────────────────────────────────────────────────────────────
-const COLUMNAS_DOCTORES = [
-  {
-    key: 'nombre_completo',
-    label: 'Nombre completo',
-    filterable: true,
-    render: (_, row) => `${row.nombres ?? ''} ${row.apellidos ?? ''}`.trim() || '—',
-  },
-  { key: 'num_documento',       label: 'Documento',    filterable: true },
-  { key: 'num_licencia',        label: 'N° Licencia',  filterable: true },
-  { key: 'nombre_especialidad', label: 'Especialidad', filterable: true },
-  {
-    key: 'estado',
-    label: 'Estado',
-    filterable: true,
-    filterType: 'select',
-    filterOptions: [
-      { value: '1', label: 'Activo'   },
-      { value: '0', label: 'Inactivo' },
-    ],
-    render: (val) => (
-      <Badge variant={val === 1 ? 'success' : 'neutral'} size="sm">
-        {val === 1 ? 'Activo' : 'Inactivo'}
-      </Badge>
-    ),
-  },
-];
+import { DataTable, Button, Input } from '../../components/ui';
+import { http } from '../../services/api/http';
+import { endpoints } from '../../services/api/endpoints';
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function DoctorManager() {
-  const [doctores,       setDoctores]       = useState([]);
+  // ── Especialidades (compartido entre secciones) ──
   const [especialidades, setEspecialidades] = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [filters,        setFilters]        = useState({});
-  const [page,           setPage]           = useState(1);
-  const [pageSize,       setPageSize]       = useState(10);
 
-  // ── Fetch especialidades (mock) ──
+  // ── Estado: médicos ──
+  const [doctores,   setDoctores]   = useState([]);
+  const [loadingDoc, setLoadingDoc] = useState(true);
+  const [pageDoc,    setPageDoc]    = useState(1);
+  const [pageSizeDoc, setPageSizeDoc] = useState(10);
+  // Inputs de filtro (controlados)
+  const [inputEspId,    setInputEspId]    = useState('');
+  const [inputLicencia, setInputLicencia] = useState('');
+  // Filtros aplicados (disparan fetch)
+  const [appliedFilters, setAppliedFilters] = useState({ id_especialidad: '', num_licencia: '' });
+
+  // ── Estado: especialidades (sección lectura) ──
+  const [loadingEsp,   setLoadingEsp]   = useState(true);
+  const [pageEsp,      setPageEsp]      = useState(1);
+  const [pageSizeEsp,  setPageSizeEsp]  = useState(10);
+  const [filtersEsp,   setFiltersEsp]   = useState({});
+
+  // ── Estado: remisiones ──
+  const [remisiones,   setRemisiones]   = useState([]);
+  const [loadingRem,   setLoadingRem]   = useState(true);
+  const [pageRem,      setPageRem]      = useState(1);
+  const [pageSizeRem,  setPageSizeRem]  = useState(10);
+  const [filtersRem,   setFiltersRem]   = useState({});
+
+  // ── Fetch especialidades ──
   const fetchEspecialidades = useCallback(async () => {
-    await new Promise((r) => setTimeout(r, 200));
-    setEspecialidades(MOCK_ESPECIALIDADES);
+    setLoadingEsp(true);
+    try {
+      const { data } = await http.get(endpoints.specialties.list);
+      setEspecialidades(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error al cargar especialidades:', err);
+      setEspecialidades([]);
+    } finally {
+      setLoadingEsp(false);
+    }
   }, []);
 
-  // ── Fetch doctores (mock) ──
+  // ── Fetch médicos ──
   const fetchDoctores = useCallback(async () => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    setDoctores(MOCK_DOCTORS);
-    setLoading(false);
+    setLoadingDoc(true);
+    try {
+      const params = {};
+      if (appliedFilters.id_especialidad) params.id_especialidad = Number(appliedFilters.id_especialidad);
+      if (appliedFilters.num_licencia)    params.num_licencia    = Number(appliedFilters.num_licencia);
+      const { data } = await http.get(endpoints.doctors.list, { params });
+      setDoctores(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error al cargar médicos:', err);
+      setDoctores([]);
+    } finally {
+      setLoadingDoc(false);
+    }
+  }, [appliedFilters]);
+
+  // ── Fetch remisiones ──
+  const fetchRemisiones = useCallback(async () => {
+    setLoadingRem(true);
+    try {
+      const { data } = await http.get(endpoints.specialties.remissions);
+      setRemisiones(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error al cargar remisiones:', err);
+      setRemisiones([]);
+    } finally {
+      setLoadingRem(false);
+    }
   }, []);
 
   useEffect(() => { fetchEspecialidades(); }, [fetchEspecialidades]);
   useEffect(() => { fetchDoctores();       }, [fetchDoctores]);
+  useEffect(() => { fetchRemisiones();     }, [fetchRemisiones]);
 
-  // ── Filtrado cliente ──
-  const filtrado = doctores.filter((row) =>
-    Object.entries(filters).every(([key, val]) => {
+  // ── Columnas médicos (dependen de especialidades para mostrar nombre) ──
+  const columnasDoctores = [
+    {
+      key:    'nombre_completo',
+      label:  'Nombre completo',
+      render: (_, row) => `${row.nombres ?? ''} ${row.apellidos ?? ''}`.trim() || '—',
+    },
+    { key: 'id_medico',    label: 'N° Documento' },
+    { key: 'num_licencia', label: 'N° Licencia'  },
+    {
+      key:    'id_especialidad',
+      label:  'Especialidad',
+      render: (val) =>
+        especialidades.find((e) => e.id_especialidad === val)?.nombre_especialidad ?? String(val),
+    },
+  ];
+
+  // ── Columnas especialidades ──
+  const columnasEspecialidades = [
+    { key: 'id_especialidad',     label: 'ID'     },
+    { key: 'nombre_especialidad', label: 'Nombre', filterable: true },
+  ];
+
+  // ── Columnas remisiones ──
+  const columnasRemisiones = [
+    { key: 'nombre_que_remite', label: 'Especialidad que remite', filterable: true },
+    { key: 'nombre_remitida',   label: 'Remitido a',              filterable: true },
+  ];
+
+  // ── Paginación client-side: médicos ──
+  const dataDocTable = doctores.slice((pageDoc - 1) * pageSizeDoc, pageDoc * pageSizeDoc);
+
+  // ── Filtrado + paginación client-side: especialidades ──
+  const filtradoEsp = especialidades.filter((row) =>
+    Object.entries(filtersEsp).every(([key, val]) => {
       if (val == null || String(val).trim() === '') return true;
-      if (key === 'estado') return String(row.estado) === String(val);
-      if (key === 'nombre_completo') {
-        const full = `${row.nombres ?? ''} ${row.apellidos ?? ''}`.toLowerCase();
-        return full.includes(String(val).toLowerCase());
-      }
       return String(row[key] ?? '').toLowerCase().includes(String(val).toLowerCase());
     })
   );
-  const dataTable = filtrado.slice((page - 1) * pageSize, page * pageSize);
+  const dataEspTable = filtradoEsp.slice((pageEsp - 1) * pageSizeEsp, pageEsp * pageSizeEsp);
 
-  // ── formConfig ──
-  const FORM_CONFIG_DOCTORES = {
+  // ── Filtrado + paginación client-side: remisiones ──
+  const filtradoRem = remisiones.filter((row) =>
+    Object.entries(filtersRem).every(([key, val]) => {
+      if (val == null || String(val).trim() === '') return true;
+      return String(row[key] ?? '').toLowerCase().includes(String(val).toLowerCase());
+    })
+  );
+  const dataRemTable = filtradoRem.slice((pageRem - 1) * pageSizeRem, pageRem * pageSizeRem);
+
+  // ── formConfig médicos ──
+  const formConfigDoctores = {
     createTitle:       'Registrar médico',
     editTitle:         'Editar médico',
     createButtonLabel: 'Nuevo médico',
     createSubmitLabel: 'Registrar',
     editSubmitLabel:   'Guardar',
-    confirmDeactivateTitle:   'Desactivar médico',
-    confirmDeactivateMessage: (row) => (
-      <>¿Está seguro que desea desactivar al médico <strong>{row?.nombres} {row?.apellidos}</strong>?</>
-    ),
-    statusKey:        'estado',
-    activeValue:      1,
-    deactivatedValue: 0,
     fields: [
       {
-        key:         'num_documento',
+        key:         'id_medico',
         label:       'Número de documento',
         type:        'text',
         placeholder: 'Ej: 10234567',
@@ -114,8 +152,9 @@ export default function DoctorManager() {
         key:         'num_licencia',
         label:       'Número de licencia médica',
         type:        'text',
-        placeholder: 'Ej: LIC-001',
+        placeholder: 'Ej: 12345',
         validation:  ['required'],
+        createOnly:  true,
       },
       {
         key:          'id_especialidad',
@@ -131,82 +170,157 @@ export default function DoctorManager() {
     ],
   };
 
-  // ── CRUD handlers (mock) ──
+  // ── Handlers médicos ──
   const handleCreate = async (newRow) => {
-    await new Promise((r) => setTimeout(r, 500));
-    const esp = especialidades.find((e) => e.id_especialidad === Number(newRow.id_especialidad));
-    setDoctores((prev) => [...prev, {
-      id_medico:           Date.now(),
-      nombres:             '—',
-      apellidos:           '—',
-      num_documento:       newRow.num_documento,
-      num_licencia:        newRow.num_licencia,
-      id_especialidad:     Number(newRow.id_especialidad),
-      nombre_especialidad: esp?.nombre_especialidad ?? '',
-      estado:              1,
-    }]);
+    try {
+      await http.post(endpoints.doctors.create, {
+        id_medico:       Number(newRow.id_medico),
+        num_licencia:    Number(newRow.num_licencia),
+        id_especialidad: Number(newRow.id_especialidad),
+      });
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      throw new Error(detail ?? 'No se pudo registrar el médico. Intente de nuevo.');
+    }
+    await fetchDoctores();
   };
 
   const handleEdit = async (id, updatedRow) => {
-    await new Promise((r) => setTimeout(r, 500));
-    const esp = especialidades.find((e) => e.id_especialidad === Number(updatedRow.id_especialidad));
-    setDoctores((prev) =>
-      prev.map((d) =>
-        d.id_medico === id
-          ? { ...d, num_licencia: updatedRow.num_licencia, id_especialidad: Number(updatedRow.id_especialidad), nombre_especialidad: esp?.nombre_especialidad ?? d.nombre_especialidad }
-          : d
-      )
-    );
+    await http.put(endpoints.doctors.updateSpecialty(id), {
+      id_especialidad: Number(updatedRow.id_especialidad),
+    });
+    await fetchDoctores();
   };
 
-  const handleDeactivate = async (id) => {
-    await new Promise((r) => setTimeout(r, 500));
-    setDoctores((prev) => prev.map((d) => d.id_medico === id ? { ...d, estado: 0 } : d));
+  // ── Aplicar / limpiar filtros ──
+  const applyFilters = () => {
+    setAppliedFilters({ id_especialidad: inputEspId, num_licencia: inputLicencia });
+    setPageDoc(1);
   };
 
-  const handleActivate = async (id) => {
-    await new Promise((r) => setTimeout(r, 500));
-    setDoctores((prev) => prev.map((d) => d.id_medico === id ? { ...d, estado: 1 } : d));
+  const clearFilters = () => {
+    setInputEspId('');
+    setInputLicencia('');
+    setAppliedFilters({ id_especialidad: '', num_licencia: '' });
+    setPageDoc(1);
   };
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
+        {/* Encabezado */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-neutral-800">Gestión de médicos</h1>
-            <p className="mt-1 text-sm text-neutral-500">Registro y administración del personal médico</p>
+            <p className="mt-1 text-sm text-neutral-500">
+              Registro y administración del personal médico, especialidades y remisiones
+            </p>
           </div>
-          <Link to="/hr">
-            <Button variant="outline" size="sm">← Volver</Button>
-          </Link>
         </div>
 
-        <DataTable
-          columns={COLUMNAS_DOCTORES}
-          data={dataTable}
-          filters={filters}
-          onFiltersChange={(f) => { setFilters(f); setPage(1); }}
-          loading={loading}
-          pagination={{
-            page,
-            pageSize,
-            total:            filtrado.length,
-            pageSizeOptions:  [5, 10, 25, 30],
-            onPageChange:     setPage,
-            onPageSizeChange: (size) => { setPageSize(size); setPage(1); },
-          }}
-          formConfig={FORM_CONFIG_DOCTORES}
-          onCreate={handleCreate}
-          onEdit={handleEdit}
-          onDeactivate={handleDeactivate}
-          onActivate={handleActivate}
-          keyExtractor={(row) => row.id_medico}
-          emptyMessage={loading ? 'Cargando...' : 'No hay médicos registrados o no coinciden con los filtros'}
-        />
+        {/* ── Sección 1: Médicos ── */}
+        <section>
+          <h2 className="text-lg font-semibold text-neutral-700 mb-4">Médicos</h2>
+
+          {/* Filtros */}
+          <div className="mb-4 flex items-end gap-3 flex-wrap rounded-lg border border-neutral-200 bg-neutral-50/80 p-4">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-neutral-700">Especialidad</label>
+              <select
+                value={inputEspId}
+                onChange={(e) => setInputEspId(e.target.value)}
+                className="block w-[220px] rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
+              >
+                <option value="">Todas las especialidades</option>
+                {especialidades.map((e) => (
+                  <option key={e.id_especialidad} value={e.id_especialidad}>
+                    {e.nombre_especialidad}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              label="N° Licencia"
+              value={inputLicencia}
+              onChange={(e) => setInputLicencia(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+              placeholder="Ej: 12345"
+              className="w-[180px]"
+            />
+            <Button variant="primary" size="sm" onClick={applyFilters} className="h-[44px]">
+              Buscar
+            </Button>
+            <Button variant="outline" size="sm" onClick={clearFilters} className="h-[44px]">
+              Limpiar
+            </Button>
+          </div>
+
+          <DataTable
+            columns={columnasDoctores}
+            data={dataDocTable}
+            loading={loadingDoc}
+            pagination={{
+              page:            pageDoc,
+              pageSize:        pageSizeDoc,
+              total:           doctores.length,
+              pageSizeOptions: [5, 10, 25, 30],
+              onPageChange:    setPageDoc,
+              onPageSizeChange: (size) => { setPageSizeDoc(size); setPageDoc(1); },
+            }}
+            formConfig={formConfigDoctores}
+            onCreate={handleCreate}
+            onEdit={handleEdit}
+            keyExtractor={(row) => row.id_medico}
+            emptyMessage={loadingDoc ? 'Cargando...' : 'No hay médicos registrados o no coinciden con los filtros'}
+          />
+        </section>
+
+        {/* ── Sección 2: Especialidades (solo lectura) ── */}
+        <section>
+          <h2 className="text-lg font-semibold text-neutral-700 mb-4">Especialidades</h2>
+          <DataTable
+            columns={columnasEspecialidades}
+            data={dataEspTable}
+            filters={filtersEsp}
+            onFiltersChange={(f) => { setFiltersEsp(f); setPageEsp(1); }}
+            loading={loadingEsp}
+            pagination={{
+              page:            pageEsp,
+              pageSize:        pageSizeEsp,
+              total:           filtradoEsp.length,
+              pageSizeOptions: [5, 10, 25],
+              onPageChange:    setPageEsp,
+              onPageSizeChange: (size) => { setPageSizeEsp(size); setPageEsp(1); },
+            }}
+            keyExtractor={(row) => row.id_especialidad}
+            emptyMessage="No hay especialidades registradas"
+          />
+        </section>
+
+        {/* ── Sección 3: Remisiones entre especialidades (solo lectura) ── */}
+        <section>
+          <h2 className="text-lg font-semibold text-neutral-700 mb-4">Remisiones entre especialidades</h2>
+          <DataTable
+            columns={columnasRemisiones}
+            data={dataRemTable}
+            filters={filtersRem}
+            onFiltersChange={(f) => { setFiltersRem(f); setPageRem(1); }}
+            loading={loadingRem}
+            pagination={{
+              page:            pageRem,
+              pageSize:        pageSizeRem,
+              total:           filtradoRem.length,
+              pageSizeOptions: [5, 10, 25],
+              onPageChange:    setPageRem,
+              onPageSizeChange: (size) => { setPageSizeRem(size); setPageRem(1); },
+            }}
+            keyExtractor={(row) => `${row.id_especialidad_que_remite}_${row.id_especialidad_remitida}`}
+            emptyMessage="No hay remisiones registradas"
+          />
+        </section>
 
       </div>
     </div>
   );
-} 
+}
