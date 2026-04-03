@@ -1,11 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { DataTable, Button, Input } from '../../components/ui';
 import { http } from '../../services/api/http';
 import { endpoints } from '../../services/api/endpoints';
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function DoctorManager() {
+  const navigate = useNavigate();
+
   // ── Especialidades (compartido entre secciones) ──
   const [especialidades, setEspecialidades] = useState([]);
 
@@ -96,6 +98,31 @@ export default function DoctorManager() {
       label:  'Especialidad',
       render: (val) =>
         especialidades.find((e) => e.id_especialidad === val)?.nombre_especialidad ?? String(val),
+    },
+    {
+      key:    'agenda',
+      label:  'Agenda',
+      render: (_, row) => {
+        const espNombre = especialidades.find((e) => e.id_especialidad === row.id_especialidad)?.nombre_especialidad ?? '';
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/hr/doctors/${row.id_medico}/schedule`, {
+              state: {
+                id_doctor:          row.id_medico,
+                id_especialidad:    row.id_especialidad,
+                nombres:            row.nombres,
+                apellidos:          row.apellidos,
+                num_licencia:       row.num_licencia,
+                nombre_especialidad: espNombre,
+              },
+            })}
+          >
+            Ver agenda
+          </Button>
+        );
+      },
     },
   ];
 

@@ -84,6 +84,7 @@ export default function App() {
             <Route index element={<Usuarios />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="doctors" element={<DoctorManager />} />
+            <Route path="doctors/:idDoctor/schedule" element={<DoctorSchedule />} />
           </Route>
 
           {/* Enfermero */}

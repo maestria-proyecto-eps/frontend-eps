@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { http } from '../../services/api/http';
 import { endpoints } from '../../services/api/endpoints';
 import { Modal, Button, Badge, Alert, Spinner, DatePicker } from '../../components/ui';
@@ -42,6 +42,17 @@ function generateDates(startStr, endStr, selectedDays) {
   return result;
 }
 
+// Ensures time string has seconds (HH:MM → HH:MM:SS)
+function toTimeWithSeconds(t) {
+  if (!t) return t;
+  return t.length === 5 ? `${t}:00` : t;
+}
+
+// Trims seconds for display and input (HH:MM:SS → HH:MM)
+function toTimeHHMM(t) {
+  return (t ?? '').substring(0, 5);
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -56,27 +67,44 @@ const DIAS_SEMANA_OPTIONS = [
   { value: 0, label: 'Dom' },
 ];
 
+// estado: 1 = disponible (no appointment), 0 = ocupado (has appointment)
 const ESTADO_CONFIG = {
-  disponible: { label: 'Disponible', variant: 'success' },
-  no_disponible: { label: 'No disponible', variant: 'neutral' },
-  ocupado: { label: 'Ocupado', variant: 'warning' },
+  1: { label: 'Disponible', variant: 'success' },
+  0: { label: 'Ocupado',    variant: 'warning' },
 };
 
 const EMPTY_FORM = {
-  id_especialidad: '',
-  tipo_fecha: 'single',
-  fecha: '',
+  tipo_fecha:  'single',
+  fecha:       '',
   fechaInicio: '',
-  fechaFin: '',
-  diasSemana: [1, 2, 3, 4, 5],
+  fechaFin:    '',
+  diasSemana:  [1, 2, 3, 4, 5],
   hora_inicio: '',
-  hora_fin: '',
+  hora_fin:    '',
 };
+
+const EMPTY_EDIT_FORM = { fecha: '', hora_inicio: '', hora_fin: '' };
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function DoctorSchedule() {
-  const { id: idDoctor } = useParams();
+  const { idDoctor } = useParams();
+  const location     = useLocation();
+  const navigate     = useNavigate();
+
+  const {
+    id_doctor,
+    id_especialidad,
+    nombres,
+    apellidos,
+    num_licencia,
+    nombre_especialidad,
+  } = location.state ?? {};
+
+  // Prefer location state id_doctor; fall back to route param
+  const doctorId      = id_doctor      ?? Number(idDoctor);
+  const especialidadId = id_especialidad ?? null;
+  const doctorNombre  = nombres && apellidos ? `${nombres} ${apellidos}`.trim() : `Médico #${doctorId}`;
 
   const today = useMemo(() => {
     const d = new Date();
@@ -86,26 +114,30 @@ export default function DoctorSchedule() {
   const todayStr = formatDate(today);
 
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const [agenda, setAgenda] = useState([]);
-  const [especialidades, setEspecialidades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [agenda,    setAgenda]    = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [saving,    setSaving]    = useState(false);
   const [pageError, setPageError] = useState(null);
 
   // Add modal
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [showAdd,    setShowAdd]    = useState(false);
+  const [form,       setForm]       = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
 
   // Preview modal
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState({ dates: [], overlaps: [] });
 
-  // Delete/disable modals
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  // Edit modal
+  const [showEdit,       setShowEdit]       = useState(false);
+  const [editTarget,     setEditTarget]     = useState(null);
+  const [editForm,       setEditForm]       = useState(EMPTY_EDIT_FORM);
+  const [editFormErrors, setEditFormErrors] = useState({});
+
+  // Delete modals
+  const [deleteTarget,      setDeleteTarget]      = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showCitaWarning, setShowCitaWarning] = useState(false);
-  const [checkingCita, setCheckingCita] = useState(false);
+  const [showCitaWarning,   setShowCitaWarning]   = useState(false);
 
   // Week days (Mon–Sun)
   const weekDays = useMemo(
@@ -123,7 +155,7 @@ export default function DoctorSchedule() {
     setLoading(true);
     setPageError(null);
     try {
-      const { data: res } = await http.get(endpoints.agenda.getByDoctor(idDoctor));
+      const { data: res } = await http.get(endpoints.schedules.getByDoctor(doctorId));
       const list = res?.data ?? res ?? [];
       setAgenda(Array.isArray(list) ? list : []);
     } catch {
@@ -131,22 +163,11 @@ export default function DoctorSchedule() {
     } finally {
       setLoading(false);
     }
-  }, [idDoctor]);
-
-  const fetchEspecialidades = useCallback(async () => {
-    try {
-      const { data: res } = await http.get(endpoints.especialidades.list);
-      const list = res?.data ?? res ?? [];
-      setEspecialidades(Array.isArray(list) ? list : []);
-    } catch {
-      // Silently fail — especialidades are optional for display names
-    }
-  }, []);
+  }, [doctorId]);
 
   useEffect(() => {
     fetchAgenda();
-    fetchEspecialidades();
-  }, [fetchAgenda, fetchEspecialidades]);
+  }, [fetchAgenda]);
 
   // ── Derived data ──────────────────────────────────────────────────────────────
 
@@ -169,9 +190,8 @@ export default function DoctorSchedule() {
 
   const validateForm = () => {
     const errs = {};
-    if (!form.id_especialidad) errs.id_especialidad = 'Requerido';
     if (!form.hora_inicio) errs.hora_inicio = 'Requerido';
-    if (!form.hora_fin) errs.hora_fin = 'Requerido';
+    if (!form.hora_fin)    errs.hora_fin    = 'Requerido';
     if (form.hora_inicio && form.hora_fin && form.hora_inicio >= form.hora_fin) {
       errs.hora_fin = 'La hora de fin debe ser posterior a la de inicio';
     }
@@ -180,7 +200,7 @@ export default function DoctorSchedule() {
       else if (parseDate(form.fecha) < today) errs.fecha = 'Solo se permiten fechas futuras';
     } else {
       if (!form.fechaInicio) errs.fechaInicio = 'Requerido';
-      if (!form.fechaFin) errs.fechaFin = 'Requerido';
+      if (!form.fechaFin)    errs.fechaFin    = 'Requerido';
       if (form.fechaInicio && form.fechaFin && form.fechaInicio > form.fechaFin) {
         errs.fechaFin = 'La fecha fin debe ser posterior a la fecha inicio';
       }
@@ -188,6 +208,17 @@ export default function DoctorSchedule() {
         errs.fechaInicio = 'Solo se permiten fechas futuras';
       }
       if (form.diasSemana.length === 0) errs.diasSemana = 'Seleccione al menos un día';
+    }
+    return errs;
+  };
+
+  const validateEditForm = () => {
+    const errs = {};
+    if (!editForm.fecha)       errs.fecha       = 'Requerido';
+    if (!editForm.hora_inicio) errs.hora_inicio = 'Requerido';
+    if (!editForm.hora_fin)    errs.hora_fin    = 'Requerido';
+    if (editForm.hora_inicio && editForm.hora_fin && editForm.hora_inicio >= editForm.hora_fin) {
+      errs.hora_fin = 'La hora de fin debe ser posterior a la de inicio';
     }
     return errs;
   };
@@ -229,15 +260,18 @@ export default function DoctorSchedule() {
     setSaving(true);
     setPageError(null);
     try {
-      const blocks = previewData.dates.map((fecha) => ({
-        id_doctor: Number(idDoctor),
-        id_especialidad: Number(form.id_especialidad),
-        fecha,
-        hora_inicio: form.hora_inicio,
-        hora_fin: form.hora_fin,
-        estado: 'disponible',
-      }));
-      await http.post(endpoints.agenda.createBulk, { blocks });
+      await Promise.all(
+        previewData.dates.map((fecha) =>
+          http.post(endpoints.schedules.create, {
+            id_doctor:       Number(doctorId),
+            id_especialidad: Number(especialidadId),
+            fecha,
+            hora_inicio:     toTimeWithSeconds(form.hora_inicio),
+            hora_fin:        toTimeWithSeconds(form.hora_fin),
+            estado:          1,
+          })
+        )
+      );
       setShowPreview(false);
       setShowAdd(false);
       setForm(EMPTY_FORM);
@@ -250,28 +284,57 @@ export default function DoctorSchedule() {
     }
   };
 
-  // ── Delete/disable flow ────────────────────────────────────────────────────────
+  // ── Edit block flow ───────────────────────────────────────────────────────────
 
-  const handleBlockAction = async (block) => {
+  const handleOpenEdit = (block) => {
+    setEditTarget(block);
+    setEditForm({
+      fecha:       (block.fecha ?? '').split('T')[0],
+      hora_inicio: toTimeHHMM(block.hora_inicio),
+      hora_fin:    toTimeHHMM(block.hora_fin),
+    });
+    setEditFormErrors({});
+    setShowEdit(true);
+  };
+
+  const handleConfirmEdit = async () => {
+    const errs = validateEditForm();
+    if (Object.keys(errs).length > 0) {
+      setEditFormErrors(errs);
+      return;
+    }
+    setSaving(true);
+    setPageError(null);
+    try {
+      await http.put(endpoints.schedules.update(editTarget.id_agenda), {
+        id_doctor:       editTarget.id_doctor,
+        id_especialidad: editTarget.id_especialidad,
+        fecha:           editForm.fecha,
+        hora_inicio:     toTimeWithSeconds(editForm.hora_inicio),
+        hora_fin:        toTimeWithSeconds(editForm.hora_fin),
+        estado:          editTarget.estado,
+      });
+      setShowEdit(false);
+      setEditTarget(null);
+      await fetchAgenda();
+    } catch {
+      setPageError('Error al actualizar el bloque.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Delete flow ────────────────────────────────────────────────────────────────
+
+  const handleBlockDelete = (block) => {
     const blockDate = parseDate((block.fecha ?? '').split('T')[0]);
     if (blockDate < today) return;
 
-    setCheckingCita(true);
-    try {
-      const { data: res } = await http.get(endpoints.citas.getByAgenda(block.id_agenda));
-      const citas = res?.data ?? res ?? [];
-      const hasCita = Array.isArray(citas) && citas.length > 0;
-      setDeleteTarget({ block, hasCita });
-      if (hasCita) {
-        setShowCitaWarning(true);
-      } else {
-        setShowDeleteConfirm(true);
-      }
-    } catch {
-      setDeleteTarget({ block, hasCita: false });
+    setDeleteTarget({ block, hasCita: block.estado === 0 });
+    if (block.estado === 0) {
+      setShowCitaWarning(true);
+    } else {
       setShowDeleteConfirm(true);
-    } finally {
-      setCheckingCita(false);
     }
   };
 
@@ -279,15 +342,13 @@ export default function DoctorSchedule() {
     if (!deleteTarget) return;
     setSaving(true);
     try {
-      await http.put(endpoints.agenda.updateEstado(deleteTarget.block.id_agenda), {
-        estado: 'no_disponible',
-      });
+      await http.delete(endpoints.schedules.delete(deleteTarget.block.id_agenda));
       setShowDeleteConfirm(false);
       setShowCitaWarning(false);
       setDeleteTarget(null);
       await fetchAgenda();
     } catch {
-      setPageError('Error al actualizar el estado del bloque.');
+      setPageError('Error al eliminar el bloque.');
     } finally {
       setSaving(false);
     }
@@ -308,10 +369,22 @@ export default function DoctorSchedule() {
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-800">Horario del médico</h1>
-            <p className="text-sm text-neutral-500 mt-1">ID Médico: {idDoctor}</p>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="text-sm text-primary-600 hover:underline mb-2 inline-block"
+            >
+              ← Volver
+            </button>
+            <h1 className="text-2xl font-bold text-neutral-800">Agenda del médico</h1>
+            <p className="text-sm text-neutral-700 mt-1 font-medium">{doctorNombre}</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm text-neutral-500">
+              {nombre_especialidad && <span>Especialidad: {nombre_especialidad}</span>}
+              {num_licencia        && <span>Licencia: {num_licencia}</span>}
+              <span>ID Médico: {doctorId}</span>
+            </div>
           </div>
           <Button
             variant="primary"
@@ -330,7 +403,7 @@ export default function DoctorSchedule() {
         {/* Week navigation */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <Button variant="outline" size="sm" onClick={goToPrevWeek}>‹ Anterior</Button>
-          <Button variant="ghost" size="sm" onClick={goToCurrentWeek}>Hoy</Button>
+          <Button variant="ghost"   size="sm" onClick={goToCurrentWeek}>Hoy</Button>
           <Button variant="outline" size="sm" onClick={goToNextWeek}>Siguiente ›</Button>
           <span className="text-sm font-medium text-neutral-600">
             {weekDays[0].toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
@@ -377,55 +450,62 @@ export default function DoctorSchedule() {
             <div className="grid grid-cols-7 min-h-[400px]">
               {weekDays.map((day) => {
                 const dateStr = formatDate(day);
-                const blocks = blocksByDay[dateStr] ?? [];
+                const blocks  = blocksByDay[dateStr] ?? [];
                 const isToday = dateStr === todayStr;
-                const isPast = parseDate(dateStr) < today;
+                const isPast  = parseDate(dateStr) < today;
                 return (
                   <div
                     key={dateStr}
                     className={cn(
                       'border-r last:border-r-0 border-neutral-200 p-1.5 space-y-1.5',
                       isToday && 'bg-primary-50/30',
-                      isPast && 'bg-neutral-50'
+                      isPast  && 'bg-neutral-50'
                     )}
                   >
                     {blocks.length === 0 && (
                       <p className="text-xs text-neutral-400 text-center mt-6">–</p>
                     )}
                     {blocks.map((block) => {
-                      const estadoCfg = ESTADO_CONFIG[block.estado] ?? { label: block.estado, variant: 'neutral' };
-                      const canModify = !isPast && block.estado !== 'no_disponible';
+                      const estadoCfg = ESTADO_CONFIG[block.estado] ?? { label: String(block.estado), variant: 'neutral' };
+                      const canModify = !isPast;
                       return (
                         <div
                           key={block.id_agenda}
                           className={cn(
                             'rounded-lg border px-2 py-1.5 text-xs',
-                            block.estado === 'disponible'
+                            block.estado === 1
                               ? 'border-primary-200 bg-primary-50'
-                              : 'border-neutral-200 bg-neutral-100'
+                              : 'border-amber-200 bg-amber-50'
                           )}
                         >
                           <div className="font-medium text-neutral-700 truncate">
-                            {block.hora_inicio} – {block.hora_fin}
-                          </div>
-                          <div className="text-neutral-500 truncate">
-                            Esp. {block.id_especialidad}
+                            {toTimeHHMM(block.hora_inicio)} – {toTimeHHMM(block.hora_fin)}
                           </div>
                           <div className="flex items-center justify-between mt-1 gap-1">
                             <Badge variant={estadoCfg.variant} size="sm">
                               {estadoCfg.label}
                             </Badge>
                             {canModify && (
-                              <button
-                                type="button"
-                                className="text-neutral-400 hover:text-emergency-600 transition-colors shrink-0"
-                                onClick={() => handleBlockAction(block)}
-                                disabled={checkingCita}
-                                title="Inhabilitar bloque"
-                                aria-label="Inhabilitar bloque"
-                              >
-                                ✕
-                              </button>
+                              <div className="flex gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  className="text-neutral-400 hover:text-primary-600 transition-colors"
+                                  onClick={() => handleOpenEdit(block)}
+                                  title="Editar bloque"
+                                  aria-label="Editar bloque"
+                                >
+                                  ✎
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-neutral-400 hover:text-emergency-600 transition-colors"
+                                  onClick={() => handleBlockDelete(block)}
+                                  title="Eliminar bloque"
+                                  aria-label="Eliminar bloque"
+                                >
+                                  ✕
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -455,7 +535,6 @@ export default function DoctorSchedule() {
         <AddBlockForm
           form={form}
           errors={formErrors}
-          especialidades={especialidades}
           today={todayStr}
           onChange={(field, value) => setForm((prev) => ({ ...prev, [field]: value }))}
         />
@@ -480,30 +559,57 @@ export default function DoctorSchedule() {
           </>
         }
       >
-        <PreviewContent data={previewData} form={form} especialidades={especialidades} />
+        <PreviewContent
+          data={previewData}
+          form={form}
+          nombreEspecialidad={nombre_especialidad}
+        />
       </Modal>
 
-      {/* ── Delete confirm (no cita) ──────────────────────────────────────────── */}
+      {/* ── Edit Block Modal ──────────────────────────────────────────────────── */}
+      <Modal
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+        title="Editar bloque de horario"
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
+            <Button variant="primary" onClick={handleConfirmEdit} disabled={saving}>
+              {saving ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+          </>
+        }
+      >
+        <EditBlockForm
+          form={editForm}
+          errors={editFormErrors}
+          today={todayStr}
+          onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
+        />
+      </Modal>
+
+      {/* ── Delete confirm (no appointment) ──────────────────────────────────── */}
       <Modal
         open={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
-        title="Inhabilitar bloque"
+        title="Eliminar bloque"
         size="sm"
         footer={
           <>
             <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
             <Button variant="danger" onClick={handleConfirmDelete} disabled={saving}>
-              {saving ? 'Guardando...' : 'Inhabilitar'}
+              {saving ? 'Eliminando...' : 'Eliminar'}
             </Button>
           </>
         }
       >
         <p className="text-neutral-700">
-          ¿Está seguro que desea inhabilitar este bloque?
+          ¿Está seguro que desea eliminar este bloque?
         </p>
         {deleteTarget && (
           <p className="mt-2 text-sm text-neutral-500">
-            {(deleteTarget.block.fecha ?? '').split('T')[0]} · {deleteTarget.block.hora_inicio} – {deleteTarget.block.hora_fin}
+            {(deleteTarget.block.fecha ?? '').split('T')[0]} · {toTimeHHMM(deleteTarget.block.hora_inicio)} – {toTimeHHMM(deleteTarget.block.hora_fin)}
           </p>
         )}
       </Modal>
@@ -518,17 +624,17 @@ export default function DoctorSchedule() {
           <>
             <Button variant="outline" onClick={() => setShowCitaWarning(false)}>Cancelar</Button>
             <Button variant="danger" onClick={handleConfirmDelete} disabled={saving}>
-              {saving ? 'Guardando...' : 'Inhabilitar de todas formas'}
+              {saving ? 'Eliminando...' : 'Eliminar de todas formas'}
             </Button>
           </>
         }
       >
         <Alert variant="warning" title="Este bloque tiene una cita asociada">
-          Al inhabilitar este bloque, la cita asociada también quedará afectada. ¿Desea continuar?
+          Al eliminar este bloque, la cita asociada también quedará afectada. ¿Desea continuar?
         </Alert>
         {deleteTarget && (
           <p className="mt-3 text-sm text-neutral-600">
-            Bloque: {(deleteTarget.block.fecha ?? '').split('T')[0]} · {deleteTarget.block.hora_inicio} – {deleteTarget.block.hora_fin}
+            Bloque: {(deleteTarget.block.fecha ?? '').split('T')[0]} · {toTimeHHMM(deleteTarget.block.hora_inicio)} – {toTimeHHMM(deleteTarget.block.hora_fin)}
           </p>
         )}
       </Modal>
@@ -538,40 +644,16 @@ export default function DoctorSchedule() {
 
 // ── Add Block Form ──────────────────────────────────────────────────────────────
 
-function AddBlockForm({ form, errors, especialidades, today, onChange }) {
+function AddBlockForm({ form, errors, today, onChange }) {
   return (
     <div className="space-y-5">
-      {/* Especialidad */}
-      <div className="space-y-1">
-        <label className="block text-sm font-medium text-neutral-700">Especialidad</label>
-        <select
-          className={cn(
-            'block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900',
-            'focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500',
-            errors.id_especialidad && 'border-emergency-500'
-          )}
-          value={form.id_especialidad}
-          onChange={(e) => onChange('id_especialidad', e.target.value)}
-        >
-          <option value="">Seleccionar especialidad...</option>
-          {especialidades.map((e) => (
-            <option key={e.id_especialidad} value={e.id_especialidad}>
-              {e.nombre ?? e.descripcion ?? `Especialidad ${e.id_especialidad}`}
-            </option>
-          ))}
-        </select>
-        {errors.id_especialidad && (
-          <p className="text-sm text-emergency-600">{errors.id_especialidad}</p>
-        )}
-      </div>
-
       {/* Tipo de fecha */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-neutral-700">Tipo de fecha</label>
         <div className="flex gap-6">
           {[
             { value: 'single', label: 'Fecha única' },
-            { value: 'range', label: 'Rango de fechas' },
+            { value: 'range',  label: 'Rango de fechas' },
           ].map((opt) => (
             <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
               <input
@@ -650,39 +732,74 @@ function AddBlockForm({ form, errors, especialidades, today, onChange }) {
       )}
 
       {/* Horario */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-neutral-700">Hora inicio</label>
-          <input
-            type="time"
-            value={form.hora_inicio}
-            onChange={(e) => onChange('hora_inicio', e.target.value)}
-            className={cn(
-              'block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900',
-              'focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500',
-              errors.hora_inicio && 'border-emergency-500'
-            )}
-          />
-          {errors.hora_inicio && (
-            <p className="text-sm text-emergency-600">{errors.hora_inicio}</p>
+      <TimeRangeFields
+        hora_inicio={form.hora_inicio}
+        hora_fin={form.hora_fin}
+        errors={errors}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+// ── Edit Block Form ─────────────────────────────────────────────────────────────
+
+function EditBlockForm({ form, errors, today, onChange }) {
+  return (
+    <div className="space-y-5">
+      <DatePicker
+        label="Fecha"
+        value={form.fecha}
+        onChange={(val) => onChange('fecha', val)}
+        min={today}
+        error={errors.fecha}
+      />
+      <TimeRangeFields
+        hora_inicio={form.hora_inicio}
+        hora_fin={form.hora_fin}
+        errors={errors}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+// ── Shared: Time Range Fields ───────────────────────────────────────────────────
+
+function TimeRangeFields({ hora_inicio, hora_fin, errors, onChange }) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-neutral-700">Hora inicio</label>
+        <input
+          type="time"
+          value={hora_inicio}
+          onChange={(e) => onChange('hora_inicio', e.target.value)}
+          className={cn(
+            'block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900',
+            'focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500',
+            errors.hora_inicio && 'border-emergency-500'
           )}
-        </div>
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-neutral-700">Hora fin</label>
-          <input
-            type="time"
-            value={form.hora_fin}
-            onChange={(e) => onChange('hora_fin', e.target.value)}
-            className={cn(
-              'block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900',
-              'focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500',
-              errors.hora_fin && 'border-emergency-500'
-            )}
-          />
-          {errors.hora_fin && (
-            <p className="text-sm text-emergency-600">{errors.hora_fin}</p>
+        />
+        {errors.hora_inicio && (
+          <p className="text-sm text-emergency-600">{errors.hora_inicio}</p>
+        )}
+      </div>
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-neutral-700">Hora fin</label>
+        <input
+          type="time"
+          value={hora_fin}
+          onChange={(e) => onChange('hora_fin', e.target.value)}
+          className={cn(
+            'block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900',
+            'focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500',
+            errors.hora_fin && 'border-emergency-500'
           )}
-        </div>
+        />
+        {errors.hora_fin && (
+          <p className="text-sm text-emergency-600">{errors.hora_fin}</p>
+        )}
       </div>
     </div>
   );
@@ -690,15 +807,13 @@ function AddBlockForm({ form, errors, especialidades, today, onChange }) {
 
 // ── Preview Content ─────────────────────────────────────────────────────────────
 
-function PreviewContent({ data, form, especialidades }) {
-  const espNombre =
-    especialidades.find((e) => String(e.id_especialidad) === String(form.id_especialidad))?.nombre ??
-    (form.id_especialidad ? `Especialidad ${form.id_especialidad}` : '–');
-
+function PreviewContent({ data, form, nombreEspecialidad }) {
   return (
     <div className="space-y-4">
       <div className="bg-neutral-50 rounded-lg p-4 space-y-1 text-sm">
-        <div><span className="font-medium">Especialidad:</span> {espNombre}</div>
+        {nombreEspecialidad && (
+          <div><span className="font-medium">Especialidad:</span> {nombreEspecialidad}</div>
+        )}
         <div><span className="font-medium">Horario:</span> {form.hora_inicio} – {form.hora_fin}</div>
         <div>
           <span className="font-medium">Registros a insertar:</span>{' '}
@@ -725,7 +840,7 @@ function PreviewContent({ data, form, especialidades }) {
             <ul className="text-sm text-neutral-600 space-y-1 max-h-40 overflow-y-auto">
               {data.overlaps.map((o, i) => (
                 <li key={i} className="bg-emergency-50 rounded px-3 py-1.5">
-                  {o.date} — existente: {o.existing.hora_inicio}–{o.existing.hora_fin}
+                  {o.date} — existente: {toTimeHHMM(o.existing.hora_inicio)}–{toTimeHHMM(o.existing.hora_fin)}
                   {' '}(ID agenda: {o.existing.id_agenda})
                 </li>
               ))}

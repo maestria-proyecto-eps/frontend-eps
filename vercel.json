@@ -21,6 +21,14 @@
       "destination": "https://backend-eps-users-service.onrender.com/api/doctors"
     },
     {
+      "source": "/api/schedules/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/schedules/:path*"
+    },
+    {
+      "source": "/api/schedules",
+      "destination": "https://backend-eps-users-service.onrender.com/api/schedules"
+    },
+    {
       "source": "/api/persons/:path*",
       "destination": "https://backend-eps-users-service.onrender.com/api/persons/:path*"
     },
