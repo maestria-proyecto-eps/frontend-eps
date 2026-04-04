@@ -17,6 +17,7 @@ const Icon = {
   pill:             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
   affiliation:      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />,
   profile:          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />,
+  doctor:           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4a4 4 0 110 8 4 4 0 010-8zm0 10c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5zm6-6h2m-1-1v2" />,
 };
 
 const SvgIcon = ({ d, className = '' }) => (
@@ -48,6 +49,7 @@ const MENUS = {
   "Talento Humano": [
     { label: 'Dashboard', path: '/hr', icon: Icon.dashboard, end: true },
     { label: 'Usuarios',  path: '/hr/usuarios', icon: Icon.users },
+    { label: 'Doctores y especialidades',  path: '/hr/doctors', icon: Icon.doctor },
   ],
   "Farmaceuta": [
     { label: 'Dashboard',    path: '/pharmacist',              icon: Icon.dashboard , end: true },
