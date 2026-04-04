@@ -12,6 +12,7 @@ import DoctorExample from "./pages/doctor/DoctorExample"
 import DoctorManager from "./pages/Usuarios/DoctorManager";
 import DoctorLayout from "./pages/doctor/DoctorLayout"
 import NewPatient from "./pages/receptionist/newpatient";
+import Calendar from "./pages/patient/calendar";
 import Appointments from "./pages/patient/Appointments";
 import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
@@ -131,7 +132,7 @@ export default function App() {
             <Route path="historia" element={<Maintenance />} />
             <Route path="prescripciones" element={<Maintenance />} />
             <Route path="perfil" element={<Maintenance />} />
-            <Route path="appointments/new" element={<Maintenance />} />
+            <Route path="appointments/new" element={<Calendar />} />
           </Route>
 
           {/* Cualquier otra ruta → redirigir al home */}

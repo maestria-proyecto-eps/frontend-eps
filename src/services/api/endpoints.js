@@ -69,6 +69,10 @@ export const endpoints = {
   appointments: {
     /** GET lista: ?fecha=&estado=&id_especialidad=&id_doctor=&id_paciente= */
     list: "/api/appointments",
+    /** GET disponibilidad de citas id_especialidad, fecha_inicio, fecha_fin, id_paciente */
+    availability: "/api/appointments/availability",
+    /** POST crear cita fecha, hora_inicio, id_doctor, id_especialidad */
+    create: "/api/appointments",
   },
 
   // ── Emergency Service ─────────────────────────────
