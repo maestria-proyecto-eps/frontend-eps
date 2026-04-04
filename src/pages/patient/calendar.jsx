@@ -51,45 +51,6 @@ export default function Calendar() {
   const navigate = useNavigate();
   const { minDate, maxDate } = getCalendarLimits();
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await http.get(endpoints.specialties.list);
-        const dataIsArray = Array.isArray(data) ? data : [];
-        const options = dataIsArray.map(spe => ({ value: String(spe.id_especialidad), label: spe.nombre_especialidad }));
-        const defaultSpecialty = options[0]?.value || "";
-        if (!cancelled) {
-          setSpecialties(options);
-          setForm(prev => ({ ...prev, specialty: defaultSpecialty }));
-          loadEvents(defaultSpecialty);
-          setIsLoading(false);
-        }
-      }
-      catch (e) {
-        setMsg({
-          type: "error",
-          title: `Error ${e.response?.status || ""}`,
-          text: `No se pudieron cargar las especialidades. ${e.response?.data?.detail || "Intente más tarde."}`
-        });
-        setVisibleAlert(true);
-        setIsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (visibleAlert) {
-      formRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
-    }
-  }, [visibleAlert]);
-
   const loadEvents = useCallback(async (specialtyId) => {
     try {
       setIsLoading(true);
@@ -136,6 +97,45 @@ export default function Calendar() {
       setEvents([]);
     }
   }, [numDocPatient, minDate, maxDate]);
+  
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await http.get(endpoints.specialties.list);
+        const dataIsArray = Array.isArray(data) ? data : [];
+        const options = dataIsArray.map(spe => ({ value: String(spe.id_especialidad), label: spe.nombre_especialidad }));
+        const defaultSpecialty = options[0]?.value || "";
+        if (!cancelled) {
+          setSpecialties(options);
+          setForm(prev => ({ ...prev, specialty: defaultSpecialty }));
+          loadEvents(defaultSpecialty);
+          setIsLoading(false);
+        }
+      }
+      catch (e) {
+        setMsg({
+          type: "error",
+          title: `Error ${e.response?.status || ""}`,
+          text: `No se pudieron cargar las especialidades. ${e.response?.data?.detail || "Intente más tarde."}`
+        });
+        setVisibleAlert(true);
+        setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (visibleAlert) {
+      formRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, [visibleAlert]);
 
   const handleEventClick = (eventInfo) => {
     setVisibleForm(true);
@@ -193,7 +193,7 @@ export default function Calendar() {
       });
       setVisibleAlert(true);
       setConfirmOpen(false);
-      setIsVisible(false);
+      setVisibleForm(false);
       setTimeout(() => {
         setIsLoading(false);
         navigate("/patient/citas");
