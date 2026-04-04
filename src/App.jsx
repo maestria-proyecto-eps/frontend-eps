@@ -8,15 +8,18 @@ import Home from "./pages/Home";
 import Components from "./pages/Components";
 import ComponentsOld from "./pages/ComponentsOld";
 import Usuarios from "./pages/Usuarios/usuarios";
-import DoctorExample from "./pages/doctor/DoctorExample";
-import DoctorLayout from "./pages/doctor/DoctorLayout";
+import DoctorExample from "./pages/doctor/DoctorExample"
+import DoctorManager from "./pages/Usuarios/DoctorManager";
+import DoctorLayout from "./pages/doctor/DoctorLayout"
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
 import Appointments from "./pages/patient/Appointments";
 import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
 import { ROUTES } from "./constants";
-import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout";
+import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
+import DoctorSchedule from "./pages/hr/DoctorSchedule";
+
 export default function App() {
   return (
     <AuthProvider>
@@ -81,6 +84,8 @@ export default function App() {
           >
             <Route index element={<Usuarios />} />
             <Route path="usuarios" element={<Usuarios />} />
+            <Route path="doctors" element={<DoctorManager />} />
+            <Route path="doctors/:idDoctor/schedule" element={<DoctorSchedule />} />
           </Route>
 
           {/* Enfermero */}
