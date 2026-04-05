@@ -67,6 +67,22 @@
     {
       "source": "/api/medical-records/:path*",
       "destination": "https://backend-eps-medical-records-service.onrender.com/api/medical-records/:path*"
+    },
+    {
+      "source": "/api/appoinment/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/appoinment/:path*"
+    },
+    {
+      "source": "/api/pattient/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/pattient/:path*"
+    },
+    {
+      "source": "/api/diagnosticos/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/diagnosticos/:path*"
+    },
+    {
+      "source": "/api/medicamentos/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/medicamentos/:path*"
     }
   ]
 }

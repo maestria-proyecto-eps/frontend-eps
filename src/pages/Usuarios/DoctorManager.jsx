@@ -70,7 +70,7 @@ export default function DoctorManager() {
   const fetchRemisiones = useCallback(async () => {
     setLoadingRem(true);
     try {
-      const { data } = await http.get(endpoints.specialties.remissions);
+      const { data } = await http.get(endpoints.specialties.remission);
       setRemisiones(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error al cargar remisiones:', err);

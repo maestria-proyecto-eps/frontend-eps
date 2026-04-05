@@ -17,6 +17,8 @@ export const endpoints = {
     doctorExample: "/api/users/doctor/example",
     /** GET lista paginada: ?pag=1&cantidad=30 */
     list: "/api/users",
+    /** GET usuario por ID */
+    getById: (id) => `/api/users/${id}`,
     /** POST crear usuario */
     create: "/api/users",
     /** PUT actualizar usuario (id numérico) */
@@ -27,10 +29,12 @@ export const endpoints = {
     deleteById: (id) => `/api/users/${id}`,
   },
 
-  /** GET lista: nombre_especialidad, descripcion, id_especialidad */
+  // ── Specialties Service ───────────────────────────
   specialties: {
-    list:      '/api/specialties',
-    remissions: '/api/specialties/remission',
+    /** GET lista: nombre_especialidad, descripcion, id_especialidad */
+    list: '/api/specialties',
+    /** alias singular usado en ConsultationForm */
+    remission: '/api/specialties/remission',
   },
 
   doctors: {
@@ -47,6 +51,7 @@ export const endpoints = {
     create: "/api/persons",
     /** PUT actualizar persona por número de documento */
     updateById: (num_documento) => `/api/persons/${num_documento}`,
+    getByDocument: (num_documento) => `/api/persons/${num_documento}`,
   },
 
   patients: {
@@ -73,6 +78,11 @@ export const endpoints = {
     availability: "/api/appointments/availability",
     /** POST crear cita fecha, hora_inicio, id_doctor, id_especialidad */
     create: "/api/appointments",
+    /** GET cita específica por ID */
+    getById: (id) => `/api/appointments/${id}`,
+    /** GET contexto de consulta para una cita (nombre paciente, especialidad) */
+    consultationContext: (id) => `/api/appoinment/${id}/consultation-context`,
+    cancel: (id) => `/api/appoinments/${id}/cancel`,
   },
 
   // ── Emergency Service ─────────────────────────────
@@ -82,11 +92,43 @@ export const endpoints = {
 
   // ── Pharmacy Service ──────────────────────────────
   pharmacy: {
-    // list: "/api/pharmacy/",
+    /** GET lista de medicamentos */
+    listMedications: "/api/pharmacy/medications",
+    /** GET inventario de medicamento específico */
+    getInventory: (codigo) => `/api/pharmacy/medications/inventory/${codigo}`,
+    /** GET alertas de bajo stock */
+    getLowStock: "/api/pharmacy/medications/low-stock",
+    /** GET alertas de medicamentos que vencen próximamente */
+    getExpiringSoon: "/api/pharmacy/medications/expiring-soon",
   },
 
   // ── Medical Records Service ───────────────────────
   medicalRecords: {
-    // list: "/api/medical-records/",
+    /** GET historial médico del paciente (nota: endpoint tiene typo "pattient") */
+    getPatientHistory: (patientId) => `/api/pattient/${patientId}/medical-history`,
+  },
+
+  // ── Diagnósticos Service ──────────────────────────
+  diagnosticos: {
+    /** GET búsqueda de diagnósticos: ?nombre=...&id=... */
+    search: "/api/diagnosticos/search",
+  },
+
+  // ── Medicamentos Service ──────────────────────────
+  medicamentos: {
+    /** GET búsqueda de medicamentos: ?nombre=... */
+    search: "/api/medicamentos/search",
+  },
+
+  // ── Consultations Service ──────────────────────────
+  consultations: {
+    /** POST crear consulta para una cita */
+    create: (appointmentId) => `/api/appoinment/${appointmentId}/consultation`,
+  },
+
+  // ── Referrals Service ──────────────────────────────
+  referrals: {
+    /** POST crear remisión para una cita */
+    create: (appointmentId) => `/api/appoinment/${appointmentId}/remision`,
   },
 };

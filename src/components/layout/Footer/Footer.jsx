@@ -146,11 +146,11 @@ export default function Footer({ className = '' }) {
         <div 
           id="footer-bottom"
           data-testid="footer-copyright-section"
-          className="border-t border-neutral-700 pt-8 text-center text-sm text-neutral-500"
+          className="border-t border-neutral-700 pt-8 text-center text-sm text-neutral-400 text-white"
         >
-          <p>
-            © {currentYear} <span className="text-neutral-400">Cuidarte EPS</span>. 
-            <span className="block sm:inline sm:ml-1">Todos los derechos reservados.</span>
+          <p className="text-white text-neutral-400">
+            © {currentYear} <span className="text-neutral-100 text-white">Cuidarte EPS</span>. 
+            <span className="block sm:inline sm:ml-1 text-white text-neutral-400">Todos los derechos reservados.</span>
           </p>
         </div>
       </Container>
