@@ -13,8 +13,44 @@
       "destination": "https://backend-eps-users-service.onrender.com/api/users/:path*"
     },
     {
+      "source": "/api/doctors/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/doctors/:path*"
+    },
+    {
+      "source": "/api/doctors",
+      "destination": "https://backend-eps-users-service.onrender.com/api/doctors"
+    },
+    {
+      "source": "/api/schedules",
+      "destination": "https://backend-eps-users-service.onrender.com/api/schedules"
+    },
+    {
+      "source": "/api/schedules/",
+      "destination": "https://backend-eps-users-service.onrender.com/api/schedules"
+    },
+    {
+      "source": "/api/schedules/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/schedules/:path*"
+    },
+    {
+      "source": "/api/persons/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/persons/:path*"
+    },
+    {
+      "source": "/api/persons",
+      "destination": "https://backend-eps-users-service.onrender.com/api/persons"
+    },
+    {
+      "source": "/api/specialties",
+      "destination": "https://backend-eps-users-service.onrender.com/api/specialties"
+    },
+    {
       "source": "/api/specialties/:path*",
       "destination": "https://backend-eps-users-service.onrender.com/api/specialties/:path*"
+    },
+    {
+      "source": "/api/appointments",
+      "destination": "https://backend-eps-appointments-service.onrender.com/api/appointments"
     },
     {
       "source": "/api/appointments/:path*",

@@ -29,10 +29,7 @@ const FOOTER_MENUS = {
   "Talento Humano": [
     { label: 'Dashboard',     path: '/hr'               },
     { label: 'Usuarios',      path: '/hr/usuarios'      },
-    { label: 'Doctores',      path: '/hr/doctores'      },
-    { label: 'Enfermeras',    path: '/hr/enfermeras'    },
-    { label: 'Farmacéuticos', path: '/hr/farmaceuticos' },
-    { label: 'Secretarios',   path: '/hr/secretarios'   },
+    { label: 'Doctores y especialidades',  path: '/hr/doctors'},
   ],
   "Farmaceuta": [
     { label: 'Dashboard',    path: '/pharmacist'              },
