@@ -15,8 +15,7 @@ import {
  * Appointments.jsx
  *
  * Agenda de citas del doctor.
- * - GET /api/appointments - Obtiene citas del doctor (filtrado por fecha)
- * - GET /api/appointments/{id} - Obtiene detalles de una cita
+ * - GET /api/appointments?fecha=YYYY-MM-DD&id_doctor=... - Obtiene citas del doctor
  */
 
 /* -------------------------------------------------------------------------- */
@@ -33,79 +32,26 @@ function sortByHour(a, b) {
   return String(a.hora_inicio).localeCompare(String(b.hora_inicio));
 }
 
-function isActiveStatus(status) {
-  const normalized = String(status).toLowerCase();
-  return [
-    "activa",
-    "activo",
-    "programada",
-    "confirmada",
-    "scheduled",
-    "confirmed",
-  ].includes(normalized);
-}
-
-const STATUS_CONFIG = {
-  success: {
-    variants: ["activa", "activo", "programada", "confirmada", "scheduled", "confirmed"],
-    classes: "bg-primary-50 text-primary-700 border border-primary-100",
-  },
-  error: {
-    variants: ["cancelada", "cancelado", "cancelled"],
-    classes: "bg-emergency-50 text-emergency-700 border border-emergency-200",
-  },
-  info: {
-    variants: ["finalizada", "finalizado", "completed"],
-    classes: "bg-secondary-50 text-secondary-700 border border-secondary-100",
-  },
-  neutral: {
-    variants: [],
-    classes: "bg-neutral-100 text-neutral-700 border border-neutral-200",
-  },
-};
-
-function getStatusClasses(status) {
-  const normalized = String(status).toLowerCase();
-  
-  for (const [, config] of Object.entries(STATUS_CONFIG)) {
-    if (config.variants.includes(normalized)) {
-      return config.classes;
-    }
-  }
-  
-  return STATUS_CONFIG.neutral.classes;
-}
-
 function normalizeAppointment(raw) {
-  const mapearEstado = (estadoAgenda, asistio) => {
-    if (asistio === true) return "completada";
-    if (asistio === false) return "no_asistio";
-    return estadoAgenda === 1 ? "activa" : "cancelada";
-  };
-
   return {
-    id_cita: raw?.id_cita || raw?.id || null,
+    id_cita: raw?.id_cita || null,
     id_paciente: raw?.id_paciente || null,
     id_doctor: raw?.id_doctor || null,
     id_especialidad: raw?.id_especialidad || null,
     fecha: raw?.fecha || getTodayISO(),
     hora_inicio: raw?.hora_inicio || "00:00",
     hora_fin: raw?.hora_fin || "00:00",
-    estado: mapearEstado(raw?.estado_agenda, raw?.asistio),
-    estado_agenda: raw?.estado_agenda,
-    asistio: raw?.asistio,
+    asistio: raw?.asistio ?? null,
     nombre_paciente: "Paciente sin información",
     num_documento: String(raw?.id_paciente || ""),
     id_remision: raw?.id_remision || null,
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-
 async function fetchPersonByDocument(numDocumento) {
   try {
     const { data: response } = await http.get(`/api/persons/${numDocumento}`);
-    
+
     if (!response?.hasError && response?.data) {
       return {
         num_documento: response.data?.num_documento,
@@ -113,9 +59,9 @@ async function fetchPersonByDocument(numDocumento) {
         apellidos: response.data?.apellidos,
       };
     }
-    
+
     return null;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -125,52 +71,40 @@ async function enrichAppointmentWithPatientData(appointment) {
 
   try {
     const personData = await fetchPersonByDocument(appointment.id_paciente);
-    
+
     if (personData?.nombres && personData?.apellidos) {
-      const nombreCompleto = `${personData.nombres} ${personData.apellidos}`.trim();
-      appointment.nombre_paciente = nombreCompleto;
+      appointment.nombre_paciente = `${personData.nombres} ${personData.apellidos}`.trim();
       appointment.num_documento = personData.num_documento;
     }
-  } catch (err) {
+  } catch {
     // Silenciar errores - se muestra "Paciente sin información"
   }
 
   return appointment;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-
 async function fetchAppointmentsByDate(dateValue, doctorId) {
   try {
     const params = { fecha: dateValue };
     if (doctorId) params.id_doctor = doctorId;
-    
+
     const { data } = await http.get(endpoints.appointments.list, { params });
     let results = Array.isArray(data) ? data.map(normalizeAppointment) : [];
-    
-    // Enriquecer datos del paciente en paralelo
+
     results = await Promise.all(results.map(enrichAppointmentWithPatientData));
-    
-    // Filtrar por doctor ID si está disponible
+
     if (doctorId) {
       const doctorIdNum = parseInt(String(doctorId).trim());
       results = results.filter(
         (apt) => parseInt(String(apt.id_doctor || "0").trim()) === doctorIdNum
       );
     }
-    
+
     return results;
-  } catch (err) {
+  } catch {
     return [];
   }
 }
-
-async function fetchConsultationContext(appointmentId) {
-  const { data } = await http.get(endpoints.appointments.getById(appointmentId));
-  return data;
-}
-
-
 
 /* -------------------------------------------------------------------------- */
 /*                                 COMPONENT                                  */
@@ -179,9 +113,7 @@ async function fetchConsultationContext(appointmentId) {
 export default function Appointments() {
   const navigate = useNavigate();
   const { payload } = useContext(AuthContext);
-  
-  // Obtener ID del doctor del payload del JWT
-  // El campo correcto es "num_documento"
+
   const doctorId = payload?.num_documento || null;
 
   const [selectedDate, setSelectedDate] = useState(getTodayISO());
@@ -191,17 +123,15 @@ export default function Appointments() {
   const [loadingContextId, setLoadingContextId] = useState(null);
 
   const [error, setError] = useState("");
-  const [infoMessage, setInfoMessage] = useState("");
 
   const loadAppointments = async (dateValue = selectedDate) => {
     setLoading(true);
     setError("");
-    setInfoMessage("");
 
     try {
       const result = await fetchAppointmentsByDate(dateValue, doctorId);
       setAppointments(result.sort(sortByHour));
-    } catch (err) {
+    } catch {
       setAppointments([]);
       setError("No fue posible cargar la agenda de citas del doctor.");
     } finally {
@@ -219,21 +149,14 @@ export default function Appointments() {
   );
 
   const totalAppointments = sortedAppointments.length;
-  const activeAppointments = sortedAppointments.filter((item) =>
-    isActiveStatus(item.estado)
+  const pendingAppointments = sortedAppointments.filter(
+    (item) => item.asistio !== true
   ).length;
 
-  const handleStartConsultation = async (appointment) => {
+  const handleStartConsultation = (appointment) => {
     setLoadingContextId(appointment.id_cita);
-    setError("");
-
-    try {
-      navigate(`/doctor/consultation/new?appointment_id=${appointment.id_cita}`);
-    } catch (err) {
-      setError("No fue posible iniciar la consulta.");
-    } finally {
-      setLoadingContextId(null);
-    }
+    navigate(`/doctor/consultation/new?appointment_id=${appointment.id_cita}`);
+    setLoadingContextId(null);
   };
 
   return (
@@ -274,13 +197,6 @@ export default function Appointments() {
         </Card.Body>
       </Card>
 
-      {/* ALERTAS */}
-      {infoMessage && (
-        <Alert variant="info" title="Actualización">
-          {infoMessage}
-        </Alert>
-      )}
-
       {error && (
         <Alert variant="error" title="Error">
           {error}
@@ -300,8 +216,8 @@ export default function Appointments() {
           tone="primary"
         />
         <SummaryCard
-          title="Citas activas"
-          value={String(activeAppointments)}
+          title="Citas pendientes"
+          value={String(pendingAppointments)}
           tone="neutral"
         />
       </section>
@@ -363,12 +279,8 @@ function SummaryCard({ title, value, tone = "primary" }) {
   );
 }
 
-function AppointmentRow({
-  appointment,
-  isLoadingContext,
-  onStartConsultation,
-}) {
-  const canStartConsultation = isActiveStatus(appointment.estado);
+function AppointmentRow({ appointment, isLoadingContext, onStartConsultation }) {
+  const canStartConsultation = appointment.asistio !== true;
 
   return (
     <div className="px-6 py-5 hover:bg-neutral-50 transition">
@@ -383,20 +295,22 @@ function AppointmentRow({
 
           <div>
             <p className="text-xs uppercase tracking-wide text-neutral-500">
-              Estado
+              Asistió
             </p>
             <span
-              className={`mt-1 inline-flex rounded-full px-3 py-1 text-sm font-medium ${getStatusClasses(
-                appointment.estado
-              )}`}
+              className={`mt-1 inline-flex rounded-full px-3 py-1 text-sm font-medium ${
+                appointment.asistio === true
+                  ? "bg-secondary-50 text-secondary-700 border border-secondary-100"
+                  : "bg-primary-50 text-primary-700 border border-primary-100"
+              }`}
             >
-              {appointment.estado}
+              {appointment.asistio === true ? "Sí" : "Pendiente"}
             </span>
           </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 justify-start md:justify-end">
-          {canStartConsultation && (
+          {canStartConsultation ? (
             <Button
               variant="primary"
               onClick={() => onStartConsultation(appointment)}
@@ -405,9 +319,7 @@ function AppointmentRow({
             >
               {isLoadingContext ? "Iniciando..." : "Iniciar consulta"}
             </Button>
-          )}
-
-          {!canStartConsultation && (
+          ) : (
             <Button variant="ghost" disabled className="text-sm">
               No disponible
             </Button>

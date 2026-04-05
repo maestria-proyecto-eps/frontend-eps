@@ -34,18 +34,20 @@ export const endpoints = {
     /** GET persona por número de documento */
     getByDocument: (num_documento) => `/api/persons/${num_documento}`,
   },
-  
+
   patients: {
     create: "/api/patients",
   },
+
   // ── Appointments Service ──────────────────────────
   appointments: {
     list: "/api/appointments",
     create: "/api/appointments",
     /** GET cita específica por ID */
     getById: (id) => `/api/appointments/${id}`,
-    consultationContext: (id) => `/api/appointments/${id}/consultation-context`,
-    cancel: (id) => `/api/appointments/${id}/cancel`,
+    /** GET contexto de consulta para una cita (nombre paciente, especialidad) */
+    consultationContext: (id) => `/api/appoinment/${id}/consultation-context`,
+    cancel: (id) => `/api/appoinments/${id}/cancel`,
   },
 
   // ── Emergency Service ─────────────────────────────
@@ -68,31 +70,36 @@ export const endpoints = {
   // ── Medical Records Service ───────────────────────
   medicalRecords: {
     /** GET historial médico del paciente (nota: endpoint tiene typo "pattient") */
-    getPatientHistory: (patientId) => `/api/medical-records/pattient/${patientId}/medical-history`,
-    /** GET búsqueda de diagnósticos */
-    searchDiagnosticos: "/api/medical-records/diagnosticos/search",
-    /** GET búsqueda de medicamentos */
-    searchMedicamentos: "/api/medical-records/medicamentos/search",
+    getPatientHistory: (patientId) => `/api/pattient/${patientId}/medical-history`,
+  },
+
+  // ── Diagnósticos Service ──────────────────────────
+  diagnosticos: {
+    /** GET búsqueda de diagnósticos: ?nombre=...&id=... */
+    search: "/api/diagnosticos/search",
+  },
+
+  // ── Medicamentos Service ──────────────────────────
+  medicamentos: {
+    /** GET búsqueda de medicamentos: ?nombre=... */
+    search: "/api/medicamentos/search",
+  },
+
+  // ── Specialties Service ───────────────────────────
+  specialties: {
+    /** GET especialidades que pueden recibir remisiones, con relación de quien remite */
+    remission: "/api/specialties/remission",
   },
 
   // ── Consultations Service ──────────────────────────
   consultations: {
-    create: "/api/consultations",
-  },
-
-  // ── Prescriptions Service ──────────────────────────
-  prescriptions: {
-    create: "/api/prescriptions",
-  },
-
-  // ── Medications Service (legacy - use pharmacy.listMedications) ──────────
-  medications: {
-    /** @deprecated Use pharmacy.listMedications instead */
-    list: "/api/pharmacy/medications",
+    /** POST crear consulta para una cita */
+    create: (appointmentId) => `/api/appoinment/${appointmentId}/consultation`,
   },
 
   // ── Referrals Service ──────────────────────────────
   referrals: {
-    create: "/api/referrals",
+    /** POST crear remisión para una cita */
+    create: (appointmentId) => `/api/appoinment/${appointmentId}/remision`,
   },
 };
