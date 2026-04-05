@@ -29,10 +29,12 @@ export const endpoints = {
     deleteById: (id) => `/api/users/${id}`,
   },
 
-  /** GET lista: nombre_especialidad, descripcion, id_especialidad */
+  // ── Specialties Service ───────────────────────────
   specialties: {
-    list:      '/api/specialties',
-    remissions: '/api/specialties/remission',
+    /** GET lista: nombre_especialidad, descripcion, id_especialidad */
+    list: '/api/specialties',
+    /** alias singular usado en ConsultationForm */
+    remission: '/api/specialties/remission',
   },
 
   doctors: {
@@ -116,12 +118,6 @@ export const endpoints = {
   medicamentos: {
     /** GET búsqueda de medicamentos: ?nombre=... */
     search: "/api/medicamentos/search",
-  },
-
-  // ── Specialties Service ───────────────────────────
-  specialties: {
-    /** GET especialidades que pueden recibir remisiones, con relación de quien remite */
-    remission: "/api/specialties/remission",
   },
 
   // ── Consultations Service ──────────────────────────
