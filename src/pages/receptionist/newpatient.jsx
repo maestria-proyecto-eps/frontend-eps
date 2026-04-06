@@ -8,27 +8,8 @@ import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
 
 /**
- * HU: Interfaz de afiliación con consentimiento
- * Ruta: /receptionist/patients/new
- *
- * OBJETIVO DE ESTE ARCHIVO:
- * - Dejar la vista y el modelo de datos alineados con el backend (POST /api/patients)
- * - NO consumir aún el endpoint (se deja "hook point" claro para el siguiente dev)
- *
- * BACKEND (request keys):
- *  - num_documento:number
- *  - password:string
- *  - nombres:string
- *  - apellidos:string
- *  - fecha_nac:YYYY-MM-DD
- *  - genero:string
- *  - direccion:string
- *  - email:string
- *  - contacto_emergencia:string
- *  - telefono_emergencia:number
- *  - grupo_sanguineo:string (ejemplo backend: "O+")
- *  - factor_RH:string (ejemplo backend: "+")
- *  - consentimiento_datos:boolean
+ * Interfaz de afiliación de pacientes con consentimiento de datos
+ * Consuma el endpoint: POST /api/patients con validaciones sincronizadas al backend
  */
 
 const GENDERS = [
@@ -51,13 +32,6 @@ function normalize(value) {
   return String(value ?? "").trim();
 }
 
-function inferRHFromBloodType(bt) {
-  // "O+" -> "+"
-  if (!bt) return "";
-  const last = bt.slice(-1);
-  return last === "+" || last === "-" ? last : "";
-}
-
 function validate(form) {
   const errors = {};
 
@@ -72,18 +46,44 @@ function validate(form) {
 
   // Info personal
   if (!normalize(form.nombres)) errors.nombres = "Nombres son requeridos.";
+  if (normalize(form.nombres) && form.nombres.trim().length < 2) {
+    errors.nombres = "Nombres deben tener al menos 2 caracteres.";
+  }
+  if (normalize(form.nombres) && form.nombres.trim().length > 50) {
+    errors.nombres = "Nombres no pueden exceder 50 caracteres.";
+  }
+  
   if (!normalize(form.apellidos)) errors.apellidos = "Apellidos son requeridos.";
-  if (!form.fecha_nac) errors.fecha_nac = "Fecha de nacimiento es requerida.";
+  if (normalize(form.apellidos) && form.apellidos.trim().length < 2) {
+    errors.apellidos = "Apellidos deben tener al menos 2 caracteres.";
+  }
+  if (normalize(form.apellidos) && form.apellidos.trim().length > 50) {
+    errors.apellidos = "Apellidos no pueden exceder 50 caracteres.";
+  }
+  
+  if (!form.fecha_nacimiento) errors.fecha_nacimiento = "Fecha de nacimiento es requerida.";
   if (!form.genero) errors.genero = "Selecciona el género.";
   if (!normalize(form.email)) errors.email = "Email es requerido.";
   if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
     errors.email = "Email no es válido.";
   }
+  
+  if (!form.telefono || !onlyDigits(form.telefono)) errors.telefono = "Teléfono es requerido (solo dígitos).";
+  
   if (!normalize(form.direccion)) errors.direccion = "Dirección es requerida.";
+  if (normalize(form.direccion) && form.direccion.trim().length < 5) {
+    errors.direccion = "Dirección debe tener al menos 5 caracteres.";
+  }
+  if (normalize(form.direccion) && form.direccion.trim().length > 100) {
+    errors.direccion = "Dirección no puede exceder 100 caracteres.";
+  }
+  
   if (!normalize(form.contacto_emergencia)) errors.contacto_emergencia = "Contacto de emergencia es requerido.";
-  if (!normalize(form.telefono_emergencia)) errors.telefono_emergencia = "Teléfono de emergencia es requerido.";
-  if (normalize(form.telefono_emergencia) && !/^\d+$/.test(onlyDigits(form.telefono_emergencia))) {
-    errors.telefono_emergencia = "Teléfono de emergencia debe ser numérico.";
+  if (normalize(form.contacto_emergencia) && form.contacto_emergencia.trim().length < 2) {
+    errors.contacto_emergencia = "Contacto debe tener al menos 2 caracteres.";
+  }
+  if (normalize(form.contacto_emergencia) && form.contacto_emergencia.trim().length > 50) {
+    errors.contacto_emergencia = "Contacto no puede exceder 50 caracteres.";
   }
 
   // Info médica
@@ -146,20 +146,17 @@ function Modal({ open, title, children, onClose, primaryAction }) {
 
 export default function NewPatient() {
   const [form, setForm] = React.useState({
-    // UI-only
-
     // Backend keys
     num_documento: "",
     password: "",
     nombres: "",
     apellidos: "",
-    fecha_nac: "",
+    fecha_nacimiento: "",
     genero: "",
     direccion: "",
     email: "",
     contacto_emergencia: "",
-    telefono_emergencia: "",
-    // UX: un solo campo; backend requiere ambos
+    telefono: "",
     tipo_sangre: "", // "O+"
     consentimiento_datos: false,
   });
@@ -167,22 +164,18 @@ export default function NewPatient() {
   const [errors, setErrors] = React.useState({});
   const [busySubmit, setBusySubmit] = React.useState(false);
   const [submitError, setSubmitError] = React.useState("");
-
-  // Modal (preparado para response real del backend)
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [createdPatient, setCreatedPatient] = React.useState(null); // aquí irá el JSON del backend
+  const [createdPatient, setCreatedPatient] = React.useState(null);
 
   const update = (key) => (e) => {
     const value = e?.target?.type === "checkbox" ? e.target.checked : e.target.value;
 
     setForm((prev) => {
-      // Normalizaciones críticas
       if (key === "num_documento") return { ...prev, [key]: onlyDigits(value) };
-      if (key === "telefono_emergencia") return { ...prev, [key]: onlyDigits(value) };
+      if (key === "telefono") return { ...prev, [key]: onlyDigits(value) };
       return { ...prev, [key]: value };
     });
 
-    // Limpieza incremental de error por campo
     setErrors((prev) => {
       if (!prev[key]) return prev;
       const next = { ...prev };
@@ -192,23 +185,19 @@ export default function NewPatient() {
   };
 
   function buildCreatePayload(currentForm) {
-    const tipoSangre = currentForm.tipo_sangre; // ej: "O+"
-    const rh = inferRHFromBloodType(tipoSangre);
-
     return {
       apellidos: currentForm.apellidos.trim(),
       consentimiento_datos: !!currentForm.consentimiento_datos,
       contacto_emergencia: currentForm.contacto_emergencia.trim(),
       direccion: currentForm.direccion.trim(),
       email: currentForm.email.trim(),
-      factor_RH: rh, // "+" | "-"
-      fecha_nac: currentForm.fecha_nac, // "YYYY-MM-DD"
-      genero: currentForm.genero, // "Femenino" ...
-      grupo_sanguineo: tipoSangre, // backend example: "O+"
+      fecha_nacimiento: currentForm.fecha_nacimiento,
+      genero: currentForm.genero,
       nombres: currentForm.nombres.trim(),
       num_documento: Number(onlyDigits(currentForm.num_documento)),
       password: currentForm.password,
-      telefono_emergencia: Number(onlyDigits(currentForm.telefono_emergencia)),
+      telefono: Number(onlyDigits(currentForm.telefono)),
+      tipo_sangre: currentForm.tipo_sangre,
     };
   }
 
@@ -223,17 +212,34 @@ export default function NewPatient() {
     setBusySubmit(true);
     try {
       const payload = buildCreatePayload(form);
-
-      // Llamado real al backend: POST /api/patients (requiere token bearer)
       const res = await http.post(endpoints.patients.create, payload);
 
-      // El backend puede responder plano (PacienteResponse) o envuelto (APIResponse.Data).
       const patient = res?.data?.Data ?? res?.data;
       setCreatedPatient(patient);
       setConfirmOpen(true);
     } catch (err) {
-      const apiMessage = err?.response?.data?.detail || err?.response?.data?.Message;
-      setSubmitError(apiMessage || "Error al registrar paciente. Verifica los datos o tu sesión.");
+      let errorMessage = "Error al registrar paciente. Verifica los datos o tu sesión.";
+      const response = err?.response?.data;
+      
+      if (response?.detail) {
+        if (Array.isArray(response.detail)) {
+          const fields = response.detail
+            .map((e) => {
+              const field = e.loc?.[e.loc.length - 1];
+              return `${field}: ${e.msg}`;
+            })
+            .join("; ");
+          errorMessage = `Errores de validación: ${fields}`;
+        } else if (typeof response.detail === "string") {
+          errorMessage = response.detail;
+        }
+      } else if (response?.Message) {
+        errorMessage = response.Message;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      setSubmitError(errorMessage);
     } finally {
       setBusySubmit(false);
     }
@@ -351,6 +357,7 @@ export default function NewPatient() {
                 className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
               <FieldError message={errors.nombres} />
+              <p className="mt-1 text-xs text-neutral-500">2-50 caracteres</p>
             </div>
 
             <div>
@@ -361,17 +368,18 @@ export default function NewPatient() {
                 className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
               <FieldError message={errors.apellidos} />
+              <p className="mt-1 text-xs text-neutral-500">2-50 caracteres</p>
             </div>
 
             <div>
               <label className="text-sm font-medium text-neutral-800">Fecha de nacimiento</label>
               <input
                 type="date"
-                value={form.fecha_nac}
-                onChange={update("fecha_nac")}
+                value={form.fecha_nacimiento}
+                onChange={update("fecha_nacimiento")}
                 className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
-              <FieldError message={errors.fecha_nac} />
+              <FieldError message={errors.fecha_nacimiento} />
             </div>
 
             <div>
@@ -411,6 +419,7 @@ export default function NewPatient() {
                 className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
               <FieldError message={errors.direccion} />
+              <p className="mt-1 text-xs text-neutral-500">5-100 caracteres</p>
             </div>
 
             <div>
@@ -422,18 +431,19 @@ export default function NewPatient() {
                 className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
               <FieldError message={errors.contacto_emergencia} />
+              <p className="mt-1 text-xs text-neutral-500">2-50 caracteres</p>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-neutral-800">Teléfono de emergencia</label>
+              <label className="text-sm font-medium text-neutral-800">Teléfono</label>
               <input
                 inputMode="numeric"
-                value={form.telefono_emergencia}
-                onChange={update("telefono_emergencia")}
+                value={form.telefono}
+                onChange={update("telefono")}
                 placeholder="Ej: 3001234567"
                 className="mt-1 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
-              <FieldError message={errors.telefono_emergencia} />
+              <FieldError message={errors.telefono} />
             </div>
           </div>
         </section>
@@ -458,11 +468,6 @@ export default function NewPatient() {
                 ))}
               </select>
               <FieldError message={errors.tipo_sangre} />
-              {/* Nota: backend requiere grupo_sanguineo + factor_RH, se derivan desde tipo_sangre */}
-              <p className="mt-1 text-xs text-neutral-500">
-                Se enviará como: grupo_sanguineo="{form.tipo_sangre || "—"}" y factor_RH="
-                {inferRHFromBloodType(form.tipo_sangre) || "—"}".
-              </p>
             </div>
           </div>
         </section>
@@ -538,17 +543,16 @@ export default function NewPatient() {
               setCreatedPatient(null);
               setErrors({});
               setForm({
-                documentType: "",
                 num_documento: "",
                 password: "",
                 nombres: "",
                 apellidos: "",
-                fecha_nac: "",
+                fecha_nacimiento: "",
                 genero: "",
                 direccion: "",
                 email: "",
                 contacto_emergencia: "",
-                telefono_emergencia: "",
+                telefono: "",
                 tipo_sangre: "",
                 consentimiento_datos: false,
               });
@@ -570,10 +574,7 @@ export default function NewPatient() {
             {affiliation ? (
               <p className="mt-1 text-xl font-bold text-primary-700">{affiliation}</p>
             ) : (
-              <p className="mt-1 text-sm text-neutral-700">
-                Pendiente: se mostrará el <span className="font-medium">num_afiliacion_formateado</span> real
-                cuando se integre el POST <span className="font-mono">/api/patients</span>.
-              </p>
+              <p className="mt-1 text-sm text-neutral-600">Cargando número de afiliación...</p>
             )}
           </div>
 
