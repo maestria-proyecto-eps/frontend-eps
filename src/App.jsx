@@ -2,24 +2,25 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AuthProvider from "./services/auth/AuthProvider";
 import ProtectedRoute from "./services/auth/ProtectedRoute";
 
-// Importaciones de páginas
+// auth
 import Login from "./pages/auth/Login";
 import Home from "./pages/Home";
 import Components from "./pages/Components";
+import ComponentsOld from "./pages/ComponentsOld";
 import Usuarios from "./pages/Usuarios/usuarios";
-import DoctorExample from "./pages/doctor/DoctorExample";
+import DoctorExample from "./pages/doctor/DoctorExample"
 import DoctorManager from "./pages/Usuarios/DoctorManager";
-import DoctorLayout from "./pages/doctor/DoctorLayout";
-import DoctorAppointments from "./pages/doctor/Appointments";
-import ConsultationForm from "./pages/doctor/ConsultationForm";
+import DoctorLayout from "./pages/doctor/DoctorLayout"
+import DoctorAppointments from "./pages/doctor/Appointments"
+import ConsultationForm from "./pages/doctor/ConsultationForm"
 import NewPatient from "./pages/receptionist/newpatient";
-import Pharmacy from "./pages/receptionist/Pharmacy.jsx"; 
 import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
 import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
+import Pharmacy from "./pages/pharmacy/Pharmacy";
 import { ROUTES } from "./constants";
-import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout";
+import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 import DoctorSchedule from "./pages/hr/DoctorSchedule";
 
 export default function App() {
@@ -27,16 +28,14 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
+          {/* LOGIN */}
           <Route path="/login" element={<Login />} />
 
-          {/* RUTA DE FARMACIA (SPRINT 2) */}
-          <Route path="/pharmacy/inventory" element={<Pharmacy />} />
-          <Route path="/test-farmacia" element={<Pharmacy />} /> 
-
-          {/* RUTAS PROTEGIDAS - DOCTOR */}
+          {/* DOCTOR ROLE EXAMPLE */}
           <Route
             path="/doctor"
             element={
@@ -52,7 +51,8 @@ export default function App() {
             <Route path="historial" element={<Maintenance />} />
           </Route>
 
-          {/* PUENTE DE AUTENTICACIÓN */}
+          {/* Rutas protegidas, requiere autenticación */}
+
           <Route
             path="/bridge"
             element={
@@ -64,7 +64,7 @@ export default function App() {
             <Route index element={<Bridge />} />
           </Route>
           
-          {/* RECEPCIONISTA */}
+          {/* Recepcionista */}
           <Route
             path="/receptionist"
             element={
@@ -77,7 +77,7 @@ export default function App() {
             <Route path="afiliacion" element={<NewPatient />} />
           </Route>
 
-          {/* TALENTO HUMANO / HR */}
+          {/* Talento Humano */}
           <Route
             path="/hr"
             element={
@@ -92,7 +92,7 @@ export default function App() {
             <Route path="doctors/:idDoctor/schedule" element={<DoctorSchedule />} />
           </Route>
 
-          {/* ENFERMERO */}
+          {/* Enfermero */}
           <Route
             path="/nurse"
             element={
@@ -107,7 +107,7 @@ export default function App() {
             <Route path="hospitalizaciones" element={<Maintenance />} />
           </Route>
 
-          {/* FARMACEUTA */}
+          {/* Farmaceuta */}
           <Route
             path="/pharmacist"
             element={
@@ -116,13 +116,10 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Maintenance />} />
-            <Route path="inventario" element={<Maintenance />} />
-            <Route path="dispensacion" element={<Maintenance />} />
-            <Route path="alertas" element={<Maintenance />} />
+            <Route index element={<Pharmacy />} />
           </Route>
 
-          {/* PACIENTE */}
+          {/* Paciente */}
           <Route
             path="/patient"
             element={
@@ -139,8 +136,8 @@ export default function App() {
             <Route path="appointments/new" element={<Calendar />} />
           </Route>
 
-          {/* REDIRECCIÓN POR DEFECTO */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Cualquier otra ruta → redirigir al home */}
+          <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

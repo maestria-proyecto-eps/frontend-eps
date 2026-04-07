@@ -1,126 +1,138 @@
 /**
  * Rutas del API organizadas por microservicio.
- * Basado en la configuración estable de Cuidarte EPS.
+ *
+ * Users service: se apunta directamente a Render (o usar proxy con pathRewrite).
+ * Resto de servicios usan prefijo /api/{servicio}/ con proxy o Vercel rewrites.
  */
-
-// 1. Definición de Bases (Microservicios en Render)
-const USERS_API_BASE = 'https://backend-eps-users-service-dev.onrender.com';
-const PHARMACY_API_BASE = 'https://backend-eps-pharmacy-service.onrender.com';
+//const USERS_API_BASE = 'https://backend-eps-users-service-dev.onrender.com';
 
 export const endpoints = {
   // ── Auth Service ──────────────────────────────────
   auth: {
     login: "/api/auth/login",
   },
-  login: "/login",
 
-  // ── Users Service ─────────────────────────────────
+  // ── Users Service (URL base directa a Render) ─────
   users: {
     doctorExample: "/api/users/doctor/example",
     /** GET lista paginada: ?pag=1&cantidad=30 */
-    list: `${USERS_API_BASE}/api/users`,
+    list: "/api/users",
     /** GET usuario por ID */
-    getById: (id) => `${USERS_API_BASE}/api/users/${id}`,
+    getById: (id) => `/api/users/${id}`,
     /** POST crear usuario */
-    create: `${USERS_API_BASE}/api/users`,
-    /** PUT actualizar usuario */
-    updateById: (id) => `${USERS_API_BASE}/api/users/${id}`,
+    create: "/api/users",
+    /** PUT actualizar usuario (id numérico) */
+    updateById: (id) => `/api/users/${id}`,
     /** PUT cambiar estado (activar/desactivar) */
-    changeStatus: (id) => `${USERS_API_BASE}/api/users/${id}/change-status`,
-    /** DELETE desactivar/eliminar usuario */
-    deleteById: (id) => `${USERS_API_BASE}/api/users/${id}`,
+    changeStatus: (id) => `/api/users/${id}/change-status`,
+    /** DELETE desactivar/eliminar usuario (id numérico) - legacy, preferir changeStatus */
+    deleteById: (id) => `/api/users/${id}`,
   },
 
   // ── Specialties Service ───────────────────────────
   specialties: {
+    /** GET lista: nombre_especialidad, descripcion, id_especialidad */
     list: '/api/specialties',
+    /** alias singular usado en ConsultationForm */
     remission: '/api/specialties/remission',
   },
 
-  // ── Doctors Service ───────────────────────────────
   doctors: {
-    list: '/api/doctors',
-    create: '/api/doctors',
+    /** GET lista: ?id_especialidad=&num_licencia= */
+    list:            '/api/doctors',
+    /** POST crear médico */
+    create:          '/api/doctors',
+    /** PUT cambiar especialidad */
     updateSpecialty: (id) => `/api/doctors/${id}/specialty`,
   },
 
-  // ── Persons Service ───────────────────────────────
   persons: {
+    /** POST crear persona */
     create: "/api/persons",
+    /** PUT actualizar persona por número de documento */
     updateById: (num_documento) => `/api/persons/${num_documento}`,
     getByDocument: (num_documento) => `/api/persons/${num_documento}`,
   },
 
-  // ── Patients Service ──────────────────────────────
   patients: {
     create: "/api/patients",
   },
 
-  // ── Pharmacy Service (TU MÓDULO + MEJORAS) ────────
-  pharmacy: {
-    // GET: Listar todos los medicamentos
-    list: `${PHARMACY_API_BASE}/api/pharmacy/medications`,
-    listMedications: `${PHARMACY_API_BASE}/api/pharmacy/medications`,
-    
-    // POST: Crear nuevo registro base de medicamento
-    create: `${PHARMACY_API_BASE}/api/pharmacy/medications`,
-    
-    // POST: Registrar un nuevo lote
-    createBatch: (codigo) => `${PHARMACY_API_BASE}/api/pharmacy/medications/inventory/${codigo}`,
-    
-    // GET: Ver inventario/lotes de un medicamento específico
-    getInventory: (codigo) => `${PHARMACY_API_BASE}/api/pharmacy/medications/inventory/${codigo}`,
-    listBatch: (codigo) => `${PHARMACY_API_BASE}/api/pharmacy/medications/inventory/${codigo}`,
-    
-    // Alertas
-    lowStock: `${PHARMACY_API_BASE}/api/pharmacy/medications/low-stock`,
-    getLowStock: `${PHARMACY_API_BASE}/api/pharmacy/medications/low-stock`,
-    expiringSoon: `${PHARMACY_API_BASE}/api/pharmacy/medications/expiring-soon`,
-    getExpiringSoon: `${PHARMACY_API_BASE}/api/pharmacy/medications/expiring-soon`,
-    
-    // PUT: Actualizar datos
-    updateByCode: (codigo) => `${PHARMACY_API_BASE}/api/pharmacy/medications/${codigo}`,
-    
-    // DELETE: Limpiar base de datos (Uso de desarrollo)
-    clearAll: `${PHARMACY_API_BASE}/api/pharmacy/debug/clear-all-data`,
-  },
-
   // ── Agenda (horarios de médicos) ──────────────────
   schedules: {
+    /** GET bloques de agenda por médico */
     getByDoctor: (idDoctor) => `/api/schedules/doctor/${idDoctor}`,
+    /** POST crear bloque de agenda */
     create: '/api/schedules/',
+    /** PUT actualizar bloque de agenda */
     update: (idAgenda) => `/api/schedules/${idAgenda}`,
+    /** DELETE eliminar bloque de agenda */
     delete: (idAgenda) => `/api/schedules/${idAgenda}`,
   },
 
   // ── Appointments Service ──────────────────────────
   appointments: {
+    /** GET lista: ?fecha=&estado=&id_especialidad=&id_doctor=&id_paciente= */
     list: "/api/appointments",
+    /** GET disponibilidad de citas id_especialidad, fecha_inicio, fecha_fin, id_paciente */
     availability: "/api/appointments/availability",
+    /** POST crear cita fecha, hora_inicio, id_doctor, id_especialidad */
     create: "/api/appointments",
+    /** GET cita específica por ID */
     getById: (id) => `/api/appointments/${id}`,
+    /** GET contexto de consulta para una cita (nombre paciente, especialidad) */
     consultationContext: (id) => `/api/appoinment/${id}/consultation-context`,
     cancel: (id) => `/api/appoinments/${id}/cancel`,
   },
 
+  // ── Emergency Service ─────────────────────────────
+  emergency: {
+    // list: "/api/emergency/",
+  },
+
+  // ── Pharmacy Service ──────────────────────────────
+  pharmacy: {
+    /** GET lista paginada de medicamentos: ?page=1&limit=10 */
+    listMedications: "/api/pharmacy/medications",
+    /** POST crear medicamento */
+    createMedication: "/api/pharmacy/medications",
+    /** PUT actualizar medicamento por código */
+    updateMedication: (codigo) => `/api/pharmacy/medications/${codigo}`,
+    /** GET lista paginada de inventario de un medicamento: ?page=1&limit=10 */
+    getInventory: (codigo) => `/api/pharmacy/medications/inventory/${codigo}`,
+    /** POST agregar lote al inventario de un medicamento */
+    createInventory: (codigo) => `/api/pharmacy/medications/inventory/${codigo}`,
+    /** PUT actualizar (dispensar) un ítem de inventario por id_inventario */
+    updateInventory: (id) => `/api/pharmacy/medications/inventory/${id}`,
+  },
+
   // ── Medical Records Service ───────────────────────
   medicalRecords: {
+    /** GET historial médico del paciente (nota: endpoint tiene typo "pattient") */
     getPatientHistory: (patientId) => `/api/pattient/${patientId}/medical-history`,
   },
 
-  // ── Diagnósticos & Medicamentos (Búsqueda) ────────
+  // ── Diagnósticos Service ──────────────────────────
   diagnosticos: {
+    /** GET búsqueda de diagnósticos: ?nombre=...&id=... */
     search: "/api/diagnosticos/search",
   },
+
+  // ── Medicamentos Service ──────────────────────────
   medicamentos: {
+    /** GET búsqueda de medicamentos: ?nombre=... */
     search: "/api/medicamentos/search",
   },
 
-  // ── Consultations & Referrals ─────────────────────
+  // ── Consultations Service ──────────────────────────
   consultations: {
+    /** POST crear consulta para una cita */
     create: (appointmentId) => `/api/appoinment/${appointmentId}/consultation`,
   },
+
+  // ── Referrals Service ──────────────────────────────
   referrals: {
+    /** POST crear remisión para una cita */
     create: (appointmentId) => `/api/appoinment/${appointmentId}/remision`,
   },
 };

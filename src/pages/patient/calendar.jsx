@@ -126,7 +126,7 @@ export default function Calendar() {
     return () => {
       cancelled = true;
     }
-  }, [loadEvents]);
+  }, []);
 
   useEffect(() => {
     if (visibleAlert) {
@@ -155,6 +155,7 @@ export default function Calendar() {
       behavior: 'smooth',
       block: 'center'
     });
+
   };
 
   const update = (key) => (e) => {
@@ -188,14 +189,15 @@ export default function Calendar() {
       setMsg({
         type: "success",
         title: "Cita agendada",
-        text: `La cita para el día ${appointment.fecha} ha sido agendada exitosamente.`,
+        text: `La cita para el dia ${appointment.fecha} ha sido agendada exitosamente. Serás redirigido a tus citas en breve.`,
       });
       setVisibleAlert(true);
       setConfirmOpen(false);
+      setVisibleForm(false);
       setTimeout(() => {
         setIsLoading(false);
         navigate("/patient/citas");
-      }, 3000);
+      }, 6000);
     } catch (e) {
       setMsg({
         type: "error",
@@ -210,6 +212,7 @@ export default function Calendar() {
 
   return (
     <PageContainer>
+
       {visibleAlert && (
         <div className="mb-4">
           <Alert
@@ -227,62 +230,117 @@ export default function Calendar() {
         <div ref={formRef}>
           <h1 className="text-2xl md:text-3xl font-bold text-neutral-900">Agendamiento de citas</h1>
           <p className="mt-1 text-neutral-600">
-            Seleccione una fecha para agendar una cita con el doctor de su preferencia.
+            Seleccione una fecha para agendar una cita con el doctor de su preferencia. Puede usar el menú desplegable para filtrar por especialidad.
           </p>
         </div>
+
         <Link to={"/patient/citas"}>
-          <Button variant="outline" size="sm">← Volver</Button>
+          <Button variant="outline" size="sm" className="whitespace-nowrap">
+            ← Volver
+          </Button>
         </Link>
       </div>
 
       <form id="appointment-form" onSubmit={handleSubmit} className="space-y-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className={`grid grid-cols-1 gap-4 md:grid-cols-${visibleForm ? '2' : '1'}`}>
           {visibleForm && (
-            <div className="flex flex-col bg-neutral-50 p-4 rounded-xl border border-neutral-200">
-              <span className="text-sm font-medium text-neutral-500">Seleccionado:</span>
-              <span className="text-lg font-bold text-neutral-900">{form.name}</span>
-              <span className="text-sm text-neutral-600">{form.date} | {form.startTime}</span>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-neutral-800 mb-1">
+                Fecha seleccionada
+              </label>
+              <label className="text-xl font-bold text-neutral-900 mb-1">
+                {form.date}
+              </label>
+              <label className="text-sm font-medium text-neutral-800 mb-1">
+                Hora seleccionada
+              </label>
+              <label className="text-xl font-bold text-neutral-900 mb-1">
+                {form.startTime} - {form.endTime}
+              </label>
             </div>
           )}
 
-          <div className="flex flex-col items-end gap-3">
+          <div className="flex flex-col items-end w-full">
+            <label className="text-sm font-medium text-neutral-800 mb-1">
+              Especialidad
+            </label>
             <select
               onChange={update("specialty")}
               value={form.specialty}
               disabled={IsLoading}
-              className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2"
+              className={`${visibleForm ? 'w-1/2' : 'w-1/4'} rounded-xl border border-neutral-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-200 
+           disabled:bg-neutral-200 disabled:text-neutral-600 disabled:cursor-not-allowed disabled:border-neutral-200`}
             >
-              {specialties.map((esp) => (
-                <option key={esp.value} value={esp.value}>{esp.label}</option>
-              ))}
+              {IsLoading ? (
+                <option value="" disabled>Cargando...</option>
+              ) : (
+                <>
+                  {specialties.map((esp) => (
+                    <option key={esp.value} value={esp.value}>
+                      {esp.label}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
+
+            <label className="text-sm font-medium mb-1">&nbsp;</label>
             {visibleForm && (
               <button
                 type="button"
                 onClick={() => setConfirmOpen(true)}
-                className="w-full h-[42px] rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600 transition"
+                className="w-1/2 h-[39px] inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition bg-primary-500 text-white hover:bg-primary-600"
               >
-                Agendar Cita
+                Agendar cita
               </button>
             )}
           </div>
+
         </div>
       </form>
 
       <hr className="my-8" />
 
-      <div className="relative">
+      <div className="relative overflow-hidden">
+
         {IsLoading && (
           <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-20 backdrop-blur-[1px]">
-            <Spinner size="lg" />
+            <div className="flex flex-col items-center gap-2">
+              <Spinner size="lg" />
+              <span className="text-sm font-medium text-primary-600">Actualizando citas...</span>
+            </div>
           </div>
         )}
-        <div className="[&_.fc-button-primary]:bg-primary-500 [&_.fc-button-primary]:border-none">
+        <div className="
+          [&_.fc-button-primary]:bg-primary-500 
+          [&_.fc-button-primary]:border-none
+          [&_.fc-button-primary]:shadow-none
+          [&_.fc-button-primary:focus]:!shadow-none
+          [&_.fc-button-primary:focus]:!ring-0
+          [&_.fc-button-primary:active]:!shadow-none
+          [&_.fc-button-primary:active]:!bg-primary-700
+          [&_.fc-button-group]:gap-0.5
+          [&_.fc-button-group_>_.fc-button]:!border-none
+          [&_.fc-button-group_>_.fc-button:focus]:z-0
+          [&_.fc-button-primary:not(:disabled):hover]:bg-primary-600
+          [&_.fc-button-primary:disabled]:opacity-50
+          [&_.fc-button-primary:disabled]:cursor-not-allowed
+        ">
           <FullCalendar
             plugins={[dayGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
-            validRange={{ start: minDate, end: maxDate }}
+            validRange={{
+              start: minDate,
+              end: maxDate
+            }}
+            selectAllow={(selectInfo) => {
+              return selectInfo.start >= new Date();
+            }}
             eventClick={handleEventClick}
+            eventDidMount={(info) => {
+              const { startTime, endTime } = info.event.extendedProps;
+              info.el.setAttribute("title", `Fecha de inicio: ${startTime}\nFecha de fin: ${endTime}`);
+            }}
             locale={esLocale}
             events={events}
           />
@@ -291,22 +349,50 @@ export default function Calendar() {
 
       <Modal
         open={confirmOpen}
-        title="Confirmar Cita"
+        title="Confirmar los datos de la cita"
         onClose={() => setConfirmOpen(false)}
         footer={
-          <button
-            type="submit"
-            form="appointment-form"
-            className="px-6 py-2 rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600"
-          >
-            Confirmar y Agendar
-          </button>
+          <>
+            <button
+              type="submit"
+              form="appointment-form"
+              className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition"
+            >
+              Confirmar y Agendar
+            </button>
+          </>
         }
       >
         <div className="space-y-4">
-          <p>¿Deseas confirmar la cita con el <strong>{form.name}</strong> para el día <strong>{form.date}</strong>?</p>
+
+          <p className="text-neutral-700">
+            Por favor, verifica que la información sea correcta antes de programar la cita:
+          </p>
+
+          <div className="rounded-2xl border border-primary-100 bg-primary-50/50 p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <p className="text-sm text-neutral-500 font-medium">Doctor:</p>
+              <p className="text-sm text-neutral-900 font-bold">{form.name || "No seleccionado"}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <p className="text-sm text-neutral-500 font-medium">Especialidad:</p>
+              <p className="text-sm text-neutral-900 font-bold">{specialties.filter(s => s.value === form.specialty)[0]?.label || "No seleccionada"}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <p className="text-sm text-neutral-500 font-medium">Fecha:</p>
+              <p className="text-sm text-neutral-900 font-bold">{form.date || "No seleccionado"}</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-neutral-500">
+            * Si los datos son incorrectos, haz clic en "Cerrar" para editarlos.
+          </p>
         </div>
       </Modal>
+
     </PageContainer>
   );
+
 }
