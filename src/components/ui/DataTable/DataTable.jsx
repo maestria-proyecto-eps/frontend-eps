@@ -1,44 +1,14 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '../../../utils/cn';
 import { Button } from '../Button';
 import { Input } from '../Input';
+import { DatePicker } from '../DatePicker';
 import { Card } from '../Card';
 import { Spinner } from '../Spinner';
 import { Modal } from '../Modal';
 import { Alert } from '../Alert';
-
-/**
- * Validadores de alto nivel reutilizables para campos habituales (email, documento, etc.).
- * La página puede usar estos nombres en field.validation o definir lógica propia en formConfig.validate.
- */
-export const VALIDATORS = {
-  required: (value, field) => {
-    if (value == null || String(value).trim() === '') {
-      return `${field.label || field.key} es obligatorio`;
-    }
-    return null;
-  },
-  email: (value, field) => {
-    if (value == null || String(value).trim() === '') return null;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      return 'Email no válido';
-    }
-    return null;
-  },
-  /** Identificación / documento: solo números y letras, longitud configurable (min/max por defecto 5-20). */
-  document: (value, field, _form, options = {}) => {
-    if (value == null || String(value).trim() === '') return null;
-    const min = options.min ?? 5;
-    const max = options.max ?? 20;
-    const str = String(value).trim();
-    if (str.length < min) return `Mínimo ${min} caracteres`;
-    if (str.length > max) return `Máximo ${max} caracteres`;
-    if (!/^[a-zA-Z0-9\-]+$/.test(str)) {
-      return 'Solo letras, números y guiones';
-    }
-    return null;
-  },
-};
+import { VALIDATORS } from './validators';
 
 /**
  * Construye el objeto vacío del formulario a partir de formConfig.fields.
@@ -74,7 +44,7 @@ function runFieldValidation(form, fields, context = {}) {
       const options = typeof rule === 'object' && rule != null ? rule.options : undefined;
       const fn = typeof rule === 'function' ? rule : VALIDATORS[name];
       if (!fn) continue;
-      const msg = fn(val, f, form, options ?? f.validationOptions?.[name]);
+      const msg = fn(val, f, form, options ?? f.validationOptions?.[name], context);
       if (msg) {
         err[f.key] = msg;
         break;
@@ -92,9 +62,11 @@ function runFieldValidation(form, fields, context = {}) {
  *
  * - data: filas a mostrar (típicamente desde estado que la página llena con el API).
  * - loading: indica carga inicial o recarga.
+ * - columns[].filterType: 'select' | 'date' (DatePicker) | por defecto Input de texto.
  * - formConfig.fields: solo los campos que la página permite crear/editar; createOnly/editOnly controlan en qué modal aparecen.
  * - formConfig.validate: validación custom (ej. unicidad en API); si no se pasa, se usan las reglas por campo (VALIDATORS).
  * - onCreate/onEdit/onDeactivate: pueden ser async; el componente muestra carga en el botón y errores si fallan.
+ * - createHref: si se define, muestra el botón principal como enlace (p. ej. nueva cita) junto a Recargar; usa formConfig.createButtonLabel.
  */
 export default function DataTable({
   columns = [],
@@ -106,17 +78,22 @@ export default function DataTable({
   onCreate,
   onEdit,
   onDeactivate,
+  onActivate,
   keyExtractor = (row) => row.id ?? row.documento ?? JSON.stringify(row),
   loading = false,
   emptyMessage = 'No hay datos',
   renderRowActions,
   className = '',
+  /** Si se define, muestra botón superior derecho: limpia filtros, vuelve a página 1 y ejecuta este callback (p. ej. refetch). */
+  onReload,
+  /** Ruta interna (React Router): botón primario como Link, a la derecha de Recargar. Texto: formConfig.createButtonLabel. */
+  createHref,
 }) {
-  const hasCrud = formConfig && (onCreate || onEdit || onDeactivate);
-  const fields = formConfig?.fields ?? [];
+  const hasCrud = formConfig && (onCreate || onEdit || onDeactivate || onActivate);
+  const fields = useMemo(() => formConfig?.fields ?? [], [formConfig?.fields]);
   const statusKey = formConfig?.statusKey;
   const activeValue = formConfig?.activeValue ?? 'Activo';
-  const deactivatedValue = formConfig?.deactivatedValue ?? 'Inactivo';
+  const deactivatedValue = formConfig?.deactivatedValue;
 
   const [modalCreate, setModalCreate] = useState(false);
   const [modalEdit, setModalEdit] = useState(false);
@@ -129,12 +106,22 @@ export default function DataTable({
   const [submitting, setSubmitting] = useState(false);
 
   const getEmptyFormState = useCallback(() => getEmptyForm(fields), [fields]);
+  const fieldsForMode = useCallback(
+    (mode) =>
+      fields.filter(
+        (f) => (mode === 'create' && !f.editOnly) || (mode === 'edit' && !f.createOnly)
+      ),
+    [fields]
+  );
   const validate = useCallback(
-    (values, context = {}) =>
-      formConfig?.validate
-        ? formConfig.validate(values, fields, context)
-        : runFieldValidation(values, fields, context),
-    [formConfig, fields]
+    (values, context = {}) => {
+      const mode = context.mode ?? 'create';
+      const fieldsToValidate = fieldsForMode(mode);
+      return formConfig?.validate
+        ? formConfig.validate(values, fieldsToValidate, context)
+        : runFieldValidation(values, fieldsToValidate, context);
+    },
+    [formConfig, fieldsForMode]
   );
 
   const openCreate = () => {
@@ -242,6 +229,20 @@ export default function DataTable({
     [statusKey, activeValue]
   );
 
+  const showRowActivate = useCallback(
+    (row) => statusKey && deactivatedValue !== undefined && row[statusKey] === deactivatedValue,
+    [statusKey, deactivatedValue]
+  );
+
+  /** Solo filas activas pueden editarse (si hay statusKey en formConfig). */
+  const showRowEdit = useCallback(
+    (row) => {
+      if (!statusKey) return true;
+      return row[statusKey] === activeValue;
+    },
+    [statusKey, activeValue]
+  );
+
   const hasFilters = columns.some((col) => col.filterable);
   const page = pagination?.page ?? 1;
   const pageSize = pagination?.pageSize ?? 10;
@@ -256,19 +257,17 @@ export default function DataTable({
     onFiltersChange({ ...filters, [columnKey]: value });
   };
 
+  const handleReload = useCallback(() => {
+    onFiltersChange?.({});
+    pagination?.onPageChange?.(1);
+    onReload?.();
+  }, [onFiltersChange, onReload, pagination]);
+
   const handlePageSizeChange = (e) => {
     const size = Number(e.target.value);
     pagination?.onPageSizeChange?.(size);
     pagination?.onPageChange?.(1);
   };
-
-  const fieldsForMode = useCallback(
-    (mode) =>
-      fields.filter(
-        (f) => (mode === 'create' && !f.editOnly) || (mode === 'edit' && !f.createOnly)
-      ),
-    [fields]
-  );
 
   const renderFormFields = (mode) =>
     fieldsForMode(mode).map((f) => {
@@ -297,7 +296,7 @@ export default function DataTable({
         <Input
           key={f.key}
           label={f.label}
-          type={f.type === 'email' ? 'email' : f.type === 'number' ? 'number' : 'text'}
+          type={f.type === 'email' ? 'email' : f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : 'text'}
           value={form[f.key] ?? ''}
           onChange={(e) => setField(f.key, e.target.value)}
           error={formErrors[f.key]}
@@ -309,14 +308,19 @@ export default function DataTable({
 
   const defaultRowActions = hasCrud
     ? (row) => (
-        <div className="flex justify-end gap-1">
-          {onEdit && (
+        <div className="flex justify-end items-center gap-2">
+          {onEdit && showRowEdit(row) && (
             <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
               Editar
             </Button>
           )}
+          {onActivate && showRowActivate(row) && (
+            <Button variant="primary" size="sm" className="min-w-[110px]" onClick={() => onActivate(keyExtractor(row))}>
+              Activar
+            </Button>
+          )}
           {onDeactivate && showRowDeactivate(row) && (
-            <Button variant="deactivate" size="sm" onClick={() => openDeactivate(row)}>
+            <Button variant="deactivate" size="sm" className="min-w-[110px]" onClick={() => openDeactivate(row)}>
               Desactivar
             </Button>
           )}
@@ -335,13 +339,43 @@ export default function DataTable({
         </Alert>
       )}
 
-      {hasCrud && onCreate && (
-        <div className="flex justify-end">
-          <Button variant="primary" onClick={openCreate}>
-            {formConfig?.createButtonLabel ?? 'Crear'}
-          </Button>
+      {(hasCrud && onCreate) || onReload || createHref ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {onReload && (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              disabled={loading}
+              onClick={handleReload}
+              title="Recargar datos y limpiar filtros"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor" aria-hidden>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                />
+              </svg>
+              <span>Recargar</span>
+            </Button>
+          )}
+          {createHref ? (
+            <Link to={createHref} className="inline-flex">
+              <Button variant="primary" size="sm" type="button">
+                {formConfig?.createButtonLabel ?? 'Crear'}
+              </Button>
+            </Link>
+          ) : (
+            hasCrud &&
+            onCreate && (
+              <Button variant="primary" onClick={openCreate}>
+                {formConfig?.createButtonLabel ?? 'Crear'}
+              </Button>
+            )
+          )}
         </div>
-      )}
+      ) : null}
 
       <Card padding={false} className={cn('overflow-hidden', className)}>
         {hasFilters && onFiltersChange && (
@@ -363,6 +397,13 @@ export default function DataTable({
                         ))}
                       </select>
                     </div>
+                  ) : col.filterType === 'date' ? (
+                    <DatePicker
+                      label={col.label}
+                      value={filters[col.key] ?? ''}
+                      onChange={(value) => handleFilterChange(col.key, value ?? '')}
+                      className="rounded-lg border-neutral-300 px-3 py-2"
+                    />
                   ) : (
                     <Input
                       label={col.label}

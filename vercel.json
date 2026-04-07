@@ -1,0 +1,88 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/auth/:path*",
+      "destination": "https://backend-eps-auth-service-xzgs.onrender.com/api/auth/:path*"
+    },
+    {
+      "source": "/api/patients/:path*",
+      "destination": "https://backend-eps-auth-service-xzgs.onrender.com/api/patients/:path*"
+    },
+    {
+      "source": "/api/users/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/users/:path*"
+    },
+    {
+      "source": "/api/doctors/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/doctors/:path*"
+    },
+    {
+      "source": "/api/doctors",
+      "destination": "https://backend-eps-users-service.onrender.com/api/doctors"
+    },
+    {
+      "source": "/api/schedules",
+      "destination": "https://backend-eps-users-service.onrender.com/api/schedules"
+    },
+    {
+      "source": "/api/schedules/",
+      "destination": "https://backend-eps-users-service.onrender.com/api/schedules"
+    },
+    {
+      "source": "/api/schedules/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/schedules/:path*"
+    },
+    {
+      "source": "/api/persons/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/persons/:path*"
+    },
+    {
+      "source": "/api/persons",
+      "destination": "https://backend-eps-users-service.onrender.com/api/persons"
+    },
+    {
+      "source": "/api/specialties",
+      "destination": "https://backend-eps-users-service.onrender.com/api/specialties"
+    },
+    {
+      "source": "/api/specialties/:path*",
+      "destination": "https://backend-eps-users-service.onrender.com/api/specialties/:path*"
+    },
+    {
+      "source": "/api/appointments",
+      "destination": "https://backend-eps-appointments-service.onrender.com/api/appointments"
+    },
+    {
+      "source": "/api/appointments/:path*",
+      "destination": "https://backend-eps-appointments-service.onrender.com/api/appointments/:path*"
+    },
+    {
+      "source": "/api/emergency/:path*",
+      "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/emergency/:path*"
+    },
+    {
+      "source": "/api/pharmacy/:path*",
+      "destination": "https://backend-eps-pharmacy-service.onrender.com/api/pharmacy/:path*"
+    },
+    {
+      "source": "/api/medical-records/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/medical-records/:path*"
+    },
+    {
+      "source": "/api/appoinment/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/appoinment/:path*"
+    },
+    {
+      "source": "/api/pattient/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/pattient/:path*"
+    },
+    {
+      "source": "/api/diagnosticos/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/diagnosticos/:path*"
+    },
+    {
+      "source": "/api/medicamentos/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/medicamentos/:path*"
+    }
+  ]
+}
