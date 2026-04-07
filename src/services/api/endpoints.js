@@ -84,7 +84,6 @@ export const endpoints = {
     getById: (id) => `/api/appointments/${id}`,
     /** GET contexto de consulta para una cita (nombre paciente, especialidad) */
     consultationContext: (id) => `/api/appoinment/${id}/consultation-context`,
-    cancel: (id) => `/api/appoinments/${id}/cancel`,
   },
 
   // ── Emergency Service ─────────────────────────────
