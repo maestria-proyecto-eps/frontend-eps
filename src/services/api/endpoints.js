@@ -74,6 +74,8 @@ export const endpoints = {
   appointments: {
     /** GET lista: ?fecha=&estado=&id_especialidad=&id_doctor=&id_paciente= */
     list: "/api/appointments",
+    /** PUT body: { razon: string } */
+    cancel: (id) => `/api/appointments/${id}/cancel`,
     /** GET disponibilidad de citas id_especialidad, fecha_inicio, fecha_fin, id_paciente */
     availability: "/api/appointments/availability",
     /** POST crear cita fecha, hora_inicio, id_doctor, id_especialidad */
@@ -82,7 +84,6 @@ export const endpoints = {
     getById: (id) => `/api/appointments/${id}`,
     /** GET contexto de consulta para una cita (nombre paciente, especialidad) */
     consultationContext: (id) => `/api/appoinment/${id}/consultation-context`,
-    cancel: (id) => `/api/appoinments/${id}/cancel`,
   },
 
   // ── Emergency Service ─────────────────────────────
