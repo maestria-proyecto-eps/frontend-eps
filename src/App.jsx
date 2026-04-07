@@ -18,6 +18,7 @@ import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
 import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
+import Pharmacy from "./pages/pharmacy/Pharmacy";
 import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 import DoctorSchedule from "./pages/hr/DoctorSchedule";
@@ -115,10 +116,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Maintenance />} />
-            <Route path="inventario" element={<Maintenance />} />
-            <Route path="dispensacion" element={<Maintenance />} />
-            <Route path="alertas" element={<Maintenance />} />
+            <Route index element={<Pharmacy />} />
           </Route>
 
           {/* Paciente */}

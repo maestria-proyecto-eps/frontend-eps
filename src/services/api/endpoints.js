@@ -92,14 +92,18 @@ export const endpoints = {
 
   // ── Pharmacy Service ──────────────────────────────
   pharmacy: {
-    /** GET lista de medicamentos */
+    /** GET lista paginada de medicamentos: ?page=1&limit=10 */
     listMedications: "/api/pharmacy/medications",
-    /** GET inventario de medicamento específico */
+    /** POST crear medicamento */
+    createMedication: "/api/pharmacy/medications",
+    /** PUT actualizar medicamento por código */
+    updateMedication: (codigo) => `/api/pharmacy/medications/${codigo}`,
+    /** GET lista paginada de inventario de un medicamento: ?page=1&limit=10 */
     getInventory: (codigo) => `/api/pharmacy/medications/inventory/${codigo}`,
-    /** GET alertas de bajo stock */
-    getLowStock: "/api/pharmacy/medications/low-stock",
-    /** GET alertas de medicamentos que vencen próximamente */
-    getExpiringSoon: "/api/pharmacy/medications/expiring-soon",
+    /** POST agregar lote al inventario de un medicamento */
+    createInventory: (codigo) => `/api/pharmacy/medications/inventory/${codigo}`,
+    /** PUT actualizar (dispensar) un ítem de inventario por id_inventario */
+    updateInventory: (id) => `/api/pharmacy/medications/inventory/${id}`,
   },
 
   // ── Medical Records Service ───────────────────────

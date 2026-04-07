@@ -52,10 +52,7 @@ const MENUS = {
     { label: 'Doctores y especialidades',  path: '/hr/doctors', icon: Icon.doctor },
   ],
   "Farmaceuta": [
-    { label: 'Dashboard',    path: '/pharmacist',              icon: Icon.dashboard , end: true },
-    { label: 'Inventario',   path: '/pharmacist/inventario',   icon: Icon.inventory },
-    { label: 'Dispensación', path: '/pharmacist/dispensacion', icon: Icon.pill      },
-    { label: 'Alertas',      path: '/pharmacist/alertas',      icon: Icon.alert     },
+    { label: 'Farmacia', path: '/pharmacist', icon: Icon.inventory, end: true },
   ],
   "Recepcionista": [
     { label: 'Dashboard',  path: '/receptionist',            icon: Icon.dashboard   , end: true },
