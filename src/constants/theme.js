@@ -76,6 +76,7 @@ export const ROUTES = {
   COMPONENTS: '/components',
   DOCTOR: '/doctor',
   USUARIOS: '/usuarios',
+  DOCTOR_SCHEDULE: (id) => `/admin/doctors/${id}/schedule`,
 };
 
 export default theme;

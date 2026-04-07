@@ -8,14 +8,20 @@ import Home from "./pages/Home";
 import Components from "./pages/Components";
 import ComponentsOld from "./pages/ComponentsOld";
 import Usuarios from "./pages/Usuarios/usuarios";
-import DoctorExample from "./pages/doctor/DoctorExample";
-import DoctorLayout from "./pages/doctor/DoctorLayout";
+import DoctorExample from "./pages/doctor/DoctorExample"
+import DoctorManager from "./pages/Usuarios/DoctorManager";
+import DoctorLayout from "./pages/doctor/DoctorLayout"
+import DoctorAppointments from "./pages/doctor/Appointments"
+import ConsultationForm from "./pages/doctor/ConsultationForm"
 import NewPatient from "./pages/receptionist/newpatient";
-import Appointments from "./pages/patient/Appointments";
+import Calendar from "./pages/patient/calendar";
+import PatientAppointments from "./pages/patient/Appointments";
 import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
 import { ROUTES } from "./constants";
-import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout";
+import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
+import DoctorSchedule from "./pages/hr/DoctorSchedule";
+
 export default function App() {
   return (
     <AuthProvider>
@@ -37,8 +43,9 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<DoctorExample />} />
-            <Route path="citas" element={<Maintenance />} />
+            <Route index element={<Maintenance />} />
+            <Route path="citas" element={<DoctorAppointments />} />
+            <Route path="consultation/new" element={<ConsultationForm />} />
             <Route path="remisiones" element={<Maintenance />} />
             <Route path="historial" element={<Maintenance />} />
           </Route>
@@ -80,6 +87,8 @@ export default function App() {
           >
             <Route index element={<Usuarios />} />
             <Route path="usuarios" element={<Usuarios />} />
+            <Route path="doctors" element={<DoctorManager />} />
+            <Route path="doctors/:idDoctor/schedule" element={<DoctorSchedule />} />
           </Route>
 
           {/* Enfermero */}
@@ -122,11 +131,11 @@ export default function App() {
             }
           >
             <Route index element={<Maintenance />} />
-            <Route path="citas" element={<Appointments />} />
+            <Route path="citas" element={<PatientAppointments />} />
             <Route path="historia" element={<Maintenance />} />
             <Route path="prescripciones" element={<Maintenance />} />
             <Route path="perfil" element={<Maintenance />} />
-            <Route path="appointments/new" element={<Maintenance />} />
+            <Route path="appointments/new" element={<Calendar />} />
           </Route>
 
           {/* Cualquier otra ruta → redirigir al home */}
