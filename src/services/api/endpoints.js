@@ -46,6 +46,8 @@ export const endpoints = {
   appointments: {
     /** GET lista: ?fecha=&estado=&id_especialidad=&id_doctor=&id_paciente= */
     list: "/api/appointments",
+    /** PUT body: { razon: string } */
+    cancel: (id) => `/api/appointments/${id}/cancel`,
   },
 
   // ── Emergency Service ─────────────────────────────
