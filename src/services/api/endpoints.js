@@ -56,6 +56,9 @@ export const endpoints = {
 
   patients: {
     create: "/api/patients",
+    getProfile: "/api/patients/me",
+    updateProfile: "/api/patients/me/profile",
+    changePassword: "/api/patients/me/change-password",
   },
 
   // ── Agenda (horarios de médicos) ──────────────────
