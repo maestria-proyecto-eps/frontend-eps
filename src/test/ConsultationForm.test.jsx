@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 /**
  * TESTS FOR CONSULTATION FORM - PRESCRIPTION SECTION

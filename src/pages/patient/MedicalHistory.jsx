@@ -55,13 +55,13 @@ export default function MedicalHistory() {
         
         try {
           appointmentsResponse = await http.get(`${endpoints.appointments.list}?id_paciente=${patientId}`);
-        } catch (err) {
+        } catch {
           // Error getting appointments, continue with empty data
         }
         
         try {
           doctorsResponse = await http.get(endpoints.doctors.list);
-        } catch (err) {
+        } catch {
           // Error getting doctors, continue with empty data
         }
         
@@ -76,7 +76,7 @@ export default function MedicalHistory() {
           const doctorsMap = new Map();
           
           if (Array.isArray(doctorsList)) {
-            doctorsList.forEach((doctor, index) => {
+            doctorsList.forEach((doctor) => {
               // Usar id_medico como ID principal
               const doctorId = doctor.id_doctor || doctor.id_medico || doctor.id || doctor.num_licencia || doctor.identificacion || doctor.numero_documento;
               

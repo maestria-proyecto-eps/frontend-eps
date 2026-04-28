@@ -1,13 +1,11 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '../../components/ui';
-import { AuthContext } from '../../services/auth/AuthContext';
 import PrescriptionList from './PrescriptionList';
 import './ConsultationItem.css';
 
 export default function ConsultationItem({ consultation, isLast = false }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const auth = useContext(AuthContext);
 
   // Formatear fecha
   const formatDate = (dateStr) => {

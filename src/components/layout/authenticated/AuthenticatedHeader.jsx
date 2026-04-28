@@ -34,7 +34,7 @@ export default function AuthenticatedHeader({ className = '' }) {
         const response = await http.get(endpoints.persons.getByDocument(userId));
         const data = response.data?.data || response.data;
         setUserInfo(data);
-      } catch (err) {
+      } catch {
         // Error fetching user info, display fallback info
       }
     };

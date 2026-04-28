@@ -11,7 +11,7 @@ export default function MedicinesTestComponent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [rawResponse, setRawResponse] = useState(null);
-  const [page, setPage] = useState(1);
+  const [page] = useState(1);
 
   const fetchMedicines = async () => {
     setLoading(true);

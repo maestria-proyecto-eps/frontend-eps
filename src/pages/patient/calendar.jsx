@@ -126,7 +126,7 @@ export default function Calendar() {
     return () => {
       cancelled = true;
     }
-  }, []);
+  }, [loadEvents]);
 
   useEffect(() => {
     if (visibleAlert) {
