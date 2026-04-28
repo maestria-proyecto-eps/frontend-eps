@@ -1,0 +1,254 @@
+.consultation-item {
+  display: flex;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+/* Timeline Marker */
+.timeline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 2rem;
+  min-width: 2rem;
+}
+
+.timeline-marker .dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #20a86d;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px #20a86d;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.timeline-marker .line {
+  width: 2px;
+  flex-grow: 1;
+  background-color: #e0e0e0;
+  margin-top: 0.5rem;
+}
+
+/* Card */
+.consultation-card {
+  flex: 1;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.consultation-item.expanded .consultation-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #20a86d;
+}
+
+/* Header */
+.consultation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.consultation-header:hover {
+  background-color: #f0f0f0;
+}
+
+.header-content {
+  flex: 1;
+  text-align: left;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.header-top .date {
+  font-weight: 600;
+  color: #0f0f0f;
+  font-size: 1rem;
+}
+
+.header-top .time {
+  font-size: 0.875rem;
+  color: #666;
+  padding: 0.25rem 0.5rem;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+}
+
+.header-bottom {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.doctor-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.doctor-info .label {
+  font-size: 0.875rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.doctor-info .doctor-name {
+  font-weight: 500;
+  color: #0f0f0f;
+}
+
+.toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: #20a86d;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.consultation-item.expanded .toggle-icon {
+  transform: rotate(180deg);
+}
+
+/* Expanded Content */
+.consultation-detail {
+  padding: 1.5rem;
+  background-color: #fff;
+  border-top: 1px solid #e0e0e0;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+.detail-section {
+  margin-bottom: 1.5rem;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-subsection {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-subsection:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.detail-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f0f0f;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  color: #0f0f0f;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.detail-text {
+  font-size: 0.95rem;
+  color: #333;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0.75rem;
+  background-color: #f9f9f9;
+  border-left: 3px solid #20a86d;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .consultation-item {
+    margin-bottom: 1.5rem;
+  }
+
+  .timeline-marker {
+    margin-right: 1rem;
+    min-width: 1.5rem;
+  }
+
+  .consultation-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .toggle-icon {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .header-top,
+  .header-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
