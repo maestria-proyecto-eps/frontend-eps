@@ -111,6 +111,8 @@ export const endpoints = {
   medicalRecords: {
     /** GET historial médico del paciente (nota: endpoint tiene typo "pattient") */
     getPatientHistory: (patientId) => `/api/pattient/${patientId}/medical-history`,
+    /** GET prescripciones del doctor autenticado: ?pag=1&cantidad=10 */
+    getDoctorPrescriptions: "/api/prescriptions/doctors/me",
   },
 
   // ── Diagnósticos Service ──────────────────────────

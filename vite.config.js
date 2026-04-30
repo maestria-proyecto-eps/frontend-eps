@@ -22,6 +22,7 @@ export default defineConfig({
       '/api/medical-records': 'https://backend-eps-medical-records-service.onrender.com',
       '/api/appoinment': 'https://backend-eps-medical-records-service.onrender.com',
       '/api/pattient': 'https://backend-eps-medical-records-service.onrender.com',
+      '/api/prescriptions': 'https://backend-eps-medical-records-service.onrender.com',
       '/api/diagnosticos': 'https://backend-eps-medical-records-service.onrender.com',
       '/api/medicamentos': 'https://backend-eps-medical-records-service.onrender.com',
     },
