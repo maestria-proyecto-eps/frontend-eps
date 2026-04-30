@@ -9,6 +9,112 @@ import ConsultationTimeline from '../../components/sections/ConsultationTimeline
 import ConsultationFilters from '../../components/sections/ConsultationFilters';
 import './MedicalHistory.css';
 
+const PRESCRIPTIONS_PAGE_SIZE = 200;
+const MEDICATIONS_PAGE_SIZE = 200;
+
+function normalizeListResponse(payload) {
+  const rows = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload?.data?.data)
+      ? payload.data.data
+      : Array.isArray(payload)
+        ? payload
+        : [];
+  const page = Number(payload?.page || payload?.data?.page) || 1;
+  const pages = Number(payload?.pages || payload?.data?.pages) || 1;
+  return { rows, page, pages };
+}
+
+function mapPrescriptionItem(item, medicationMap) {
+  const medicationId =
+    item?.id_medicamento ??
+    item?.codigo ??
+    item?.medicamento?.codigo ??
+    item?.medication?.codigo;
+  const catalogItem =
+    medicationId !== null && medicationId !== undefined
+      ? medicationMap?.get(String(medicationId))
+      : null;
+  const med = item?.medicamento || item?.medication || catalogItem || {};
+  return {
+    id_prescripcion:
+      item?.id_items ?? item?.id_item ?? item?.id ?? item?.id_prescripcion ?? null,
+    nombre_compuesto:
+      item?.nombre_compuesto ||
+      item?.nombre_medicamento ||
+      med?.nombre_medicamento ||
+      item?.nombre ||
+      '',
+    nombre_generico:
+      item?.nombre_generico || item?.principio_activo || med?.principio_activo || '',
+    presentacion: item?.presentacion || med?.presentacion || '',
+    dosis: item?.dosis || item?.dosis_indicada || '',
+  };
+}
+
+function hasPrescriptionDetails(item) {
+  return Boolean(
+    (item?.nombre_compuesto && String(item.nombre_compuesto).trim()) ||
+      (item?.nombre_generico && String(item.nombre_generico).trim()) ||
+      (item?.presentacion && String(item.presentacion).trim()) ||
+      (item?.dosis && String(item.dosis).trim())
+  );
+}
+
+function buildPrescriptionItems(prescription, medicationMap) {
+  const items = Array.isArray(prescription?.prescripciones_items)
+    ? prescription.prescripciones_items
+    : Array.isArray(prescription?.medicamentos)
+      ? prescription.medicamentos
+      : Array.isArray(prescription?.items)
+        ? prescription.items
+        : [];
+
+  const mapped = items
+    .map((item) => mapPrescriptionItem(item, medicationMap))
+    .filter(hasPrescriptionDetails);
+  if (mapped.length > 0) return mapped;
+
+  const direct = mapPrescriptionItem(prescription, medicationMap);
+  return hasPrescriptionDetails(direct) ? [direct] : [];
+}
+
+function buildMedicationMap(medicationsRows) {
+  const medicationMap = new Map();
+  medicationsRows.forEach((medication) => {
+    const medicationIdRaw =
+      medication?.codigo ?? medication?.id_medicamento ?? medication?.id;
+    if (medicationIdRaw === null || medicationIdRaw === undefined || medicationIdRaw === '') {
+      return;
+    }
+    medicationMap.set(String(medicationIdRaw), medication);
+  });
+  return medicationMap;
+}
+
+function buildPrescriptionsMap(prescriptionsRows, medicationMap) {
+  const prescriptionsMap = new Map();
+  prescriptionsRows.forEach((prescription) => {
+    const atencionIdRaw =
+      prescription?.id_atencion ??
+      prescription?.id_cita ??
+      prescription?.id_registro ??
+      prescription?.id_consulta;
+
+    if (atencionIdRaw === null || atencionIdRaw === undefined || atencionIdRaw === '') {
+      return;
+    }
+
+    const atencionId = String(atencionIdRaw);
+    const items = buildPrescriptionItems(prescription, medicationMap);
+    if (items.length === 0) return;
+
+    const existing = prescriptionsMap.get(atencionId) || [];
+    prescriptionsMap.set(atencionId, existing.concat(items));
+  });
+  return prescriptionsMap;
+}
+
 export default function MedicalHistory() {
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
@@ -39,32 +145,28 @@ export default function MedicalHistory() {
       try {
         setLoading(true);
         setError('');
-        
-        // Obtener historial clínico, citas y lista de doctores en paralelo
-        let historyResponse = { data: { data: [] } };
-        let appointmentsResponse = { data: [] };
-        let doctorsResponse = { data: [] };
-        
-        try {
-          historyResponse = await http.get(endpoints.medicalRecords.getPatientHistory(patientId));
-        } catch (err) {
-          if (err.response?.status === 401) {
-            throw err;
-          }
+
+        const results = await Promise.allSettled([
+          http.get(endpoints.medicalRecords.getPatientHistory(patientId)),
+          http.get(`${endpoints.appointments.list}?id_paciente=${patientId}`),
+          http.get(endpoints.doctors.list),
+        ]);
+
+        const historyResult = results[0];
+        if (historyResult.status === 'rejected' && historyResult.reason?.response?.status === 401) {
+          throw historyResult.reason;
         }
-        
-        try {
-          appointmentsResponse = await http.get(`${endpoints.appointments.list}?id_paciente=${patientId}`);
-        } catch {
-          // Error getting appointments, continue with empty data
-        }
-        
-        try {
-          doctorsResponse = await http.get(endpoints.doctors.list);
-        } catch {
-          // Error getting doctors, continue with empty data
-        }
-        
+
+        const historyResponse = historyResult.status === 'fulfilled'
+          ? historyResult.value
+          : { data: { data: [] } };
+        const appointmentsResponse = results[1].status === 'fulfilled'
+          ? results[1].value
+          : { data: [] };
+        const doctorsResponse = results[2].status === 'fulfilled'
+          ? results[2].value
+          : { data: [] };
+
         // Extraer datos de la respuesta
         const responseData = historyResponse.data || { data: [] };
         const historias = responseData.data || [];
@@ -131,7 +233,7 @@ export default function MedicalHistory() {
                 id_doctor: doctorId, 
                 nombre_doctor: 'Doctor desconocido' 
               };
-              
+
               consultationList.push({
                 id_consulta: registro.id_registro,
                 id_cita: registro.id_cita,
@@ -145,7 +247,7 @@ export default function MedicalHistory() {
                 observaciones: registro.observaciones || '',
                 tratamiento: registro.tratamiento || '',
                 id_diagnostico: registro.id_diagnostico,
-                prescripciones: [], // Por ahora sin prescripciones
+                prescripciones: [],
               });
             });
           }
@@ -173,6 +275,132 @@ export default function MedicalHistory() {
 
           setDoctors(uniqueDoctorsList);
         }
+
+        const loadPrescriptionsAndMedications = async () => {
+          let prescriptionsRows = [];
+          try {
+            const res = await http.get(
+              endpoints.medicalRecords.getPatientPrescriptions,
+              { params: { pag: 1, cantidad: PRESCRIPTIONS_PAGE_SIZE } }
+            );
+            const normalizedPrescriptions = normalizeListResponse(res.data);
+            prescriptionsRows = normalizedPrescriptions.rows || [];
+
+            if (normalizedPrescriptions.pages > 1) {
+              const extraRows = [];
+              for (let page = 2; page <= normalizedPrescriptions.pages; page += 1) {
+                if (cancelled) break;
+                try {
+                  const extraRes = await http.get(
+                    endpoints.medicalRecords.getPatientPrescriptions,
+                    { params: { pag: page, cantidad: PRESCRIPTIONS_PAGE_SIZE } }
+                  );
+                  const extra = normalizeListResponse(extraRes.data);
+                  extraRows.push(...(extra.rows || []));
+                } catch {
+                  break;
+                }
+              }
+              prescriptionsRows = prescriptionsRows.concat(extraRows);
+            }
+          } catch {
+            prescriptionsRows = [];
+          }
+
+          if (cancelled || prescriptionsRows.length === 0) return;
+
+          const medicationIds = new Set();
+          prescriptionsRows.forEach((prescription) => {
+            const items = Array.isArray(prescription?.prescripciones_items)
+              ? prescription.prescripciones_items
+              : Array.isArray(prescription?.medicamentos)
+                ? prescription.medicamentos
+                : Array.isArray(prescription?.items)
+                  ? prescription.items
+                  : [];
+
+            items.forEach((item) => {
+              const medId =
+                item?.id_medicamento ??
+                item?.codigo ??
+                item?.medicamento?.codigo ??
+                item?.medication?.codigo;
+              if (medId !== null && medId !== undefined && medId !== '') {
+                medicationIds.add(String(medId));
+              }
+            });
+          });
+
+          let medicationsRows = [];
+          if (medicationIds.size > 0) {
+            try {
+              const firstRes = await http.get(endpoints.pharmacy.listMedications, {
+                params: { page: 1, limit: MEDICATIONS_PAGE_SIZE },
+              });
+              const normalizedMedications = normalizeListResponse(firstRes.data);
+              medicationsRows = normalizedMedications.rows || [];
+
+              const remainingIds = new Set(medicationIds);
+              medicationsRows.forEach((medication) => {
+                const medId =
+                  medication?.codigo ?? medication?.id_medicamento ?? medication?.id;
+                if (medId !== null && medId !== undefined && medId !== '') {
+                  remainingIds.delete(String(medId));
+                }
+              });
+
+              if (normalizedMedications.pages > 1 && remainingIds.size > 0) {
+                const extraRows = [];
+                for (let page = 2; page <= normalizedMedications.pages; page += 1) {
+                  if (cancelled) break;
+                  try {
+                    const extraRes = await http.get(endpoints.pharmacy.listMedications, {
+                      params: { page, limit: MEDICATIONS_PAGE_SIZE },
+                    });
+                    const extra = normalizeListResponse(extraRes.data);
+                    extraRows.push(...(extra.rows || []));
+                    extra.rows.forEach((medication) => {
+                      const medId =
+                        medication?.codigo ?? medication?.id_medicamento ?? medication?.id;
+                      if (medId !== null && medId !== undefined && medId !== '') {
+                        remainingIds.delete(String(medId));
+                      }
+                    });
+                    if (remainingIds.size === 0) break;
+                  } catch {
+                    break;
+                  }
+                }
+                medicationsRows = medicationsRows.concat(extraRows);
+              }
+            } catch {
+              medicationsRows = [];
+            }
+          }
+
+          if (cancelled) return;
+
+          const medicationMap = buildMedicationMap(medicationsRows);
+          const prescriptionsMap = buildPrescriptionsMap(prescriptionsRows, medicationMap);
+
+          if (cancelled || prescriptionsMap.size === 0) return;
+
+          setConsultations((prev) =>
+            prev.map((consultation) => {
+              const keys = [consultation.id_cita, consultation.id_consulta]
+                .filter((value) => value !== null && value !== undefined && value !== '')
+                .map((value) => String(value));
+              const prescripciones =
+                keys
+                  .map((key) => prescriptionsMap.get(key))
+                  .find((items) => Array.isArray(items) && items.length > 0) || [];
+              if (!prescripciones.length) return consultation;
+              return { ...consultation, prescripciones };
+            })
+          );
+        };
+
+        void loadPrescriptionsAndMedications();
       } catch (err) {
         if (!cancelled) {
           setError(

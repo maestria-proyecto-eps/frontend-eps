@@ -2,7 +2,8 @@ import React from 'react';
 import { Alert } from '../../components/ui';
 import './PrescriptionList.css';
 
-export default function PrescriptionList({ prescriptions = [] }) {
+export default function PrescriptionList(props) {
+  const { prescriptions = [] } = props;
   if (!prescriptions || prescriptions.length === 0) {
     return (
       <div className="prescription-empty">
@@ -16,10 +17,22 @@ export default function PrescriptionList({ prescriptions = [] }) {
   return (
     <div className="prescription-list">
       {prescriptions.map((prescription, index) => {
-        const nombreCompuesto = prescription.nombre_compuesto || prescription.nombre || '—';
-        const nombreGenerico = prescription.nombre_generico || '';
-        const presentacion = prescription.presentacion || '—';
-        const dosis = prescription.dosis || '—';
+        const nombreCompuesto =
+          prescription.nombre_compuesto ||
+          prescription.nombre_medicamento ||
+          prescription.nombre ||
+          prescription.medicamento?.nombre_medicamento ||
+          '—';
+        const nombreGenerico =
+          prescription.nombre_generico ||
+          prescription.principio_activo ||
+          prescription.medicamento?.principio_activo ||
+          '';
+        const presentacion =
+          prescription.presentacion ||
+          prescription.medicamento?.presentacion ||
+          '—';
+        const dosis = prescription.dosis || prescription.dosis_indicada || '—';
 
         return (
           <div key={prescription.id_prescripcion || index} className="prescription-item">
