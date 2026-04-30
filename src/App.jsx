@@ -17,6 +17,7 @@ import DoctorPrescriptions from "./pages/doctor/Prescriptions"
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
+import PatientPrescriptions from "./pages/patient/Prescriptions";
 import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
 import Pharmacy from "./pages/pharmacy/Pharmacy";
@@ -133,7 +134,7 @@ export default function App() {
             <Route index element={<Maintenance />} />
             <Route path="citas" element={<PatientAppointments />} />
             <Route path="historia" element={<Maintenance />} />
-            <Route path="prescripciones" element={<Maintenance />} />
+            <Route path="prescripciones" element={<PatientPrescriptions />} />
             <Route path="perfil" element={<Maintenance />} />
             <Route path="appointments/new" element={<Calendar />} />
           </Route>
