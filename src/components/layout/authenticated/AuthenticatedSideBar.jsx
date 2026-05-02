@@ -30,6 +30,7 @@ const MENUS = {
   "Médico": [
     { label: 'Dashboard',  path: '/doctor',             icon: Icon.dashboard  , end: true },
     { label: 'Mis Citas',  path: '/doctor/citas',       icon: Icon.calendar   },
+    { label: 'Prescripciones', path: '/doctor/prescriptions', icon: Icon.pill },
     { label: 'Remisiones', path: '/doctor/remisiones',  icon: Icon.clipboard  },
     { label: 'Historial',  path: '/doctor/historial',   icon: Icon.history    },
   ],
@@ -83,7 +84,7 @@ export default function AuthenticatedSideBar({ className = '' }) {
   return (
     <aside
       className={cn(
-        'flex flex-col bg-primary-50 text-neutral-700 transition-all duration-300 min-h-full rounded-2xl border-2 border-primary-500 p-1.5 m-2 shadow-sm hover:shadow-lg',
+        'flex flex-col bg-primary-50 text-neutral-700 transition-all duration-300 sticky top-0 h-fit max-h-screen rounded-2xl border-2 border-primary-500 p-1.5 m-2 shadow-sm hover:shadow-lg',
         collapsed ? 'w-16' : 'w-56',
         className
       )}
@@ -124,7 +125,7 @@ export default function AuthenticatedSideBar({ className = '' }) {
       </div>
 
       {/* Nav items (agrupados por módulos) */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      <nav className="flex-1 py-4 overflow-hidden">
         {(() => {
           const moduleOrder = [];
           const moduleMap = new Map();

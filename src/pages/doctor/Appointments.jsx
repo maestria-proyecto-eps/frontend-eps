@@ -141,6 +141,7 @@ export default function Appointments() {
 
   useEffect(() => {
     loadAppointments(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, doctorId]);
 
   const sortedAppointments = useMemo(
