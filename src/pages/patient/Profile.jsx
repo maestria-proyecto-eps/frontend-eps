@@ -1,4 +1,5 @@
 import React, { useContext } from "react";
+import { AuthContext } from '../../services/auth/AuthContext';
 import { PageContainer } from "../../components/layout";
 import { Button } from "../../components/ui";
 import { http } from "../../services/api/http";
@@ -103,6 +104,8 @@ function InfoDisplay({ label, value }) {
 }
 
 export default function Profile() {
+  const auth = useContext(AuthContext);
+  const idUsuario = auth?.payload?.id_usuario;
   const [user, setUser] = React.useState(null);
   const [loadingUser, setLoadingUser] = React.useState(true);
   const [loadUserError, setLoadUserError] = React.useState("");
@@ -293,12 +296,15 @@ export default function Profile() {
     setBusyPassword(true);
     try {
       const payload = {
-        old_password: passwordForm.oldPassword.trim(),
-        new_password: passwordForm.newPassword.trim(),
-        confirm_password: passwordForm.confirmPassword.trim(),
+        oldPassword: passwordForm.oldPassword.trim(),
+        newPassword: passwordForm.newPassword.trim(),
       };
 
-      await http.put(endpoints.patients.changePassword, payload);
+      const { data } = await http.post(endpoints.users.changePassword(idUsuario), payload);
+
+      if (data?.hasError === true) {
+        throw new Error(data?.Message || "Error al cambiar la contraseña.");
+      }
 
       setPasswordSuccess(true);
       setPasswordForm({
