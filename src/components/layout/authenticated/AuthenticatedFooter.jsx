@@ -32,10 +32,7 @@ const FOOTER_MENUS = {
     { label: 'Doctores y especialidades',  path: '/hr/doctors'},
   ],
   "Farmaceuta": [
-    { label: 'Dashboard',    path: '/pharmacist'              },
-    { label: 'Inventario',   path: '/pharmacist/inventario'   },
-    { label: 'Dispensación', path: '/pharmacist/dispensacion' },
-    { label: 'Alertas',      path: '/pharmacist/alertas'      },
+    { label: 'Farmacia', path: '/pharmacist' },
   ],
   "Recepcionista": [
     { label: 'Dashboard',  path: '/receptionist'            },

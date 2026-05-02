@@ -320,8 +320,8 @@ export default function DataTable({
             </Button>
           )}
           {onDeactivate && showRowDeactivate(row) && (
-            <Button variant="deactivate" size="sm" className="min-w-[110px]" onClick={() => openDeactivate(row)}>
-              Desactivar
+            <Button variant="outline-danger" size="sm" className="min-w-[110px]" onClick={() => openDeactivate(row)}>
+              {formConfig?.deactivateButtonLabel ?? 'Desactivar'}
             </Button>
           )}
           {renderRowActions?.(row)}
@@ -568,7 +568,9 @@ export default function DataTable({
                 <>
                   <Button variant="outline" onClick={closeDeactivate} disabled={submitting}>Cancelar</Button>
                   <Button variant="danger" onClick={handleDeactivate} disabled={submitting}>
-                    {submitting ? (formConfig?.submittingLabel ?? 'Guardando...') : 'Desactivar'}
+                    {submitting
+                      ? (formConfig?.submittingLabel ?? 'Guardando...')
+                      : (formConfig?.confirmDeactivateSubmitLabel ?? formConfig?.deactivateButtonLabel ?? 'Desactivar')}
                   </Button>
                 </>
               }

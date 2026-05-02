@@ -74,6 +74,8 @@ export const endpoints = {
   appointments: {
     /** GET lista: ?fecha=&estado=&id_especialidad=&id_doctor=&id_paciente= */
     list: "/api/appointments",
+    /** PUT body: { razon: string } */
+    cancel: (id) => `/api/appointments/${id}/cancel`,
     /** GET disponibilidad de citas id_especialidad, fecha_inicio, fecha_fin, id_paciente */
     availability: "/api/appointments/availability",
     /** POST crear cita fecha, hora_inicio, id_doctor, id_especialidad */
@@ -82,7 +84,6 @@ export const endpoints = {
     getById: (id) => `/api/appointments/${id}`,
     /** GET contexto de consulta para una cita (nombre paciente, especialidad) */
     consultationContext: (id) => `/api/appoinment/${id}/consultation-context`,
-    cancel: (id) => `/api/appoinments/${id}/cancel`,
   },
 
   // ── Emergency Service ─────────────────────────────
@@ -92,20 +93,28 @@ export const endpoints = {
 
   // ── Pharmacy Service ──────────────────────────────
   pharmacy: {
-    /** GET lista de medicamentos */
+    /** GET lista paginada de medicamentos: ?page=1&limit=10 */
     listMedications: "/api/pharmacy/medications",
-    /** GET inventario de medicamento específico */
+    /** POST crear medicamento */
+    createMedication: "/api/pharmacy/medications",
+    /** PUT actualizar medicamento por código */
+    updateMedication: (codigo) => `/api/pharmacy/medications/${codigo}`,
+    /** GET lista paginada de inventario de un medicamento: ?page=1&limit=10 */
     getInventory: (codigo) => `/api/pharmacy/medications/inventory/${codigo}`,
-    /** GET alertas de bajo stock */
-    getLowStock: "/api/pharmacy/medications/low-stock",
-    /** GET alertas de medicamentos que vencen próximamente */
-    getExpiringSoon: "/api/pharmacy/medications/expiring-soon",
+    /** POST agregar lote al inventario de un medicamento */
+    createInventory: (codigo) => `/api/pharmacy/medications/inventory/${codigo}`,
+    /** PUT actualizar (dispensar) un ítem de inventario por id_inventario */
+    updateInventory: (id) => `/api/pharmacy/medications/inventory/${id}`,
   },
 
   // ── Medical Records Service ───────────────────────
   medicalRecords: {
     /** GET historial médico del paciente (nota: endpoint tiene typo "pattient") */
     getPatientHistory: (patientId) => `/api/pattient/${patientId}/medical-history`,
+    /** GET prescripciones del doctor autenticado: ?pag=1&cantidad=10 */
+    getDoctorPrescriptions: "/api/prescriptions/doctors/me",
+    /** GET prescripciones del paciente autenticado: ?pag=1&cantidad=10 */
+    getPatientPrescriptions: "/api/prescriptions/patients/me",
   },
 
   // ── Diagnósticos Service ──────────────────────────

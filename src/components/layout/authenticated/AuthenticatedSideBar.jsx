@@ -30,6 +30,7 @@ const MENUS = {
   "Médico": [
     { label: 'Dashboard',  path: '/doctor',             icon: Icon.dashboard  , end: true },
     { label: 'Mis Citas',  path: '/doctor/citas',       icon: Icon.calendar   },
+    { label: 'Prescripciones', path: '/doctor/prescriptions', icon: Icon.pill },
     { label: 'Remisiones', path: '/doctor/remisiones',  icon: Icon.clipboard  },
     { label: 'Historial',  path: '/doctor/historial',   icon: Icon.history    },
   ],
@@ -52,10 +53,7 @@ const MENUS = {
     { label: 'Doctores y especialidades',  path: '/hr/doctors', icon: Icon.doctor },
   ],
   "Farmaceuta": [
-    { label: 'Dashboard',    path: '/pharmacist',              icon: Icon.dashboard , end: true },
-    { label: 'Inventario',   path: '/pharmacist/inventario',   icon: Icon.inventory },
-    { label: 'Dispensación', path: '/pharmacist/dispensacion', icon: Icon.pill      },
-    { label: 'Alertas',      path: '/pharmacist/alertas',      icon: Icon.alert     },
+    { label: 'Farmacia', path: '/pharmacist', icon: Icon.inventory, end: true },
   ],
   "Recepcionista": [
     { label: 'Dashboard',  path: '/receptionist',            icon: Icon.dashboard   , end: true },

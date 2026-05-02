@@ -13,11 +13,14 @@ import DoctorManager from "./pages/Usuarios/DoctorManager";
 import DoctorLayout from "./pages/doctor/DoctorLayout"
 import DoctorAppointments from "./pages/doctor/Appointments"
 import ConsultationForm from "./pages/doctor/ConsultationForm"
+import DoctorPrescriptions from "./pages/doctor/Prescriptions"
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
+import PatientPrescriptions from "./pages/patient/Prescriptions";
 import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
+import Pharmacy from "./pages/pharmacy/Pharmacy";
 import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 import DoctorSchedule from "./pages/hr/DoctorSchedule";
@@ -45,6 +48,7 @@ export default function App() {
           >
             <Route index element={<Maintenance />} />
             <Route path="citas" element={<DoctorAppointments />} />
+            <Route path="prescriptions" element={<DoctorPrescriptions />} />
             <Route path="consultation/new" element={<ConsultationForm />} />
             <Route path="remisiones" element={<Maintenance />} />
             <Route path="historial" element={<Maintenance />} />
@@ -115,10 +119,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Maintenance />} />
-            <Route path="inventario" element={<Maintenance />} />
-            <Route path="dispensacion" element={<Maintenance />} />
-            <Route path="alertas" element={<Maintenance />} />
+            <Route index element={<Pharmacy />} />
           </Route>
 
           {/* Paciente */}
@@ -133,7 +134,7 @@ export default function App() {
             <Route index element={<Maintenance />} />
             <Route path="citas" element={<PatientAppointments />} />
             <Route path="historia" element={<Maintenance />} />
-            <Route path="prescripciones" element={<Maintenance />} />
+            <Route path="prescripciones" element={<PatientPrescriptions />} />
             <Route path="perfil" element={<Maintenance />} />
             <Route path="appointments/new" element={<Calendar />} />
           </Route>

@@ -7,27 +7,52 @@ import { AuthContext } from '../../services/auth/AuthContext';
 
 /** Compara fecha+hora de la cita con el momento actual (para futuras vs pasadas). */
 function citaComoDate(cita) {
-  const fecha = cita.fecha;
-  const hora = (cita.hora_inicio || '00:00:00').toString();
+  const hi = cita?.hora_inicio;
+  const fecha = cita?.fecha;
+
+  if (hi != null && hi !== '') {
+    const s = String(hi);
+    // ISO completo (ej. 2026-05-01T10:00:00.000Z): no usar slice(0,8) — rompe el parseo.
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s) || (s.includes('T') && /\d{2}:\d{2}/.test(s))) {
+      const d = new Date(s);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+  }
+
+  const hora = (hi ?? '00:00:00').toString();
   const hhmmss = hora.length >= 8 ? hora.slice(0, 8) : `${hora.padEnd(8, '0')}`;
-  return new Date(`${fecha}T${hhmmss}`);
+  const day = fecha != null ? String(fecha).slice(0, 10) : '';
+  const d = new Date(`${day}T${hhmmss}`);
+  return Number.isNaN(d.getTime()) ? new Date(0) : d;
 }
-
-function mapEstadoAgenda(estadoAgenda) {
-  if (estadoAgenda === 1) return 'Activo';
-  if (estadoAgenda === 0) return 'Inactivo';
-  return String(estadoAgenda ?? '—');
-}
-
-const ESTADOS_FILTRO = [
-  { value: '1', label: 'Activo' },
-  { value: '0', label: 'Inactivo' },
-];
 
 function formatoHora(valor) {
   if (valor == null || valor === '') return '—';
   const s = String(valor);
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s) || (s.includes('T') && s.length > 12)) {
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) {
+      const h = d.getHours();
+      const m = d.getMinutes();
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+  }
   return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
+/** Encabezado exigido por el servicio de citas para el paciente autenticado. */
+function headersPaciente(numDocumento) {
+  const doc = numDocumento != null ? String(numDocumento).trim() : '';
+  if (doc === '') return {};
+  return { 'X-Patient-Id': doc };
+}
+
+/** Solo ocultar cancelar si la cita ya consta cancelada (no usar `estado_agenda` del hueco: puede ser 0 y la cita igual ser válida). */
+function citaYaCanceladaSegunApi(row) {
+  const v = row?.estado_cita ?? row?.estado;
+  if (v === false || v === 0 || v === '0' || v === 'false') return true;
+  if (typeof v === 'string' && /cancel/i.test(v)) return true;
+  return false;
 }
 
 export default function Appointments() {
@@ -125,23 +150,6 @@ export default function Appointments() {
           return nombre ?? (id != null && id !== '' ? String(id) : '—');
         },
       },
-      {
-        key: 'estado_agenda',
-        label: 'Estado',
-        filterable: true,
-        filterType: 'select',
-        filterOptions: ESTADOS_FILTRO.map((e) => ({ value: e.value, label: e.label })),
-        render: (valor) => {
-          const v = Number(valor);
-          const variant = v === 1 ? 'success' : v === 0 ? 'neutral' : 'neutral';
-          const text = mapEstadoAgenda(v);
-          return (
-            <Badge variant={variant} size="sm">
-              {text}
-            </Badge>
-          );
-        },
-      },
     ];
   }, [especialidades]);
 
@@ -154,7 +162,10 @@ export default function Appointments() {
         params.id_paciente = Number(idPaciente);
       }
 
-      const { data } = await http.get(endpoints.appointments.list, { params });
+      const { data } = await http.get(endpoints.appointments.list, {
+        params,
+        headers: headersPaciente(idPaciente),
+      });
       const raw = Array.isArray(data) ? data : [];
       const mine =
         idPaciente != null && String(idPaciente).trim() !== ''
@@ -189,9 +200,6 @@ export default function Appointments() {
         if (val == null || String(val).trim() === '') return true;
         const value = String(val).trim().toLowerCase();
         const cell = row[key];
-        if (key === 'estado_agenda') {
-          return String(cell) === String(val);
-        }
         if (key === 'id_especialidad') {
           return String(cell ?? '') === String(val).trim();
         }
@@ -206,15 +214,58 @@ export default function Appointments() {
   }, [citasPorTab, filters]);
 
   const total = citasFiltradas.length;
-  const dataPage = useMemo(
-    () => citasFiltradas.slice((page - 1) * pageSize, page * pageSize),
-    [citasFiltradas, page, pageSize]
-  );
+  const dataPage = useMemo(() => {
+    const slice = citasFiltradas.slice((page - 1) * pageSize, page * pageSize);
+    if (tab !== 'futuras') return slice;
+    return slice.map((row) => ({
+      ...row,
+      _cancelable: !citaYaCanceladaSegunApi(row) ? 1 : 0,
+    }));
+  }, [citasFiltradas, page, pageSize, tab]);
 
   const handleFiltersChange = (nextFilters) => {
     setFilters(nextFilters);
     setPage(1);
   };
+
+  const handleCancelarCita = useCallback(
+    async (idCita) => {
+      await http.put(
+        endpoints.appointments.cancel(idCita),
+        { razon: 'Cancelación solicitada por el paciente' },
+        { headers: headersPaciente(idPaciente) }
+      );
+      await fetchCitas();
+    },
+    [fetchCitas, idPaciente]
+  );
+
+  const formConfigCitas = useMemo(
+    () => ({
+      createButtonLabel: 'Nueva cita',
+      deactivateButtonLabel: 'Cancelar',
+      confirmDeactivateSubmitLabel: 'Cancelar',
+      confirmDeactivateTitle: '¿Cancelar cita?',
+      confirmDeactivateMessage: (row) => (
+        <>
+          ¿Está segura de que desea cancelar la cita del{' '}
+          <strong>{row?.fecha ? String(row.fecha).slice(0, 10) : '—'}</strong>
+          {row?.hora_inicio ? (
+            <>
+              {' '}
+              a las <strong>{formatoHora(row.hora_inicio)}</strong>
+            </>
+          ) : null}
+          ?
+        </>
+      ),
+      deactivateSuccessMessage: 'Cita cancelada correctamente.',
+      statusKey: '_cancelable',
+      activeValue: 1,
+      deactivatedValue: 0,
+    }),
+    []
+  );
 
   return (
     <PageContainer>
@@ -267,9 +318,10 @@ export default function Appointments() {
         data={dataPage}
         filters={filters}
         onFiltersChange={handleFiltersChange}
-        formConfig={{ createButtonLabel: 'Nueva cita' }}
+        formConfig={formConfigCitas}
         createHref="/patient/appointments/new"
         onReload={fetchCitas}
+        onDeactivate={tab === 'futuras' ? handleCancelarCita : undefined}
         loading={loading}
         pagination={{
           page,
@@ -282,7 +334,7 @@ export default function Appointments() {
             setPage(1);
           },
         }}
-        keyExtractor={(row) => row.id_cita}
+        keyExtractor={(row) => row.id_cita ?? row.id}
         emptyMessage={
           loading ? 'Cargando...' : 'No tienes citas en esta pestaña o con estos filtros.'
         }
