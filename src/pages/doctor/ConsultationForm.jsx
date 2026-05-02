@@ -15,7 +15,144 @@ function createPrescriptionItem() {
     dosis: "",
     duracion: "",
     cantidad: "",
+    presentacion: "", // To store medication presentation format
+    principio_activo: "", // To store active principle associated with medication
   };
+}
+
+/**
+ * Get placeholder text for dose field based on medication presentation
+ */
+function getDosePlaceholder(presentacion) {
+  if (!presentacion || !presentacion.trim()) return "Ej: 2, 5 ml, 10 mg";
+  
+  const lower = presentacion.toLowerCase();
+  
+  if (lower.includes("tableta") || lower.includes("cápsula") || lower.includes("capsula")) {
+    return "Ej: 1, 2, 3 (número de tabletas)";
+  }
+  if (lower.includes("ampolla") || lower.includes("inyectable") || lower.includes("inyección")) {
+    return "Ej: 10 mg, 1 ml (mg o ml)";
+  }
+  if (lower.includes("jarabe") || lower.includes("solución") || lower.includes("solucion") || lower.includes("ml")) {
+    return "Ej: 5 ml, 10 ml (mililitros)";
+  }
+  if (lower.includes("gota")) {
+    return "Ej: 5, 10 (número de gotas)";
+  }
+  
+  return "Ej: 2, 5 ml, 10 mg";
+}
+
+/**
+ * Extract units from presentation (e.g., "Caja x12" → 12, "Frasco x 120ml" → 120)
+ */
+function extractUnitsFromPresentation(presentacion) {
+  if (!presentacion) return null;
+  const match = presentacion.match(/x\s*(\d+)/i);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/**
+ * Calculate quantity based on dose, duration, and presentation
+ * cantidad = Math.ceil((dosis × duracion) / unidades_por_presentacion)
+ * Example: 1 dose × 12 days = 12 units, Caja x12 = 1 caja
+ */
+function calculateQuantity(dose, duration, presentacion) {
+  if (!dose || !duration) return "";
+  
+  // Extract numeric value from dose (handles "5 ml", "10 mg", etc.)
+  const doseNumeric = parseFloat(dose);
+  const durationNumeric = parseInt(duration, 10);
+  
+  if (isNaN(doseNumeric) || isNaN(durationNumeric)) return "";
+  
+  // Total units needed
+  const totalUnits = doseNumeric * durationNumeric;
+  
+  // If presentation has units, calculate how many presentations are needed
+  const unitsPerPresentation = extractUnitsFromPresentation(presentacion);
+  if (unitsPerPresentation && unitsPerPresentation > 0) {
+    return Math.ceil(totalUnits / unitsPerPresentation).toString();
+  }
+  
+  // If no presentation or can't extract units, return total units
+  return totalUnits.toString();
+}
+
+/**
+ * Get unique active principles from medications
+ */
+function getUniquePrincipiosActivos(medications) {
+  const seen = new Set();
+  const principios = [];
+  
+  medications.forEach((med) => {
+    const principio = med.principio_activo?.trim();
+    if (principio && !seen.has(principio)) {
+      seen.add(principio);
+      principios.push(principio);
+    }
+  });
+  
+  return principios.sort();
+}
+
+/**
+ * Filter medications by active principle
+ */
+function getMedicamentosByPrincipio(medications, principioActivo) {
+  if (!principioActivo) return [];
+  return medications.filter(
+    (med) => med.principio_activo?.trim() === principioActivo.trim()
+  );
+}
+
+/**
+ * Determine expected dose format based on presentation type
+ * Returns null if no specific format expected (free text)
+ */
+function getExpectedDoseFormat(presentacion) {
+  if (!presentacion || !presentacion.trim()) return null;
+  
+  const lower = presentacion.toLowerCase();
+  
+  if (lower.includes("tableta") || lower.includes("cápsula") || lower.includes("capsula")) {
+    return { type: "integer", label: "número entero", pattern: /^\d+$/ };
+  }
+  if (lower.includes("jarabe") || lower.includes("solución") || lower.includes("solucion")) {
+    return { type: "liquid", label: "ml o gotas", pattern: /^(\d+\.?\d*)\s?(ml|gotas|gota|ml\.)$|^\d+\.?\d*$/ };
+  }
+  if (lower.includes("ampolla") || lower.includes("ampolla") || lower.includes("inyectable") || lower.includes("inyección")) {
+    return { type: "injectable", label: "mg/ml", pattern: /^(\d+\.?\d*)\s?(mg|ml|mg\/ml)$|^\d+\.?\d*$/ };
+  }
+  if (lower.includes("gota")) {
+    return { type: "drops", label: "gotas", pattern: /^\d+\s?gotas?$|^\d+$/ };
+  }
+  
+  return null;
+}
+
+/**
+ * Validate dose against expected format
+ * Returns { valid: boolean, warning: string | null }
+ */
+function validateDoseFormat(dose, presentacion) {
+  if (!dose || !dose.trim()) return { valid: false, warning: null };
+  
+  const format = getExpectedDoseFormat(presentacion);
+  if (!format) return { valid: true, warning: null }; // No specific format = free text OK
+  
+  const trimmedDose = dose.trim();
+  
+  if (!format.pattern.test(trimmedDose)) {
+    return {
+      valid: false,
+      warning: `Se esperaba formato: ${format.label}. Ejemplo: ${format.type === "integer" ? "2" : format.type === "liquid" ? "5 ml" : "10 mg"}`,
+    };
+  }
+  
+  return { valid: true, warning: null };
 }
 
 function unwrapBackendResponse(responseData) {
@@ -108,8 +245,14 @@ export default function ConsultationForm() {
   const diagDebounceRef = useRef(null);
 
   // Medications
-  const [medicamentoOptions, setMedicamentoOptions] = useState([]); // { codigo, nombre_medicamento, ... }
+  const [medicamentoOptions, setMedicamentoOptions] = useState([]); // { codigo, nombre_medicamento, principio_activo, presentacion, ... }
   const [prescriptionItems, setPrescriptionItems] = useState([createPrescriptionItem()]);
+  
+  // Track selected principio activo per prescription item
+  const [selectedPrincipioActivo, setSelectedPrincipioActivo] = useState({}); // { localId: principio_activo }
+  
+  // Dose warnings per prescription item
+  const [doseWarnings, setDoseWarnings] = useState({}); // { "localId": "warning message" }
 
   // After consultation creation
   const [createdRegistroId, setCreatedRegistroId] = useState(null);
@@ -238,9 +381,96 @@ export default function ConsultationForm() {
   /* ---------------------------------------------------------------------- */
 
   function updatePrescriptionItem(localId, key, value) {
-    setPrescriptionItems((prev) =>
-      prev.map((item) => (item.localId === localId ? { ...item, [key]: value } : item))
-    );
+    // If updating principio_activo, clear medicamento selection
+    if (key === "principio_activo") {
+      setSelectedPrincipioActivo((prev) => ({ ...prev, [localId]: value }));
+      setPrescriptionItems((prev) =>
+        prev.map((item) =>
+          item.localId === localId
+            ? { ...item, codigo: "", dosis: "", duracion: "", cantidad: "", presentacion: "" }
+            : item
+        )
+      );
+      setErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[`${localId}_codigo`];
+        delete updated[`${localId}_dosis`];
+        delete updated[`${localId}_duracion`];
+        return updated;
+      });
+    } 
+    // If updating medicamento (codigo), load presentacion and principio_activo
+    else if (key === "codigo" && value) {
+      const selectedMed = medicamentoOptions.find((m) => m.codigo === Number(value));
+      if (selectedMed) {
+        setPrescriptionItems((prev) =>
+          prev.map((item) =>
+            item.localId === localId
+              ? {
+                  ...item,
+                  [key]: value,
+                  presentacion: selectedMed.presentacion || "",
+                  principio_activo: selectedMed.principio_activo || "",
+                }
+              : item
+          )
+        );
+      } else {
+        setPrescriptionItems((prev) =>
+          prev.map((item) =>
+            item.localId === localId
+              ? { ...item, [key]: value, presentacion: "", principio_activo: "" }
+              : item
+          )
+        );
+      }
+    } 
+    // If updating dosis, recalculate cantidad and check for warnings
+    else if (key === "dosis") {
+      const item = prescriptionItems.find((i) => i.localId === localId);
+      const validation = validateDoseFormat(value, item?.presentacion);
+      
+      // Calculate new cantidad based on dosis and duracion
+      const newCantidad = calculateQuantity(value, item?.duracion, item?.presentacion);
+      
+      setPrescriptionItems((prev) =>
+        prev.map((item) => 
+          item.localId === localId 
+            ? { ...item, [key]: value, cantidad: newCantidad }
+            : item
+        )
+      );
+      
+      if (validation.warning) {
+        setDoseWarnings((prev) => ({ ...prev, [localId]: validation.warning }));
+      } else {
+        setDoseWarnings((prev) => {
+          const updated = { ...prev };
+          delete updated[localId];
+          return updated;
+        });
+      }
+    } 
+    // If updating duracion, recalculate cantidad
+    else if (key === "duracion") {
+      const item = prescriptionItems.find((i) => i.localId === localId);
+      const newCantidad = calculateQuantity(item?.dosis, value, item?.presentacion);
+      
+      setPrescriptionItems((prev) =>
+        prev.map((item) =>
+          item.localId === localId
+            ? { ...item, [key]: value, cantidad: newCantidad }
+            : item
+        )
+      );
+    }
+    // Any other field update
+    else {
+      setPrescriptionItems((prev) =>
+        prev.map((item) => (item.localId === localId ? { ...item, [key]: value } : item))
+      );
+    }
+    
     setErrors((prev) => ({ ...prev, [`${localId}_${key}`]: "" }));
   }
 
@@ -249,9 +479,21 @@ export default function ConsultationForm() {
   }
 
   function removePrescriptionItem(localId) {
+    if (prescriptionItems.length === 1) return;
     setPrescriptionItems((prev) =>
-      prev.length === 1 ? prev : prev.filter((item) => item.localId !== localId)
+      prev.filter((item) => item.localId !== localId)
     );
+    // Clean up state
+    setSelectedPrincipioActivo((prev) => {
+      const updated = { ...prev };
+      delete updated[localId];
+      return updated;
+    });
+    setDoseWarnings((prev) => {
+      const updated = { ...prev };
+      delete updated[localId];
+      return updated;
+    });
   }
 
   /* ---------------------------------------------------------------------- */
@@ -274,15 +516,14 @@ export default function ConsultationForm() {
     }
 
     prescriptionItems.forEach((item) => {
-      const hasAny = item.codigo || item.cantidad || item.dosis || item.duracion;
+      const hasAny = item.codigo || item.dosis || item.duracion;
       if (!hasAny) return;
 
-      if (!item.codigo) {
-        newErrors[`${item.localId}_codigo`] = "Seleccione un medicamento.";
+      if (!selectedPrincipioActivo[item.localId]) {
+        newErrors[`${item.localId}_principio_activo`] = "Debe seleccionar un principio activo.";
       }
-
-      if (!item.cantidad || Number(item.cantidad) <= 0) {
-        newErrors[`${item.localId}_cantidad`] = "La cantidad debe ser mayor a cero.";
+      if (!item.codigo) {
+        newErrors[`${item.localId}_codigo`] = "Debe seleccionar un medicamento.";
       }
 
       if (!item.dosis.trim()) {
@@ -291,6 +532,10 @@ export default function ConsultationForm() {
 
       if (!item.duracion || Number(item.duracion) <= 0) {
         newErrors[`${item.localId}_duracion`] = "La duración debe ser mayor a cero.";
+      }
+      // Cantidad is auto-calculated, so we just validate it's > 0 if present
+      if (!item.cantidad || Number(item.cantidad) <= 0) {
+        newErrors[`${item.localId}_cantidad`] = "La cantidad calculada debe ser mayor a cero.";
       }
     });
 
@@ -568,7 +813,6 @@ export default function ConsultationForm() {
                               className="cursor-pointer px-3 py-2 text-sm text-neutral-800 hover:bg-primary-50 hover:text-primary-700"
                               onClick={() => selectDiagnostico(d)}
                             >
-                              <span className="font-medium">#{d.id_diagnostico}</span>{" "}
                               {d.nombre_enfermedad}
                             </li>
                           ))}
@@ -628,17 +872,42 @@ export default function ConsultationForm() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div className="space-y-1 md:col-span-2">
+                      {/* 1. Principio Activo Selection */}
+                      <div className="md:col-span-2 space-y-1">
                         <label className="block text-sm font-medium text-neutral-700">
-                          Medicamento
+                          Principio Activo *
                         </label>
+                        <select
+                          value={selectedPrincipioActivo[item.localId] || ""}
+                          onChange={(e) => updatePrescriptionItem(item.localId, "principio_activo", e.target.value)}
+                          disabled={!!createdRegistroId}
+                          className={[
+                            "block w-full rounded-lg border px-3 py-2 text-neutral-900 bg-white",
+                            "focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500",
+                            "disabled:bg-neutral-100 disabled:cursor-not-allowed",
+                            errors[`${item.localId}_principio_activo`]
+                              ? "border-emergency-500 focus:border-emergency-500 focus:ring-emergency-500"
+                              : "border-neutral-300",
+                          ].join(" ")}
+                        >
+                          <option value="">Seleccione principio activo</option>
+                          {getUniquePrincipiosActivos(medicamentoOptions).map((principio) => (
+                            <option key={principio} value={principio}>
+                              {principio}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
+                      {/* 2. Medicamento Selection (filtered by principio activo) */}
+                      <div className="md:col-span-2 space-y-1">
+                        <label className="block text-sm font-medium text-neutral-700">
+                          Medicamento *
+                        </label>
                         <select
                           value={item.codigo}
-                          onChange={(e) =>
-                            updatePrescriptionItem(item.localId, "codigo", e.target.value)
-                          }
-                          disabled={!!createdRegistroId}
+                          onChange={(e) => updatePrescriptionItem(item.localId, "codigo", e.target.value)}
+                          disabled={!selectedPrincipioActivo[item.localId] || !!createdRegistroId}
                           className={[
                             "block w-full rounded-lg border px-3 py-2 text-neutral-900 bg-white",
                             "focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500",
@@ -648,33 +917,67 @@ export default function ConsultationForm() {
                               : "border-neutral-300",
                           ].join(" ")}
                         >
-                          <option value="">Seleccione medicamento</option>
-                          {medicamentoOptions.map((med) => (
-                            <option key={med.codigo} value={med.codigo}>
-                              {med.nombre_medicamento}
-                            </option>
-                          ))}
+                          <option value="">
+                            {selectedPrincipioActivo[item.localId] 
+                              ? "Seleccione medicamento" 
+                              : "Seleccione primero un principio activo"}
+                          </option>
+                          {selectedPrincipioActivo[item.localId] && 
+                            getMedicamentosByPrincipio(medicamentoOptions, selectedPrincipioActivo[item.localId]).map((med) => (
+                              <option key={med.codigo} value={med.codigo}>
+                                {med.nombre_medicamento}
+                              </option>
+                            ))}
                         </select>
+                      </div>
 
-                        {errors[`${item.localId}_codigo`] && (
+                      {/* 3. Presentación (display as badge) */}
+                      {item.presentacion && (
+                        <div className="md:col-span-2 space-y-1">
+                          <label className="block text-sm font-medium text-neutral-700">
+                            Presentación
+                          </label>
+                          <Badge variant="secondary">{item.presentacion}</Badge>
+                        </div>
+                      )}
+
+                      {/* 4. Dosis */}
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-neutral-700">
+                          Dosis *
+                        </label>
+                        <input
+                          type="text"
+                          value={item.dosis}
+                          onChange={(e) => updatePrescriptionItem(item.localId, "dosis", e.target.value)}
+                          placeholder={getDosePlaceholder(item.presentacion)}
+                          disabled={!!createdRegistroId}
+                          className={[
+                            "block w-full rounded-lg border px-3 py-2 text-neutral-900 placeholder-neutral-400",
+                            "focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500",
+                            "disabled:bg-neutral-100 disabled:cursor-not-allowed",
+                            errors[`${item.localId}_dosis`]
+                              ? "border-emergency-500 focus:border-emergency-500 focus:ring-emergency-500"
+                              : doseWarnings[item.localId]
+                              ? "border-amber-300 focus:border-amber-400 focus:ring-amber-400"
+                              : "border-neutral-300",
+                          ].join(" ")}
+                        />
+                        {errors[`${item.localId}_dosis`] && (
                           <p className="text-sm text-emergency-600">
-                            {errors[`${item.localId}_codigo`]}
+                            {errors[`${item.localId}_dosis`]}
+                          </p>
+                        )}
+                        {doseWarnings[item.localId] && !errors[`${item.localId}_dosis`] && (
+                          <p className="text-sm text-amber-600">
+                            ⚠ {doseWarnings[item.localId]}
                           </p>
                         )}
                       </div>
 
+                      {/* 5. Duración (días) */}
                       <Input
-                        label="Dosis"
-                        value={item.dosis}
-                        onChange={(e) =>
-                          updatePrescriptionItem(item.localId, "dosis", e.target.value)
-                        }
-                        error={errors[`${item.localId}_dosis`]}
-                        disabled={!!createdRegistroId}
-                      />
-
-                      <Input
-                        label="Duración (días)"
+                        label="Duración (días) *"
                         type="number"
                         min="1"
                         value={item.duracion}
@@ -685,18 +988,31 @@ export default function ConsultationForm() {
                         disabled={!!createdRegistroId}
                       />
 
-                      <div className="md:col-span-2">
-                        <Input
-                          label="Cantidad"
-                          type="number"
-                          min="1"
+                      {/* 6. Cantidad (auto-calculated based on presentation, read-only) */}
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-neutral-700">
+                          Cantidad
+                        </label>
+                        <input
+                          type="text"
                           value={item.cantidad}
-                          onChange={(e) =>
-                            updatePrescriptionItem(item.localId, "cantidad", e.target.value)
-                          }
-                          error={errors[`${item.localId}_cantidad`]}
-                          disabled={!!createdRegistroId}
+                          readOnly
+                          disabled={true}
+                          placeholder="Se calcula automáticamente"
+                          className="block w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-700 bg-neutral-50 cursor-not-allowed"
                         />
+                        {item.cantidad && (
+                          <p className="text-xs text-neutral-500">
+                            {(() => {
+                              const totalUnits = parseFloat(item.dosis) * parseInt(item.duracion);
+                              const unitsPerPresentation = extractUnitsFromPresentation(item.presentacion);
+                              if (unitsPerPresentation && unitsPerPresentation > 0) {
+                                return `${totalUnits} unidades ÷ ${unitsPerPresentation} (por presentación) = ${item.cantidad}`;
+                              }
+                              return `${item.dosis} × ${item.duracion} días = ${item.cantidad}`;
+                            })()}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -757,25 +1073,25 @@ export default function ConsultationForm() {
                           {historia.registros_historia.map((registro, i) => (
                             <div
                               key={registro.id_registro ?? i}
-                              className="space-y-1 rounded border border-neutral-100 bg-neutral-50 px-3 py-2"
+                              className="rounded border border-primary-300 bg-primary-50 px-3 py-2 space-y-1"
                             >
                               {registro.nombre_enfermedad && (
                                 <div>
-                                  <span className="font-medium">Diagnóstico:</span>{" "}
+                                  <span className="font-bold">Diagnóstico:</span>{" "}
                                   {registro.nombre_enfermedad}
                                 </div>
                               )}
 
                               {registro.observaciones && (
                                 <div>
-                                  <span className="font-medium">Observaciones:</span>{" "}
+                                  <span className="font-bold">Observaciones:</span>{" "}
                                   {registro.observaciones}
                                 </div>
                               )}
 
                               {registro.tratamiento && (
                                 <div>
-                                  <span className="font-medium">Tratamiento:</span>{" "}
+                                  <span className="font-bold">Tratamiento:</span>{" "}
                                   {registro.tratamiento}
                                 </div>
                               )}
