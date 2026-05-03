@@ -300,7 +300,7 @@ export default function Profile() {
         newPassword: passwordForm.newPassword.trim(),
       };
 
-      const { data } = await http.post(endpoints.users.changePassword(idUsuario), payload);
+      await http.post(endpoints.users.changePassword(idUsuario), payload);
 
       setPasswordSuccess(true);
       setPasswordForm({
