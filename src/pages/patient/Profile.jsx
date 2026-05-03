@@ -302,10 +302,6 @@ export default function Profile() {
 
       const { data } = await http.post(endpoints.users.changePassword(idUsuario), payload);
 
-      if (data?.hasError === true) {
-        throw new Error(data?.Message || "Error al cambiar la contraseña.");
-      }
-
       setPasswordSuccess(true);
       setPasswordForm({
         oldPassword: "",
@@ -315,15 +311,8 @@ export default function Profile() {
     } catch (err) {
       let errorMessage = "Error al cambiar la contraseña. Verifica la contraseña actual.";
       const response = err?.response?.data;
-
-      if (response?.detail) {
-        if (Array.isArray(response.detail)) {
-          errorMessage = response.detail.map((e) => e.msg).join("; ");
-        } else if (typeof response.detail === "string") {
-          errorMessage = response.detail;
-        }
-      } else if (response?.Message) {
-        errorMessage = response.Message;
+      if (response) {
+        errorMessage = "La contraseña actual es incorrecta.";
       } else if (err?.message) {
         errorMessage = err.message;
       }
