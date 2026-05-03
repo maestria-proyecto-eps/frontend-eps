@@ -45,6 +45,7 @@ const MENUS = {
     { label: 'Mis Citas',      path: '/patient/citas',          icon: Icon.calendar  },
     { label: 'Mi Historia',    path: '/patient/historia',       icon: Icon.clipboard },
     { label: 'Prescripciones', path: '/patient/prescripciones', icon: Icon.pill      },
+    { label: 'Remisiones',     path: '/patient/referrals',      icon: Icon.alert     },
     { label: 'Perfil',         path: '/patient/perfil',         icon: Icon.profile   },
   ],
   "Talento Humano": [
