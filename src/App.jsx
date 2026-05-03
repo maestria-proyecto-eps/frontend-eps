@@ -25,6 +25,7 @@ import Pharmacy from "./pages/pharmacy/Pharmacy";
 import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 import DoctorSchedule from "./pages/hr/DoctorSchedule";
+import Profile from "./pages/patient/Profile";
 
 export default function App() {
   return (
@@ -137,7 +138,7 @@ export default function App() {
             <Route path="historia" element={<MedicalHistory />} />
             <Route path="medical-history" element={<MedicalHistory />} />
             <Route path="prescripciones" element={<PatientPrescriptions />} />
-            <Route path="perfil" element={<Maintenance />} />
+            <Route path="perfil" element={<Profile />} />
             <Route path="appointments/new" element={<Calendar />} />
           </Route>
 
