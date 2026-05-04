@@ -50,8 +50,6 @@ vi.mock('../components/ui', () => ({
     onReload,
     pagination,
     keyExtractor,
-    filters,
-    onFiltersChange,
     emptyMessage,
   }) => (
     <div data-testid="datatable">

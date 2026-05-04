@@ -164,7 +164,6 @@ export default function PatientReferrals() {
     return filteredReferrals.slice(startIdx, startIdx + pageSize);
   }, [filteredReferrals, page, pageSize]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredReferrals.length / pageSize));
   const total = filteredReferrals.length;
 
   /**
