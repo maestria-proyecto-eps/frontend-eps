@@ -87,6 +87,14 @@
     {
       "source": "/api/medicamentos/:path*",
       "destination": "https://backend-eps-medical-records-service.onrender.com/api/medicamentos/:path*"
+    },
+    {
+      "source": "/api/referrals",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/referrals"
+    },
+    {
+      "source": "/api/referrals/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/referrals/:path*"
     }
   ]
 }

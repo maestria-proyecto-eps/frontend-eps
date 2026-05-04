@@ -144,6 +144,8 @@ export const endpoints = {
 
   // ── Referrals Service ──────────────────────────────
   referrals: {
+    /** GET remisiones con filtros opcionales: ?id_paciente=&id_especialidad=&vigente= */
+    list: "/api/referrals",
     /** POST crear remisión para una cita */
     create: (appointmentId) => `/api/appoinment/${appointmentId}/remision`,
   },

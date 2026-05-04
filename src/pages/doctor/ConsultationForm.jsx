@@ -159,22 +159,34 @@ function unwrapBackendResponse(responseData) {
   if (!responseData || typeof responseData !== "object") {
     throw new Error("La respuesta del backend no es válida.");
   }
+
   if (responseData.hasError) {
     throw new Error(responseData.message || "El backend reportó un error.");
   }
+
   return {
     message: responseData.message || "",
     data: responseData.data ?? null,
   };
 }
 
-function TextAreaField({ label, value, onChange, error, rows = 4, placeholder = "", name }) {
+function TextAreaField({
+  label,
+  value,
+  onChange,
+  error,
+  rows = 4,
+  placeholder = "",
+  name,
+}) {
   const inputId = name ?? label?.toLowerCase().replace(/\s+/g, "-") ?? "textarea";
+
   return (
     <div className="space-y-1">
       <label htmlFor={inputId} className="block text-sm font-medium text-neutral-700">
         {label}
       </label>
+
       <textarea
         id={inputId}
         value={value}
@@ -191,6 +203,7 @@ function TextAreaField({ label, value, onChange, error, rows = 4, placeholder = 
         ].join(" ")}
         aria-invalid={!!error}
       />
+
       {error && (
         <p className="text-sm text-emergency-600" role="alert">
           {error}
@@ -247,8 +260,12 @@ export default function ConsultationForm() {
   // Remission modal
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [allowedSpecialties, setAllowedSpecialties] = useState([]);
-  const [referral, setReferral] = useState({ id_especialidad: "", fecha_expiracion: "" });
+  const [referral, setReferral] = useState({
+    id_especialidad: "",
+    fecha_expiracion: "",
+  });
   const [referralDone, setReferralDone] = useState(false);
+  const [referralErrors, setReferralErrors] = useState({});
 
   /* ---------------------------------------------------------------------- */
   /*                           INITIAL DATA LOAD                             */
@@ -259,8 +276,11 @@ export default function ConsultationForm() {
       const id = new URLSearchParams(window.location.search).get("appointment_id");
 
       if (!id) {
-        setFeedback({ type: "error", text: "No se especificó ID de cita. Retornando..." });
-        setTimeout(() => navigate("/doctor/citas"), 2000);
+        setFeedback({
+          type: "error",
+          text: "No se encontró el parámetro appointment_id en la URL.",
+        });
+        setLoading(false);
         return;
       }
 
@@ -325,7 +345,11 @@ export default function ConsultationForm() {
 
   function handleDiagnosticoQueryChange(value) {
     setDiagnosticoQuery(value);
-    if (diagDebounceRef.current) clearTimeout(diagDebounceRef.current);
+
+    if (diagDebounceRef.current) {
+      clearTimeout(diagDebounceRef.current);
+    }
+
     diagDebounceRef.current = setTimeout(async () => {
       try {
         setLoadingDiagnosticos(true);
@@ -482,9 +506,11 @@ export default function ConsultationForm() {
     if (!form.observacion.trim()) {
       newErrors.observacion = "Las observaciones son obligatorias.";
     }
+
     if (!form.tratamiento.trim()) {
       newErrors.tratamiento = "El tratamiento es obligatorio.";
     }
+
     if (!selectedDiagnostico) {
       newErrors.diagnostico = "Debe seleccionar un diagnóstico.";
     }
@@ -499,9 +525,11 @@ export default function ConsultationForm() {
       if (!item.codigo) {
         newErrors[`${item.localId}_codigo`] = "Debe seleccionar un medicamento.";
       }
+
       if (!item.dosis.trim()) {
         newErrors[`${item.localId}_dosis`] = "La dosis es obligatoria.";
       }
+
       if (!item.duracion || Number(item.duracion) <= 0) {
         newErrors[`${item.localId}_duracion`] = "La duración debe ser mayor a cero.";
       }
@@ -523,7 +551,10 @@ export default function ConsultationForm() {
     if (createdRegistroId) return; // already saved
 
     if (!validate()) {
-      setFeedback({ type: "warning", text: "Debes completar los campos obligatorios del formulario." });
+      setFeedback({
+        type: "warning",
+        text: "Debes completar los campos obligatorios del formulario.",
+      });
       return;
     }
 
@@ -572,13 +603,16 @@ export default function ConsultationForm() {
 
   async function handleOpenReferralModal() {
     setShowReferralModal(true);
+
     try {
       const res = await http.get(endpoints.specialties.remission);
       const all = Array.isArray(res.data) ? res.data : [];
+
       // Only show specialties that can be referred from the current appointment's specialty
       const filtered = all.filter(
         (s) => s.id_especialidad_que_remite === citaContext?.id_especialidad
       );
+
       setAllowedSpecialties(filtered);
     } catch {
       setAllowedSpecialties([]);
@@ -586,15 +620,28 @@ export default function ConsultationForm() {
   }
 
   async function handleSaveReferral() {
-    if (!referral.id_especialidad || !referral.fecha_expiracion) {
+    const newReferralErrors = {};
+
+    if (!referral.id_especialidad) {
+      newReferralErrors.id_especialidad = "Debe seleccionar una especialidad destino.";
+    }
+
+    if (!referral.fecha_expiracion) {
+      newReferralErrors.fecha_expiracion = "Debe seleccionar una fecha de expiración.";
+    }
+
+    setReferralErrors(newReferralErrors);
+
+    if (Object.keys(newReferralErrors).length > 0) {
       setFeedback({
         type: "warning",
-        text: "La remisión requiere especialidad destino y fecha de expiración.",
+        text: "Completa los campos obligatorios de la remisión.",
       });
       return;
     }
 
     setIsSavingReferral(true);
+
     try {
       const payload = {
         id_registro: createdRegistroId,
@@ -608,6 +655,7 @@ export default function ConsultationForm() {
       setShowReferralModal(false);
       setReferralDone(true);
       setReferral({ id_especialidad: "", fecha_expiracion: "" });
+      setReferralErrors({});
       setFeedback({
         type: "success",
         text: wrapped.message || `Remisión creada. ID: ${wrapped.data?.id_remision ?? "-"}`,
@@ -646,24 +694,28 @@ export default function ConsultationForm() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Badge variant="secondary" size="sm">Cita #{citaContext?.id_cita}</Badge>
-        <Badge variant="success" size="sm">{citaContext?.nombreUsuario || `Paciente #${citaContext?.id_paciente}`}</Badge>
-        <Badge variant="warning" size="sm">{citaContext?.nombreEspecialidad || `Esp. #${citaContext?.id_especialidad}`}</Badge>
+        <Badge variant="secondary" size="sm">
+          Cita #{citaContext?.id_cita}
+        </Badge>
+        <Badge variant="success" size="sm">
+          {citaContext?.nombreUsuario || `Paciente #${citaContext?.id_paciente}`}
+        </Badge>
+        <Badge variant="warning" size="sm">
+          {citaContext?.nombreEspecialidad || `Esp. #${citaContext?.id_especialidad}`}
+        </Badge>
       </div>
 
-      {feedback && (
-        <Alert variant={feedback.type}>{feedback.text}</Alert>
-      )}
+      {feedback && <Alert variant={feedback.type}>{feedback.text}</Alert>}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_380px]">
         {/* ── LEFT COLUMN ─────────────────────────────────────── */}
         <div className="space-y-6">
-
           {/* Datos de la cita */}
           <Card padding>
             <Card.Header>
               <h2 className="text-lg font-semibold text-neutral-800">Datos de la cita</h2>
             </Card.Header>
+
             <Card.Body>
               <div className="grid grid-cols-1 gap-4 text-sm text-neutral-700 md:grid-cols-2">
                 <div>
@@ -676,7 +728,8 @@ export default function ConsultationForm() {
                   <span className="font-semibold">Paciente:</span> {citaContext?.nombreUsuario}
                 </div>
                 <div>
-                  <span className="font-semibold">Especialidad:</span> {citaContext?.nombreEspecialidad}
+                  <span className="font-semibold">Especialidad:</span>{" "}
+                  {citaContext?.nombreEspecialidad}
                 </div>
               </div>
             </Card.Body>
@@ -687,6 +740,7 @@ export default function ConsultationForm() {
             <Card.Header>
               <h2 className="text-lg font-semibold text-neutral-800">Consulta</h2>
             </Card.Header>
+
             <Card.Body>
               <div className="space-y-4">
                 <TextAreaField
@@ -727,7 +781,7 @@ export default function ConsultationForm() {
                       <button
                         type="button"
                         onClick={clearDiagnostico}
-                        className="text-xs text-primary-600 hover:text-primary-900 font-medium"
+                        className="text-xs font-medium text-primary-600 hover:text-primary-900"
                       >
                         Cambiar
                       </button>
@@ -750,8 +804,9 @@ export default function ConsultationForm() {
                         />
                         {loadingDiagnosticos && <Spinner size="sm" />}
                       </div>
+
                       {diagnosticoOptions.length > 0 && (
-                        <ul className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 max-h-52 overflow-y-auto">
+                        <ul className="mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50">
                           {diagnosticoOptions.map((d) => (
                             <li
                               key={d.id_diagnostico}
@@ -763,6 +818,14 @@ export default function ConsultationForm() {
                           ))}
                         </ul>
                       )}
+
+                      {!loadingDiagnosticos &&
+                        diagnosticoQuery.trim() &&
+                        diagnosticoOptions.length === 0 && (
+                          <p className="mt-1 text-sm text-emergency-600">
+                            No se encontraron diagnósticos con ese nombre.
+                          </p>
+                        )}
                     </div>
                   )}
 
@@ -780,7 +843,12 @@ export default function ConsultationForm() {
           <Card padding>
             <Card.Header className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-neutral-800">Medicamentos</h2>
-              <Button variant="outline" size="sm" onClick={addPrescriptionItem} disabled={!!createdRegistroId}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addPrescriptionItem}
+                disabled={!!createdRegistroId}
+              >
                 Agregar
               </Button>
             </Card.Header>
@@ -788,10 +856,7 @@ export default function ConsultationForm() {
             <Card.Body>
               <div className="space-y-4">
                 {prescriptionItems.map((item, index) => (
-                  <div
-                    key={item.localId}
-                    className="rounded-xl border border-neutral-200 p-4"
-                  >
+                  <div key={item.localId} className="rounded-xl border border-neutral-200 p-4">
                     <div className="mb-4 flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-neutral-700">
                         Medicamento #{index + 1}
@@ -916,7 +981,9 @@ export default function ConsultationForm() {
                         type="number"
                         min="1"
                         value={item.duracion}
-                        onChange={(e) => updatePrescriptionItem(item.localId, "duracion", e.target.value)}
+                        onChange={(e) =>
+                          updatePrescriptionItem(item.localId, "duracion", e.target.value)
+                        }
                         error={errors[`${item.localId}_duracion`]}
                         disabled={!!createdRegistroId}
                       />
@@ -961,11 +1028,13 @@ export default function ConsultationForm() {
                 Crear Remisión
               </Button>
             )}
-            <Button
-              onClick={handleFinalize}
-              disabled={isSaving || !!createdRegistroId}
-            >
-              {isSaving ? "Guardando..." : createdRegistroId ? "Consulta guardada" : "Finalizar Consulta"}
+
+            <Button onClick={handleFinalize} disabled={isSaving || !!createdRegistroId}>
+              {isSaving
+                ? "Guardando..."
+                : createdRegistroId
+                  ? "Consulta guardada"
+                  : "Finalizar Consulta"}
             </Button>
           </div>
         </div>
@@ -978,6 +1047,7 @@ export default function ConsultationForm() {
                 Historia clínica del paciente
               </h2>
             </Card.Header>
+
             <Card.Body>
               <div className="space-y-4 text-sm text-neutral-700">
                 <div>
@@ -991,10 +1061,11 @@ export default function ConsultationForm() {
                   medicalHistory.map((historia) => (
                     <div
                       key={historia.id_historia}
-                      className="rounded-lg border border-neutral-200 p-3 space-y-2"
+                      className="space-y-2 rounded-lg border border-neutral-200 p-3"
                     >
                       <div className="text-xs text-neutral-500">
-                        Inicio: {historia.fecha_inicio} · Actualización: {historia.fecha_ult_actualizacion}
+                        Inicio: {historia.fecha_inicio} · Actualización:{" "}
+                        {historia.fecha_ult_actualizacion}
                       </div>
 
                       {historia.registros_historia && historia.registros_historia.length > 0 ? (
@@ -1010,12 +1081,14 @@ export default function ConsultationForm() {
                                   {registro.nombre_enfermedad}
                                 </div>
                               )}
+
                               {registro.observaciones && (
                                 <div>
                                   <span className="font-bold">Observaciones:</span>{" "}
                                   {registro.observaciones}
                                 </div>
                               )}
+
                               {registro.tratamiento && (
                                 <div>
                                   <span className="font-bold">Tratamiento:</span>{" "}
@@ -1026,7 +1099,9 @@ export default function ConsultationForm() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-neutral-400 text-xs">Sin registros en esta historia.</p>
+                        <p className="text-xs text-neutral-400">
+                          Sin registros en esta historia.
+                        </p>
                       )}
                     </div>
                   ))
@@ -1059,18 +1134,38 @@ export default function ConsultationForm() {
             <label className="block text-sm font-medium text-neutral-700">
               Especialidad destino
             </label>
+
             <select
               value={referral.id_especialidad}
-              onChange={(e) => setReferral((prev) => ({ ...prev, id_especialidad: e.target.value }))}
-              className="block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 bg-white focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              onChange={(e) => {
+                setReferral((prev) => ({ ...prev, id_especialidad: e.target.value }));
+                setReferralErrors((prev) => ({ ...prev, id_especialidad: "" }));
+              }}
+              className={[
+                "block w-full rounded-lg border px-3 py-2 text-neutral-900 bg-white",
+                "focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500",
+                referralErrors.id_especialidad
+                  ? "border-emergency-500 focus:border-emergency-500 focus:ring-emergency-500"
+                  : "border-neutral-300",
+              ].join(" ")}
             >
               <option value="">Seleccione especialidad</option>
               {allowedSpecialties.map((s) => (
-                <option key={s.id_especialidad_remitida} value={s.id_especialidad_remitida}>
+                <option
+                  key={s.id_especialidad_remitida}
+                  value={s.id_especialidad_remitida}
+                >
                   {s.nombre_remitida}
                 </option>
               ))}
             </select>
+
+            {referralErrors.id_especialidad && (
+              <p className="text-sm text-emergency-600">
+                {referralErrors.id_especialidad}
+              </p>
+            )}
+
             {allowedSpecialties.length === 0 && (
               <p className="text-xs text-neutral-500">
                 No hay especialidades disponibles para remisión desde esta especialidad.
@@ -1082,7 +1177,11 @@ export default function ConsultationForm() {
             label="Fecha de expiración"
             type="date"
             value={referral.fecha_expiracion}
-            onChange={(e) => setReferral((prev) => ({ ...prev, fecha_expiracion: e.target.value }))}
+            onChange={(e) => {
+              setReferral((prev) => ({ ...prev, fecha_expiracion: e.target.value }));
+              setReferralErrors((prev) => ({ ...prev, fecha_expiracion: "" }));
+            }}
+            error={referralErrors.fecha_expiracion}
           />
         </div>
       </Modal>
