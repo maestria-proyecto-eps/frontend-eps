@@ -27,6 +27,8 @@ export const endpoints = {
     changeStatus: (id) => `/api/users/${id}/change-status`,
     /** DELETE desactivar/eliminar usuario (id numérico) - legacy, preferir changeStatus */
     deleteById: (id) => `/api/users/${id}`,
+    /** PUT cambiar contraseña por ID de usuario */
+    changePassword: (id) => `/api/users/${id}/reset-password`,
   },
 
   // ── Specialties Service ───────────────────────────
@@ -55,7 +57,12 @@ export const endpoints = {
   },
 
   patients: {
+    /** POST crear paciente */
     create: "/api/patients",
+    /** GET perfil del paciente */
+    getProfile: "/api/patients/me",
+    /** PUT actualizar perfil del paciente */
+    updateProfile: "/api/patients/me/profile",
   },
 
   // ── Agenda (horarios de médicos) ──────────────────
