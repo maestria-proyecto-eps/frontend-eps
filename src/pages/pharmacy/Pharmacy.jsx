@@ -107,6 +107,7 @@ export default function Pharmacy() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadMedications(1); }, []);
 
   const handleCreateMed = async () => {

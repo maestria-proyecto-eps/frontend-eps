@@ -27,6 +27,8 @@ export const endpoints = {
     changeStatus: (id) => `/api/users/${id}/change-status`,
     /** DELETE desactivar/eliminar usuario (id numérico) - legacy, preferir changeStatus */
     deleteById: (id) => `/api/users/${id}`,
+    /** PUT cambiar contraseña por ID de usuario */
+    changePassword: (id) => `/api/users/${id}/reset-password`,
   },
 
   // ── Specialties Service ───────────────────────────
@@ -55,7 +57,12 @@ export const endpoints = {
   },
 
   patients: {
+    /** POST crear paciente */
     create: "/api/patients",
+    /** GET perfil del paciente */
+    getProfile: "/api/patients/me",
+    /** PUT actualizar perfil del paciente */
+    updateProfile: "/api/patients/me/profile",
   },
 
   // ── Agenda (horarios de médicos) ──────────────────
@@ -111,6 +118,10 @@ export const endpoints = {
   medicalRecords: {
     /** GET historial médico del paciente (nota: endpoint tiene typo "pattient") */
     getPatientHistory: (patientId) => `/api/pattient/${patientId}/medical-history`,
+    /** GET prescripciones del doctor autenticado: ?pag=1&cantidad=10 */
+    getDoctorPrescriptions: "/api/prescriptions/doctors/me",
+    /** GET prescripciones del paciente autenticado: ?pag=1&cantidad=10 */
+    getPatientPrescriptions: "/api/prescriptions/patients/me",
   },
 
   // ── Diagnósticos Service ──────────────────────────
@@ -133,6 +144,8 @@ export const endpoints = {
 
   // ── Referrals Service ──────────────────────────────
   referrals: {
+    /** GET remisiones con filtros opcionales: ?id_paciente=&id_especialidad=&vigente= */
+    list: "/api/referrals",
     /** POST crear remisión para una cita */
     create: (appointmentId) => `/api/appoinment/${appointmentId}/remision`,
   },

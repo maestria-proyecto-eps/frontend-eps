@@ -1,9 +1,11 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../services/auth/AuthContext';
-import { Button, Badge } from '../../ui';
+import { Button } from '../../ui';
 import { cn } from '../../../utils/cn';
 import { ROUTES } from '../../../constants';
+import { http } from '../../../services/api/http';
+import { endpoints } from '../../../services/api/endpoints';
 
 const ROLE_LABELS = {
   'Médico': 'Médico',
@@ -17,9 +19,28 @@ const ROLE_LABELS = {
 export default function AuthenticatedHeader({ className = '' }) {
   const auth = useContext(AuthContext);
   const nav = useNavigate();
+  const [userInfo, setUserInfo] = useState(null);
 
   const role = auth?.role || 'Paciente';
   const roleLabel = ROLE_LABELS[role] || role;
+  const userId = auth?.payload?.num_documento;
+
+  // Obtener información del usuario autenticado
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchUserInfo = async () => {
+      try {
+        const response = await http.get(endpoints.persons.getByDocument(userId));
+        const data = response.data?.data || response.data;
+        setUserInfo(data);
+      } catch {
+        // Error fetching user info, display fallback info
+      }
+    };
+
+    fetchUserInfo();
+  }, [userId]);
 
   const handleLogout = () => {
     auth?.logout?.();
@@ -63,14 +84,39 @@ export default function AuthenticatedHeader({ className = '' }) {
             <div 
               id="user-identification"
               data-testid="user-identification"
-              className="hidden md:flex"
+              className="hidden md:flex items-center gap-3"
             >
-              <Badge 
-                variant="primary"
-                size="md"
-              >
-                {auth?.payload?.num_documento ? `${auth.payload.num_documento} • ${roleLabel}` : roleLabel}
-              </Badge>
+              {userInfo ? (
+                <div className="flex items-center gap-2">
+                  {/* Hola! [Nombre] - Grande, negrita, subrayado verde */}
+                  <span className="text-primary-600 font-bold text-base">
+                    Hola!
+                  </span>
+                  <span className="text-neutral-900 font-bold text-base">
+                    {(userInfo.nombre || userInfo.nombres || '')} {(userInfo.apellido || userInfo.apellidos || '')}
+                  </span>
+                  
+                  {/* Rol - Pequeño, subrayado secundario */}
+                  <span className="text-xs ml-2">
+                    <span className="text-secondary-600 font-semibold">
+                      Rol
+                    </span>
+                    <span className="text-neutral-700 ml-1">{roleLabel}</span>
+                  </span>
+                  
+                  {/* ID - Pequeño, subrayado secundario */}
+                  <span className="text-xs">
+                    <span className="text-secondary-600 font-semibold">
+                      ID
+                    </span>
+                    <span className="text-neutral-700 ml-1">{userId}</span>
+                  </span>
+                </div>
+              ) : (
+                <div className="text-sm font-medium text-neutral-700">
+                  {userId} • {roleLabel}
+                </div>
+              )}
             </div>
 
             {/* Botón Cerrar Sesión */}
