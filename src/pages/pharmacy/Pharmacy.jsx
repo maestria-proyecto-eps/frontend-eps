@@ -107,7 +107,6 @@ export default function Pharmacy() {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadMedications(1); }, []);
 
   const handleCreateMed = async () => {
@@ -356,7 +355,13 @@ export default function Pharmacy() {
   // ── Render ───────────────────────────────────────
   return (
     <div className="p-6 space-y-4">
-      <Alert alert={alert} />
+      
+      {/* 
+          CAMBIO CLAVE: 
+          Si 'modal' tiene algún valor (es decir, está abierto), 
+          NO renderices la alerta de la página principal.
+      */}
+      {!modal && alert && <Alert alert={alert} />}
 
       {/* ── VIEW: MEDICATIONS LIST ─────────────────── */}
       {view === 'medications' && (
