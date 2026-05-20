@@ -5,6 +5,8 @@ import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
 import { AuthContext } from "../../services/auth/AuthContext";
 
+const PENDING_TRIAGE_KEY = "doctor_urgency_pending_triage";
+
 function unwrapRows(responseData) {
   if (!responseData || typeof responseData !== "object") return { rows: [], page: 1, pages: 1 };
   if (responseData.hasError) {
@@ -171,6 +173,7 @@ export default function Urgency() {
   const [medications, setMedications] = useState([]);
 
   const [selectedTriage, setSelectedTriage] = useState(null);
+  const [triageToConfirm, setTriageToConfirm] = useState(null);
   const [patientInfo, setPatientInfo] = useState(null);
   const [patientLoading, setPatientLoading] = useState(false);
   const [patientError, setPatientError] = useState("");
@@ -260,6 +263,36 @@ export default function Urgency() {
     }
   }, []);
 
+  const loadFormCatalogs = useCallback(async () => {
+    setFormLoading(true);
+    try {
+      const medsPromise = http.get(endpoints.medicamentos.search).catch(() => null);
+      const [diagnosticosResponse, medsResponse] = await Promise.all([
+        http.get(endpoints.diagnosticos.search).catch(() => null),
+        medsPromise,
+      ]);
+
+      if (diagnosticosResponse?.data) {
+        const wrapped = unwrapRows(diagnosticosResponse.data);
+        setDiagnosticos(Array.isArray(wrapped.rows) ? wrapped.rows : []);
+      }
+      if (medsResponse?.data) {
+        const wrapped = unwrapRows(medsResponse.data);
+        setMedications(Array.isArray(wrapped.rows) ? wrapped.rows : []);
+      }
+    } finally {
+      setFormLoading(false);
+    }
+  }, []);
+
+  const clearPendingTriage = useCallback(() => {
+    window.sessionStorage.removeItem(PENDING_TRIAGE_KEY);
+  }, []);
+
+  const persistPendingTriage = useCallback((snapshot) => {
+    window.sessionStorage.setItem(PENDING_TRIAGE_KEY, JSON.stringify(snapshot));
+  }, []);
+
   const loadFirstUrgentTriage = useCallback(async () => {
     setFirstTriageLoading(true);
     try {
@@ -304,6 +337,60 @@ export default function Urgency() {
     loadDiagnosticos();
   }, [loadDiagnosticos, loadFirstUrgentTriage]);
 
+  useEffect(() => {
+    const raw = window.sessionStorage.getItem(PENDING_TRIAGE_KEY);
+    if (!raw) return;
+
+    try {
+      const pending = JSON.parse(raw);
+      if (!pending?.selectedTriage?.id_triage) return;
+
+      setSelectedTriage(pending.selectedTriage);
+      setAttentionForm(
+        pending.attentionForm ?? { observaciones: "", tratamiento: "", id_diagnostico: "" }
+      );
+      setAttentionOptions(
+        pending.attentionOptions ?? { requiresPrescription: false, requiresHospitalization: false }
+      );
+      setCreatedUrgencyId(pending.createdUrgencyId ?? null);
+      setPrescriptionItems(
+        Array.isArray(pending.prescriptionItems) && pending.prescriptionItems.length > 0
+          ? pending.prescriptionItems
+          : [createPrescriptionItem()]
+      );
+      setFeedback({
+        type: "warning",
+        text: "Tienes un triage pendiente por gestionar. Debes finalizar la atencion en curso.",
+      });
+      loadFormCatalogs();
+    } catch {
+      window.sessionStorage.removeItem(PENDING_TRIAGE_KEY);
+    }
+  }, [loadFormCatalogs]);
+
+  useEffect(() => {
+    if (!selectedTriage?.id_triage) {
+      clearPendingTriage();
+      return;
+    }
+
+    persistPendingTriage({
+      selectedTriage,
+      attentionForm,
+      attentionOptions,
+      createdUrgencyId,
+      prescriptionItems,
+    });
+  }, [
+    selectedTriage,
+    attentionForm,
+    attentionOptions,
+    createdUrgencyId,
+    prescriptionItems,
+    persistPendingTriage,
+    clearPendingTriage,
+  ]);
+
   async function handleStartAttention(row) {
     if (!row?.id_triage) return;
     setFeedback(null);
@@ -316,21 +403,7 @@ export default function Urgency() {
         setFormErrors({});
         setCreatedUrgencyId(null);
         setPrescriptionItems([createPrescriptionItem()]);
-        setFormLoading(true);
-        const medsPromise = http.get(endpoints.medicamentos.search).catch(() => null);
-        const [diagnosticosResponse, medsResponse] = await Promise.all([
-          http.get(endpoints.diagnosticos.search).catch(() => null),
-          medsPromise,
-        ]);
-
-        if (diagnosticosResponse?.data) {
-          const wrapped = unwrapRows(diagnosticosResponse.data);
-          setDiagnosticos(Array.isArray(wrapped.rows) ? wrapped.rows : []);
-        }
-        if (medsResponse?.data) {
-          const wrapped = unwrapRows(medsResponse.data);
-          setMedications(Array.isArray(wrapped.rows) ? wrapped.rows : []);
-        }
+        await loadFormCatalogs();
       }
     } catch (error) {
       if (error?.response?.status === 409) {
@@ -416,6 +489,7 @@ export default function Urgency() {
       if (!attentionOptions.requiresPrescription && !hospitalizationFailed) {
         setSelectedTriage(null);
         setCreatedUrgencyId(null);
+        clearPendingTriage();
       }
       loadFirstUrgentTriage();
     } catch (error) {
@@ -476,6 +550,7 @@ export default function Urgency() {
       setPrescriptionItems([createPrescriptionItem()]);
       setSelectedTriage(null);
       setCreatedUrgencyId(null);
+      clearPendingTriage();
       loadFirstUrgentTriage();
     } catch (error) {
       console.error("Error creando prescripcion:", error);
@@ -523,7 +598,7 @@ export default function Urgency() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => currentTriage && handleStartAttention(currentTriage)}
+                onClick={() => currentTriage && setTriageToConfirm(currentTriage)}
                 disabled={!currentTriage || firstTriageLoading}
               >
                 Realizar atencion
@@ -604,9 +679,12 @@ export default function Urgency() {
 
       <Modal
         open={!!selectedTriage}
-        onClose={() => setSelectedTriage(null)}
+        onClose={() => {}}
         title={`Atencion de urgencia - Triage #${selectedTriage?.id_triage ?? ""}`}
         size="lg"
+        scrollable={true}
+        closeOnOverlayClick={false}
+        showCloseButton={false}
         className="max-w-5xl max-h-[90vh] flex flex-col"
       >
         {!selectedTriage ? null : (
@@ -820,6 +898,36 @@ export default function Urgency() {
             )}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={!!triageToConfirm}
+        onClose={() => setTriageToConfirm(null)}
+        title="Confirmar inicio de atencion"
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setTriageToConfirm(null)}>
+              No
+            </Button>
+            <Button
+              onClick={async () => {
+                const triage = triageToConfirm;
+                setTriageToConfirm(null);
+                if (triage) {
+                  await handleStartAttention(triage);
+                }
+              }}
+            >
+              Si, continuar
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-neutral-700">
+          Una vez inicies la atencion del paciente, debes finalizar toda la gestion de este triage.
+          ¿Deseas continuar?
+        </p>
       </Modal>
 
     </PageContainer>
