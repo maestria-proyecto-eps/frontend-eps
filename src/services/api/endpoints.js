@@ -95,7 +95,12 @@ export const endpoints = {
 
   // ── Emergency Service ─────────────────────────────
   emergency: {
-    // list: "/api/emergency/",
+    triages: "/api/triages",
+    firstUrgentTriage: "/api/triages/urgencia/first",
+    attendTriage: (idTriage) => `/api/triages/atender/${idTriage}`,
+    urgencies: "/api/atencion_urgencias",
+    hospitalization: "/api/hospitalizacion/",
+    hospitalizationAdmission: "/api/hospitalizacion/admision",
   },
 
   // ── Pharmacy Service ──────────────────────────────
@@ -122,6 +127,8 @@ export const endpoints = {
     getDoctorPrescriptions: "/api/prescriptions/doctors/me",
     /** GET prescripciones del paciente autenticado: ?pag=1&cantidad=10 */
     getPatientPrescriptions: "/api/prescriptions/patients/me",
+    /** POST crear prescripción para una atención */
+    createPrescription: "/api/prescriptions/",
   },
 
   // ── Diagnósticos Service ──────────────────────────

@@ -48,7 +48,7 @@ export default function Modal({
       />
       <div
         className={cn(
-          'relative w-full bg-white rounded-xl border border-neutral-200 shadow-xl overflow-hidden',
+          'relative w-full bg-white rounded-xl border border-neutral-200 shadow-xl overflow-hidden max-h-[90vh] flex flex-col',
           sizeClasses[size],
           className
         )}
@@ -69,7 +69,7 @@ export default function Modal({
             </button>
           </div>
         )}
-        <div className="px-6 py-4">{children}</div>
+        <div className="px-6 py-4 overflow-y-auto">{children}</div>
         {footer != null && (
           <div className="border-t border-neutral-200 px-6 py-4 bg-neutral-50 flex justify-end gap-2">
             {footer}
