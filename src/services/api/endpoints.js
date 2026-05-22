@@ -16,11 +16,11 @@ export const endpoints = {
   users: {
     doctorExample: "/api/users/doctor/example",
     /** GET lista paginada: ?pag=1&cantidad=30 */
-    list: "/api/users",
+    list: "/api/users/",
     /** GET usuario por ID */
     getById: (id) => `/api/users/${id}`,
     /** POST crear usuario */
-    create: "/api/users",
+    create: "/api/users/",
     /** PUT actualizar usuario (id numérico) */
     updateById: (id) => `/api/users/${id}`,
     /** PUT cambiar estado (activar/desactivar) */
@@ -152,7 +152,7 @@ export const endpoints = {
   // ── Referrals Service ──────────────────────────────
   referrals: {
     /** GET remisiones con filtros opcionales: ?id_paciente=&id_especialidad=&vigente= */
-    list: "/api/referrals",
+    list: "/api/referrals/",
     /** POST crear remisión para una cita */
     create: (appointmentId) => `/api/appoinment/${appointmentId}/remision`,
   },
