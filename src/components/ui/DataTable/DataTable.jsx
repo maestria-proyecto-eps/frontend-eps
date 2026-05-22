@@ -330,13 +330,7 @@ export default function DataTable({
     : renderRowActions;
 
   const showActionsColumn = !!defaultRowActions;
-
-  // DEBUG: mostrar columnas y si se activa la columna de acciones
-  if (process.env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line no-console
-    console.debug('DataTable columns:', columns.map((c) => c.key), 'showActionsColumn:', showActionsColumn);
-  }
-
+  
   return (
     <div className="space-y-4">
       {feedback && (

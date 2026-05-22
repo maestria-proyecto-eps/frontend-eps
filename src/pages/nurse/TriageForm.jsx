@@ -84,7 +84,6 @@ export default function TriageForm() {
         nivel: Number(form.nivel),
         escala_dolor: form.escala_dolor ? Number(form.escala_dolor) : undefined,
         riesgo_vital: Boolean(form.riesgo_vital),
-        estado: 2,
       };
 
       await http.post(endpoints.emergency.createTriage, payloadBody);

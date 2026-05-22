@@ -6,8 +6,8 @@ import { endpoints } from '../../services/api/endpoints';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20];
 const STATUS_OPTIONS = [
+  { value: 0, label: 'Pendiente' },
   { value: 1, label: 'Atendido' },
-  { value: 2, label: 'Pendiente' },
 ];
 
 const NIVEL_OPTIONS = [
@@ -81,8 +81,8 @@ function getLevelVariant(nivel) {
 
 function getStatusLabel(value) {
   const raw = value ?? '';
+  if (raw === 0 || raw === '0') return 'Pendiente';
   if (raw === 1 || raw === '1') return 'Atendido';
-  if (raw === 2 || raw === '2') return 'Pendiente';
   const normalized = String(raw).toLowerCase();
   if (normalized.includes('pendiente')) return 'Pendiente';
   if (normalized.includes('atendido')) return 'Atendido';
