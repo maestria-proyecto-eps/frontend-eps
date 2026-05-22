@@ -33,6 +33,7 @@ export default function Modal({
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
   };
 
   return (
@@ -48,7 +49,7 @@ export default function Modal({
       />
       <div
         className={cn(
-          'relative w-full bg-white rounded-xl border border-neutral-200 shadow-xl overflow-hidden',
+          'relative w-full max-h-[calc(100vh-4rem)] overflow-y-auto bg-white rounded-xl border border-neutral-200 shadow-xl',
           sizeClasses[size],
           className
         )}

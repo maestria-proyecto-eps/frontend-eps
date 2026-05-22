@@ -27,6 +27,8 @@ import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 import DoctorSchedule from "./pages/hr/DoctorSchedule";
 import Profile from "./pages/patient/Profile";
+import Triages from "./pages/nurse/Triages";
+import TriageForm from "./pages/nurse/TriageForm";
 
 export default function App() {
   return (
@@ -109,7 +111,8 @@ export default function App() {
           >
             <Route index element={<Maintenance />} />
             <Route path="urgencias" element={<Maintenance />} />
-            <Route path="triage" element={<Maintenance />} />
+            <Route path="triage" element={<Triages />} />
+            <Route path="triage/new" element={<TriageForm />} />
             <Route path="hospitalizaciones" element={<Maintenance />} />
           </Route>
 
