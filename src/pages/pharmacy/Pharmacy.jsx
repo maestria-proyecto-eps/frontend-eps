@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { http } from '../../services/api/http';
 import { endpoints } from '../../services/api/endpoints';
 import { Spinner, Badge } from '../../components/ui';
@@ -85,13 +85,13 @@ export default function Pharmacy() {
   // ── Alerts ───────────────────────────────────────
   const [alert, setAlert] = useState(null);
 
-  const showAlert = (type, message) => {
+ const showAlert = useCallback((type, message) => {
     setAlert({ type, message });
     setTimeout(() => setAlert(null), 4500);
-  };
+  }, []); // <--- Al poner [] vacío, esta función ya no cambiará nunca
 
   // ── Medications API ──────────────────────────────
-  const loadMedications = async (p = 1) => {
+ const loadMedications = useCallback(async (p = 1) => {
     setLoadingMeds(true);
     try {
       const { data } = await http.get(endpoints.pharmacy.listMedications, {
@@ -105,9 +105,11 @@ export default function Pharmacy() {
     } finally {
       setLoadingMeds(false);
     }
-  };
+  }, [showAlert]);
 
-  useEffect(() => { loadMedications(1); }, []);
+useEffect(() => {
+  loadMedications(1);
+}, [loadMedications]);
 
   const handleCreateMed = async () => {
     if (!medForm.codigo || !medForm.nombre_medicamento || !medForm.reg_invima || !medForm.principio_activo || !medForm.presentacion) {
@@ -181,7 +183,7 @@ export default function Pharmacy() {
   };
 
   // ── Inventory API ────────────────────────────────
-  const loadInventory = async (codigo, p = 1) => {
+  const loadInventory = useCallback(async (codigo, p = 1) => {
     setLoadingInv(true);
     try {
       const { data } = await http.get(endpoints.pharmacy.getInventory(codigo), {
@@ -195,7 +197,7 @@ export default function Pharmacy() {
     } finally {
       setLoadingInv(false);
     }
-  };
+  }, [showAlert]); // <--- Solo agrega esto al final
 
   const openInventory = (med) => {
     setSelectedMed(med);
