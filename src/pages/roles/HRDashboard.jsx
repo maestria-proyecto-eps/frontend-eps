@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const HRDashboard = ({ user }) => {
+const HRDashboard = () => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,34 +64,24 @@ const HRDashboard = ({ user }) => {
           <p className="text-sm text-gray-500 animate-pulse py-8 text-center">Calculando métricas de asistencia...</p>
         ) : (
           <div className="space-y-6">
-            {/* Contenedor de la gráfica */}
             <div className="h-64 flex items-end justify-between gap-2 sm:gap-4 pt-6 px-2 border-b border-gray-200 relative">
-              
-              {/* Líneas de guía horizontales de fondo */}
               <div className="absolute left-0 right-0 top-1/4 border-t border-gray-100 pointer-events-none"></div>
               <div className="absolute left-0 right-0 top-2/4 border-t border-gray-100 pointer-events-none"></div>
               <div className="absolute left-0 right-0 top-3/4 border-t border-gray-100 pointer-events-none"></div>
 
               {chartData.map((data, index) => {
-                // Cálculo porcentual exacto de la altura de la columna
                 const barHeightPercent = (data.citas / maxCitas) * 100;
-                
                 return (
                   <div key={index} className="flex flex-col items-center flex-1 group relative z-10">
-                    {/* Tooltip con el número de citas flotante al pasar el mouse */}
                     <span className="mb-2 bg-gray-800 text-white text-xs px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition absolute -top-6 font-semibold">
                       {data.citas} citas
                     </span>
-                    
-                    {/* Barra Animada de Tailwind */}
                     <div 
                       style={{ height: `${Math.max(barHeightPercent, 10)}%` }}
                       className="w-full bg-gradient-to-t from-purple-600 to-indigo-500 rounded-t-md hover:from-purple-700 hover:to-indigo-600 transition-all duration-500 flex items-end justify-center pb-2 shadow-sm"
                     >
                       <span className="text-white text-xs font-bold hidden sm:inline">{data.citas}</span>
                     </div>
-
-                    {/* Header de la columna: Día de la semana y día del mes */}
                     <span className="text-[10px] sm:text-xs font-medium text-gray-500 mt-2 text-center block rotate-12 sm:rotate-0 whitespace-nowrap">
                       {data.headerLabel}
                     </span>
@@ -103,12 +93,10 @@ const HRDashboard = ({ user }) => {
         )}
       </section>
 
-      {/* Criterio de Aceptación: Navegación Rápida Quirúrgica */}
+      {/* Navegación Rápida */}
       <section className="space-y-3">
         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Navegación Rápida</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          
-          {/* CONTROL DE USUARIOS Y PERSONAL */}
           <Link to="/hr/usuarios" className="p-5 bg-white rounded-lg shadow border hover:border-purple-400 transition flex items-center space-x-4">
             <span className="text-3xl">👥</span>
             <div>
@@ -116,8 +104,6 @@ const HRDashboard = ({ user }) => {
               <span className="text-xs text-gray-400">Administrar cuentas, credenciales y perfiles</span>
             </div>
           </Link>
-
-          {/* GESTIÓN DE MÉDICOS Y HORARIOS */}
           <Link to="/hr/doctors" className="p-5 bg-white rounded-lg shadow border hover:border-purple-400 transition flex items-center space-x-4">
             <span className="text-3xl">📅</span>
             <div>
@@ -125,7 +111,6 @@ const HRDashboard = ({ user }) => {
               <span className="text-xs text-gray-400">Asignar turnos, agendas y agendas de especialistas</span>
             </div>
           </Link>
-
         </div>
       </section>
     </div>
