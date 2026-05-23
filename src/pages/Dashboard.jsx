@@ -13,31 +13,35 @@ const Dashboard = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user'));
-    const path = window.location.pathname.toLowerCase();
-    
-    // Fuerza la detección del rol basándose exclusivamente en la URL del navegador
-    let roleDetected = "";
-    if (path.includes('/hr')) roleDetected = "hr";
-    else if (path.includes('/doctor')) roleDetected = "doctor";
-    // Corregimos la coincidencia para que sea específica al subpath del dashboard en farmacia
-    else if (path.includes('/pharmacist/dashboard')) roleDetected = "pharmacist";
-    else if (path.includes('/nurse')) roleDetected = "nurse";
-    else if (path.includes('/patient')) roleDetected = "patient";
+    const syncDashboardState = () => {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const path = window.location.pathname.toLowerCase();
+      
+      // Detección de rol por URL
+      let roleDetected = "";
+      if (path.includes('/hr')) roleDetected = "hr";
+      else if (path.includes('/doctor')) roleDetected = "doctor";
+      else if (path.includes('/pharmacist/dashboard')) roleDetected = "pharmacist";
+      else if (path.includes('/nurse')) roleDetected = "nurse";
+      else if (path.includes('/patient')) roleDetected = "patient";
 
-    // Si no lo detecta por URL (o si es la raíz /pharmacist), recurre al localStorage como plan de respaldo seguro
-    if (!roleDetected && storedUser?.role) {
-      const r = storedUser.role.toLowerCase();
-      if (r.includes('talento') || r.includes('recursos')) roleDetected = "hr";
-      else if (r.includes('médico') || r.includes('doctor')) roleDetected = "doctor";
-      else if (r.includes('farmaceuta') || r.includes('boticario')) roleDetected = "pharmacist";
-      else if (r.includes('enfermer')) roleDetected = "nurse";
-      else roleDetected = "patient";
-    }
+      // Respaldo por localStorage
+      if (!roleDetected && storedUser?.role) {
+        const r = storedUser.role.toLowerCase();
+        if (r.includes('talento') || r.includes('recursos')) roleDetected = "hr";
+        else if (r.includes('médico') || r.includes('doctor')) roleDetected = "doctor";
+        else if (r.includes('farmaceuta') || r.includes('boticario')) roleDetected = "pharmacist";
+        else if (r.includes('enfermer')) roleDetected = "nurse";
+        else roleDetected = "patient";
+      }
 
-    setActiveRole(roleDetected);
-    setUser(storedUser || { name: "Personal EPS" });
-    setLoading(false);
+      // Actualización en lote (batch update) para satisfacer al linter
+      setActiveRole(roleDetected);
+      setUser(storedUser || { name: "Personal EPS" });
+      setLoading(false);
+    };
+
+    syncDashboardState();
   }, [location]);
 
   if (loading) return <div className="p-6 text-center text-gray-500">Cargando módulo de atención...</div>;
@@ -46,13 +50,12 @@ const Dashboard = () => {
   const isPharmacyCatalog = window.location.pathname.toLowerCase() === '/pharmacist' || window.location.pathname.toLowerCase() === '/pharmacist/farmacia';
 
   if (isPharmacyCatalog) {
-    return null; // Deja que App.jsx renderice el catálogo <Pharmacy /> libremente sin estorbar
+    return null;
   }
 
-  // Renderizado directo basado en la bandera limpia de la URL
   return (
     <div className="w-full h-full">
-      {activeRole === "hr" && <HRDashboard user={user} />}
+      {activeRole === "hr" && <HRDashboard />}
       {activeRole === "doctor" && <DoctorDashboard user={user} />}
       {activeRole === "pharmacist" && <PharmacistDashboard user={user} />}
       {activeRole === "nurse" && <NurseDashboard user={user} />}
