@@ -14,11 +14,7 @@ import DoctorLayout from "./pages/doctor/DoctorLayout";
 import DoctorAppointments from "./pages/doctor/Appointments";
 import ConsultationForm from "./pages/doctor/ConsultationForm";
 import DoctorPrescriptions from "./pages/doctor/Prescriptions";
-import DoctorLayout from "./pages/doctor/DoctorLayout"
-import DoctorAppointments from "./pages/doctor/Appointments"
-import ConsultationForm from "./pages/doctor/ConsultationForm"
-import DoctorPrescriptions from "./pages/doctor/Prescriptions"
-import DoctorUrgency from "./pages/doctor/Urgency"
+import DoctorUrgency from "./pages/doctor/Urgency";
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
