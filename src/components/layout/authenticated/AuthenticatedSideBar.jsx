@@ -55,7 +55,8 @@ const MENUS = {
     { label: 'Doctores y especialidades',  path: '/hr/doctors', icon: Icon.doctor },
   ],
   "Farmaceuta": [
-    { label: 'Farmacia', path: '/pharmacist', icon: Icon.inventory, end: true },
+    { label: 'Dashboard', path: '/pharmacist/dashboard', icon: Icon.dashboard, end: true },
+    { label: 'Farmacia',  path: '/pharmacist',           icon: Icon.inventory },
   ],
   "Recepcionista": [
     { label: 'Dashboard',  path: '/receptionist',            icon: Icon.dashboard   , end: true },
@@ -77,7 +78,6 @@ export default function AuthenticatedSideBar({ className = '' }) {
     items.forEach((item) => {
       if (seenPaths.has(item.path)) return;
       seenPaths.add(item.path);
-      // Guardamos la "fuente" del item para poder agruparlo por módulos.
       menu.push({ ...item, _role: r });
     });
   });
@@ -133,11 +133,9 @@ export default function AuthenticatedSideBar({ className = '' }) {
           const moduleMap = new Map();
 
           const getModuleName = (item) => {
-            // Talento Humano -> módulo único "Talento Humano" con submenú Usuarios.
             if (item._role === 'Talento Humano') {
               return 'Talento Humano';
             }
-            // Por defecto: agrupamos por el rol origen.
             return item._role ?? 'Módulos';
           };
 
@@ -162,8 +160,6 @@ export default function AuthenticatedSideBar({ className = '' }) {
                 <ul className="space-y-1 px-2">
                   {items.map((item) => (
                     <li key={item.path}>
-                      {(() => {
-                        return (
                       <NavLink
                         to={item.path}
                         end={!!item.end}
@@ -181,8 +177,6 @@ export default function AuthenticatedSideBar({ className = '' }) {
                         <SvgIcon d={item.icon} className="shrink-0" />
                         {!collapsed && <span className="truncate">{item.label}</span>}
                       </NavLink>
-                        );
-                      })()}
                     </li>
                   ))}
                 </ul>
