@@ -14,6 +14,11 @@ import DoctorLayout from "./pages/doctor/DoctorLayout";
 import DoctorAppointments from "./pages/doctor/Appointments";
 import ConsultationForm from "./pages/doctor/ConsultationForm";
 import DoctorPrescriptions from "./pages/doctor/Prescriptions";
+import DoctorLayout from "./pages/doctor/DoctorLayout"
+import DoctorAppointments from "./pages/doctor/Appointments"
+import ConsultationForm from "./pages/doctor/ConsultationForm"
+import DoctorPrescriptions from "./pages/doctor/Prescriptions"
+import DoctorUrgency from "./pages/doctor/Urgency"
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
@@ -57,6 +62,7 @@ export default function App() {
             <Route path="citas" element={<DoctorAppointments />} />
             <Route path="prescriptions" element={<DoctorPrescriptions />} />
             <Route path="consultation/new" element={<ConsultationForm />} />
+            <Route path="urgencia" element={<DoctorUrgency />} />
             <Route path="remisiones" element={<Maintenance />} />
             <Route path="historial" element={<Maintenance />} />
           </Route>

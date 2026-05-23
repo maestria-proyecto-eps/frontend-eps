@@ -16,11 +16,11 @@ export const endpoints = {
   users: {
     doctorExample: "/api/users/doctor/example",
     /** GET lista paginada: ?pag=1&cantidad=30 */
-    list: "/api/users",
+    list: "/api/users/",
     /** GET usuario por ID */
     getById: (id) => `/api/users/${id}`,
     /** POST crear usuario */
-    create: "/api/users",
+    create: "/api/users/",
     /** PUT actualizar usuario (id numérico) */
     updateById: (id) => `/api/users/${id}`,
     /** PUT cambiar estado (activar/desactivar) */
@@ -95,7 +95,12 @@ export const endpoints = {
 
   // ── Emergency Service ─────────────────────────────
   emergency: {
-    // list: "/api/emergency/",
+    triages: "/api/triages",
+    firstUrgentTriage: "/api/triages/urgencia/first",
+    attendTriage: (idTriage) => `/api/triages/atender/${idTriage}`,
+    urgencies: "/api/atencion_urgencias",
+    hospitalization: "/api/hospitalizacion/",
+    hospitalizationAdmission: "/api/hospitalizacion/admision",
   },
 
   // ── Pharmacy Service ──────────────────────────────
@@ -122,6 +127,8 @@ export const endpoints = {
     getDoctorPrescriptions: "/api/prescriptions/doctors/me",
     /** GET prescripciones del paciente autenticado: ?pag=1&cantidad=10 */
     getPatientPrescriptions: "/api/prescriptions/patients/me",
+    /** POST crear prescripción para una atención */
+    createPrescription: "/api/prescriptions/",
   },
 
   // ── Diagnósticos Service ──────────────────────────
@@ -145,7 +152,7 @@ export const endpoints = {
   // ── Referrals Service ──────────────────────────────
   referrals: {
     /** GET remisiones con filtros opcionales: ?id_paciente=&id_especialidad=&vigente= */
-    list: "/api/referrals",
+    list: "/api/referrals/",
     /** POST crear remisión para una cita */
     create: (appointmentId) => `/api/appoinment/${appointmentId}/remision`,
   },
