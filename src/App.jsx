@@ -28,6 +28,8 @@ import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout";
 import DoctorSchedule from "./pages/hr/DoctorSchedule";
 import Profile from "./pages/patient/Profile";
+import Triages from "./pages/nurse/Triages";
+import TriageForm from "./pages/nurse/TriageForm";
 
 // Importamos el Dashboard del Sprint
 import Dashboard from "./pages/Dashboard";
@@ -116,7 +118,8 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="urgencias" element={<Maintenance />} />
-            <Route path="triage" element={<Maintenance />} />
+            <Route path="triage" element={<Triages />} />
+            <Route path="triage/new" element={<TriageForm />} />
             <Route path="hospitalizaciones" element={<Maintenance />} />
           </Route>
 

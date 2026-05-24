@@ -330,7 +330,7 @@ export default function DataTable({
     : renderRowActions;
 
   const showActionsColumn = !!defaultRowActions;
-
+  
   return (
     <div className="space-y-4">
       {feedback && (
@@ -436,7 +436,7 @@ export default function DataTable({
                   </th>
                 ))}
                 {showActionsColumn && (
-                  <th className="text-right text-sm font-semibold text-neutral-700 px-4 py-3 w-32">
+                  <th className="text-center text-sm font-semibold text-neutral-700 px-4 py-3 w-32">
                     Acciones
                   </th>
                 )}

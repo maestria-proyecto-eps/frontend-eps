@@ -95,7 +95,10 @@ export const endpoints = {
 
   // ── Emergency Service ─────────────────────────────
   emergency: {
+    /** GET lista de triages id_paciente, nivel, estado, fecha_inicio, fecha_fin, riesgo_vital */
     triages: "/api/triages",
+    /** POST crear triage */
+    createTriage: "/api/triages",
     firstUrgentTriage: "/api/triages/urgencia/first",
     attendTriage: (idTriage) => `/api/triages/atender/${idTriage}`,
     urgencies: "/api/atencion_urgencias",

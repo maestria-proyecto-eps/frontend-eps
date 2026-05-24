@@ -8,6 +8,8 @@ const lightVariants = {
   warning: 'bg-accent-100 text-black',
   error: 'bg-emergency-100 text-black',
   neutral: 'bg-neutral-100 text-black',
+  yellow: 'bg-amber-100 text-black',
+  blue: 'bg-blue-100 text-black',
 };
 
 const darkVariants = {
@@ -17,6 +19,8 @@ const darkVariants = {
   warning: 'bg-accent-800 text-white',
   error: 'bg-emergency-700 text-white',
   neutral: 'bg-neutral-700 text-white',
+  yellow: 'bg-amber-700 text-white',
+  blue: 'bg-blue-700 text-white',
 };
 
 const sizes = {
