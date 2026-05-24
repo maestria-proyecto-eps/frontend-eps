@@ -92,7 +92,35 @@ export const endpoints = {
     /** GET contexto de consulta para una cita (nombre paciente, especialidad) */
     consultationContext: (id) => `/api/appoinment/${id}/consultation-context`,
   },
+// ── Hospitalizations Service ───────────────────────
+  hospitalizations: {
+    /** GET lista de hospitalizaciones */
+    list: "/api/hospitalizacion",
 
+    /** PUT realizar ingreso */
+    ingreso: (id) => `/api/hospitalizacion/ingreso/${id}`,
+
+    /** PUT registrar salida */
+    salida: (id) => `/api/hospitalizacion/salida/${id}`,
+
+    /** GET ítems de prescripción por hospitalización */
+    prescriptionItems: (id) =>
+      `/api/prescriptions/items/hospitalizacion/${id}`,
+
+    /** POST crear administración de medicamentos */
+    medicationAdministration: "/api/administracion_medicamentos",
+
+    /** GET administración de medicamentos por hospitalización */
+    medicationAdministrationByHospitalization: (id) =>
+      `/api/administracion_medicamentos/${id}`,
+
+    /** POST crear atención hospitalización */
+  createAttention: "/api/hospitalizacion/atención",
+
+    /** GET atenciones por hospitalización */
+    attentionsByHospitalization: (id) =>
+      `/api/hospitalizacion/atención/${id}`,
+  },
   // ── Emergency Service ─────────────────────────────
   emergency: {
     // list: "/api/emergency/",
