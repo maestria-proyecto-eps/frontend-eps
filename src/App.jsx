@@ -30,7 +30,7 @@ import DoctorSchedule from "./pages/hr/DoctorSchedule";
 import Profile from "./pages/patient/Profile";
 import Triages from "./pages/nurse/Triages";
 import TriageForm from "./pages/nurse/TriageForm";
-
+import PerfilRoute from './feature-flags/PerfilRoute'
 // Importamos el Dashboard del Sprint
 import Dashboard from "./pages/Dashboard";
 
@@ -158,11 +158,10 @@ export default function App() {
             
             {/* Rutas duplicadas para soportar fórmulas en inglés y español */}
             <Route path="prescripciones" element={<PatientPrescriptions />} />
-            <Route path="prescriptions/my" element={<PatientPrescriptions />} />
             
             {/* Rutas duplicadas para soportar datos personales en inglés y español */}
-            <Route path="perfil" element={<Profile />} />
-            <Route path="profile" element={<Profile />} />
+            <Route path="perfil" element={<PerfilRoute />} />
+            {/* <Route path="perfil" element={<Profile />} /> */}
             
             <Route path="referrals" element={<PatientReferrals />} />
             <Route path="appointments/new" element={<Calendar />} />

@@ -9,6 +9,9 @@ import { AuthContext } from "../../services/auth/AuthContext";
 import { Button, Input, Card, Spinner } from '../../components/ui';
 import { MainLayout } from "../../components/layout";
 
+//feature flag
+import { usePostHog } from 'posthog-js/react'
+
 export default function Login() {
   const nav = useNavigate();
   const auth = useContext(AuthContext);
@@ -34,6 +37,10 @@ export default function Login() {
         setMsg(data.Message);
         return;
       }
+
+      // set id to feature flag
+      posthog.reset()
+      posthog.identify(num_documento)
 
       auth.login(data.Data.access_token);
       nav("/bridge");
