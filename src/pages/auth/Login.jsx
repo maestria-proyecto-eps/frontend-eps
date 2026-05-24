@@ -15,6 +15,7 @@ import { usePostHog } from 'posthog-js/react'
 export default function Login() {
   const nav = useNavigate();
   const auth = useContext(AuthContext);
+  const posthog = usePostHog()
 
   const [num_documento, setUser] = useState("");
   const [password, setPass] = useState("");
@@ -40,12 +41,15 @@ export default function Login() {
 
       // set id to feature flag
       posthog.reset()
-      posthog.identify(num_documento)
-
+      console.log(num_documento)
+      posthog.identify(num_documento, {
+        num_documento: num_documento
+      })
       auth.login(data.Data.access_token);
       nav("/bridge");
 
-    } catch {
+    } catch (err){
+      console.error("Error capturado:", err) 
       setMsg("Error de conexión. Intente nuevamente.");
     } finally {
       setLoading(false);
