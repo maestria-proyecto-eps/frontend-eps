@@ -13,6 +13,8 @@ export default function Modal({
   footer,
   size = 'md',
   closeOnOverlayClick = true,
+  showCloseButton = true,
+  scrollable = false,
   className = '',
 }) {
   useEffect(() => {
@@ -49,7 +51,8 @@ export default function Modal({
       />
       <div
         className={cn(
-          'relative w-full max-h-[calc(100vh-4rem)] overflow-y-auto bg-white rounded-xl border border-neutral-200 shadow-xl',
+          'relative w-full bg-white rounded-xl border border-neutral-200 shadow-xl overflow-hidden',
+          scrollable && 'max-h-[90vh] flex flex-col',
           sizeClasses[size],
           className
         )}
@@ -60,17 +63,19 @@ export default function Modal({
             <h2 id="modal-title" className="text-lg font-semibold text-neutral-800">
               {title}
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              aria-label="Cerrar"
-            >
-              <span className="text-xl leading-none">×</span>
-            </button>
+            {showCloseButton && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="Cerrar"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+            )}
           </div>
         )}
-        <div className="px-6 py-4">{children}</div>
+        <div className={cn('px-6 py-4', scrollable && 'overflow-y-auto')}>{children}</div>
         {footer != null && (
           <div className="border-t border-neutral-200 px-6 py-4 bg-neutral-50 flex justify-end gap-2">
             {footer}

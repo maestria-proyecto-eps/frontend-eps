@@ -8,12 +8,13 @@ import Home from "./pages/Home";
 import Components from "./pages/Components";
 import ComponentsOld from "./pages/ComponentsOld";
 import Usuarios from "./pages/Usuarios/usuarios";
-import DoctorExample from "./pages/doctor/DoctorExample"
+import DoctorExample from "./pages/doctor/DoctorExample";
 import DoctorManager from "./pages/Usuarios/DoctorManager";
-import DoctorLayout from "./pages/doctor/DoctorLayout"
-import DoctorAppointments from "./pages/doctor/Appointments"
-import ConsultationForm from "./pages/doctor/ConsultationForm"
-import DoctorPrescriptions from "./pages/doctor/Prescriptions"
+import DoctorLayout from "./pages/doctor/DoctorLayout";
+import DoctorAppointments from "./pages/doctor/Appointments";
+import ConsultationForm from "./pages/doctor/ConsultationForm";
+import DoctorPrescriptions from "./pages/doctor/Prescriptions";
+import DoctorUrgency from "./pages/doctor/Urgency";
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
@@ -24,11 +25,14 @@ import Bridge from "./pages/Bridge";
 import Maintenance from "./pages/Maintenance";
 import Pharmacy from "./pages/pharmacy/Pharmacy";
 import { ROUTES } from "./constants";
-import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
+import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout";
 import DoctorSchedule from "./pages/hr/DoctorSchedule";
 import Profile from "./pages/patient/Profile";
 import Triages from "./pages/nurse/Triages";
 import TriageForm from "./pages/nurse/TriageForm";
+
+// Importamos el Dashboard del Sprint
+import Dashboard from "./pages/Dashboard";
 
 export default function App() {
   return (
@@ -42,7 +46,7 @@ export default function App() {
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
 
-          {/* DOCTOR ROLE EXAMPLE */}
+          {/* DOCTOR ROLE */}
           <Route
             path="/doctor"
             element={
@@ -51,16 +55,17 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Maintenance />} />
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="citas" element={<DoctorAppointments />} />
             <Route path="prescriptions" element={<DoctorPrescriptions />} />
             <Route path="consultation/new" element={<ConsultationForm />} />
+            <Route path="urgencia" element={<DoctorUrgency />} />
             <Route path="remisiones" element={<Maintenance />} />
             <Route path="historial" element={<Maintenance />} />
           </Route>
 
-          {/* Rutas protegidas, requiere autenticación */}
-
+          {/* Ruta de redirección intermedia tras login */}
           <Route
             path="/bridge"
             element={
@@ -69,7 +74,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Bridge />} />
+            <Route index element={<Dashboard />} />
           </Route>
           
           {/* Recepcionista */}
@@ -94,7 +99,8 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Usuarios />} />
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="doctors" element={<DoctorManager />} />
             <Route path="doctors/:idDoctor/schedule" element={<DoctorSchedule />} />
@@ -104,19 +110,20 @@ export default function App() {
           <Route
             path="/nurse"
             element={
-              <ProtectedRoute allowRoles={["Enfermero"]}>
+              <ProtectedRoute allowRoles={["Enfermero", "Enfermera"]}>
                 <AuthenticatedLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<Maintenance />} />
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="urgencias" element={<Maintenance />} />
             <Route path="triage" element={<Triages />} />
             <Route path="triage/new" element={<TriageForm />} />
             <Route path="hospitalizaciones" element={<Maintenance />} />
           </Route>
 
-          {/* Farmaceuta */}
+          {/* Farmaceuta - SECCIÓN ACTUALIZADA SOLO PARA HABILITAR EL DASHBOARD */}
           <Route
             path="/pharmacist"
             element={
@@ -126,9 +133,12 @@ export default function App() {
             }
           >
             <Route index element={<Pharmacy />} />
+            <Route path="farmacia" element={<Pharmacy />} />
+            {/* Habilitamos el subpath de manera explícita para que la URL /pharmacist/dashboard funcione */}
+            <Route path="dashboard" element={<Dashboard />} />
           </Route>
 
-          {/* Paciente */}
+          {/* PACIENTE */}
           <Route
             path="/patient"
             element={
@@ -137,13 +147,24 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Maintenance />} />
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="citas" element={<PatientAppointments />} />
+            
+            {/* Rutas duplicadas para soportar historial en inglés y español */}
             <Route path="historia" element={<MedicalHistory />} />
             <Route path="medical-history" element={<MedicalHistory />} />
+            <Route path="appointments/history" element={<MedicalHistory />} />
+            
+            {/* Rutas duplicadas para soportar fórmulas en inglés y español */}
             <Route path="prescripciones" element={<PatientPrescriptions />} />
-            <Route path="referrals" element={<PatientReferrals />} />
+            <Route path="prescriptions/my" element={<PatientPrescriptions />} />
+            
+            {/* Rutas duplicadas para soportar datos personales en inglés y español */}
             <Route path="perfil" element={<Profile />} />
+            <Route path="profile" element={<Profile />} />
+            
+            <Route path="referrals" element={<PatientReferrals />} />
             <Route path="appointments/new" element={<Calendar />} />
           </Route>
 

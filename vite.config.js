@@ -19,6 +19,8 @@ export default defineConfig({
       '/api/appointments':    'https://backend-eps-appointments-service.onrender.com',
       '/api/emergency':       'https://backend-eps-emergency-service-xqll.onrender.com',
       '/api/triages':         'https://backend-eps-emergency-service-xqll.onrender.com',
+      '/api/atencion_urgencias': 'https://backend-eps-emergency-service-xqll.onrender.com',
+      '/api/hospitalizacion': 'https://backend-eps-emergency-service-xqll.onrender.com',
       '/api/pharmacy':        'https://backend-eps-pharmacy-service.onrender.com',
       '/api/medical-records': 'https://backend-eps-medical-records-service.onrender.com',
       '/api/referrals':       'https://backend-eps-medical-records-service.onrender.com',

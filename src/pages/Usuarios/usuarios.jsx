@@ -3,6 +3,7 @@ import { PageContainer } from '../../components/layout';
 import { DataTable, Badge, Input, Button } from '../../components/ui';
 import { http } from '../../services/api/http';
 import { endpoints } from '../../services/api/endpoints';
+import { AuthContext } from '../../services/auth/AuthContext';
 
 // Roles quemados según los que aparecen en la respuesta del API
 const ROLES_OPCIONES = [
@@ -54,6 +55,7 @@ const FORM_CONFIG_USUARIOS = {
 };
 
 export default function Usuarios() {
+  const auth = React.useContext(AuthContext);
   const [usuarios, setUsuarios] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState({});
@@ -61,6 +63,11 @@ export default function Usuarios() {
   const [pageSize, setPageSize] = React.useState(10);
   const [total, setTotal] = React.useState(0);
   const [docInput, setDocInput] = React.useState('');
+
+  const authHeaders = React.useMemo(() => {
+    const token = String(auth?.token || '').replace(/^Bearer\s+/i, '').trim();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, [auth?.token]);
 
   // Mantiene el input "Documento" sincronizado solo cuando el valor se aplica a filtros
   useEffect(() => {
@@ -107,6 +114,7 @@ export default function Usuarios() {
 
       const { data: res } = await http.get(endpoints.users.list, {
         params,
+        headers: authHeaders,
       });
       if (res.hasError || !res.data) {
         setUsuarios([]);
@@ -135,7 +143,7 @@ export default function Usuarios() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters]);
+  }, [page, pageSize, filters, authHeaders]);
 
   useEffect(() => {
     fetchUsers();
@@ -159,14 +167,14 @@ export default function Usuarios() {
       num_documento: numDocumento,
       nombres: String(newRow.nombres ?? '').trim(),
       apellidos: String(newRow.apellidos ?? '').trim(),
-    });
+    }, { headers: authHeaders });
 
     // 2) Crear usuario
     await http.post(endpoints.users.create, {
       num_documento: numDocumento,
       password: newRow.password,
       id_rol: Number(newRow.id_rol),
-    });
+    }, { headers: authHeaders });
     await fetchUsers();
   };
 
@@ -178,23 +186,23 @@ export default function Usuarios() {
       nombres: String(updatedRow.nombres ?? '').trim(),
       // Si el backend requiere ambos campos, mandamos apellidos (sin permitir edición en UI).
       apellidos: String(updatedRow.apellidos ?? '').trim(),
-    });
+    }, { headers: authHeaders });
 
     // 2) Actualizar rol en /api/users/{id}
     await http.put(endpoints.users.updateById(id), {
       id_rol: Number(updatedRow.id_rol),
-    });
+    }, { headers: authHeaders });
 
     await fetchUsers();
   };
 
   const handleDeactivate = async (id) => {
-    await http.put(endpoints.users.changeStatus(id), { estado: 0 });
+    await http.put(endpoints.users.changeStatus(id), { estado: 0 }, { headers: authHeaders });
     await fetchUsers();
   };
 
   const handleActivate = async (id) => {
-    await http.put(endpoints.users.changeStatus(id), { estado: 1 });
+    await http.put(endpoints.users.changeStatus(id), { estado: 1 }, { headers: authHeaders });
     await fetchUsers();
   };
 

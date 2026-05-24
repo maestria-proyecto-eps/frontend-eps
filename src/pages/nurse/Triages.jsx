@@ -140,7 +140,7 @@ export default function Triages() {
         if (currentFilters.riesgo_vital) params.riesgo_vital = currentFilters.riesgo_vital;
         if (currentFilters.fecha) params.fecha = currentFilters.fecha;
 
-        const { data } = await http.get(endpoints.emergency.listTriages, { params });
+        const { data } = await http.get(endpoints.emergency.triages, { params });
         const normalized = normalizeTriagesResponse(data, targetPageSize);
         setTriages(normalized.rows);
         setPage(normalized.page);
@@ -166,7 +166,7 @@ export default function Triages() {
         if (currentFilters.riesgo_vital) params.riesgo_vital = currentFilters.riesgo_vital;
         if (currentFilters.fecha) params.fecha = currentFilters.fecha;
 
-        const { data } = await http.get(endpoints.emergency.listTriages, { params });
+        const { data } = await http.get(endpoints.emergency.triages, { params });
         const normalized = normalizeTriagesResponse(data, 1);
         if (normalized.total > 0) {
           setTotal(normalized.total);
@@ -300,6 +300,7 @@ export default function Triages() {
         onClose={() => setSelectedTriage(null)}
         title={`Detalle del triage #${selectedTriage?.id_triage ?? selectedTriage?.id ?? '—'}`}
         size="xl"
+        scrollable
       >
         {selectedTriage ? (
           <div className="space-y-4">
