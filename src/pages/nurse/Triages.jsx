@@ -23,14 +23,6 @@ const RIESGO_VITAL_OPTIONS = [
   { value: 'false', label: 'No' },
 ];
 
-function getPatientLabel(row) {
-  const firstName = row?.paciente?.nombre ?? row?.nombre_paciente ?? row?.nombre ?? row?.primer_nombre;
-  const lastName = row?.paciente?.apellido ?? row?.apellido_paciente ?? row?.apellido ?? row?.apellidos;
-  const documentNumber = row?.paciente?.documento ?? row?.id_paciente ?? row?.numero_documento ?? row?.documento;
-  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
-  return fullName || documentNumber || `Paciente ${row?.id_triage ?? row?.id ?? '—'}`;
-}
-
 function getPatientDocument(row) {
   return row?.paciente?.documento ?? row?.id_paciente ?? row?.numero_documento ?? row?.documento ?? '—';
 }
@@ -182,7 +174,7 @@ export default function Triages() {
     setPage(1);
     loadTriagesTotal(filters);
     loadTriages(1, pageSize, filters);
-  }, [filters]);
+  }, [filters, loadTriages, loadTriagesTotal, pageSize]);
 
   const handleFiltersChange = useCallback((nextFilters) => {
     setPage(1);
