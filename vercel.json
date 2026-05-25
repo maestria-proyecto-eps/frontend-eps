@@ -61,6 +61,30 @@
       "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/emergency/:path*"
     },
     {
+      "source": "/api/triages",
+      "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/triages"
+    },
+    {
+      "source": "/api/triages/:path*",
+      "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/triages/:path*"
+    },
+    {
+      "source": "/api/atencion_urgencias",
+      "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/atencion_urgencias"
+    },
+    {
+      "source": "/api/atencion_urgencias/:path*",
+      "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/atencion_urgencias/:path*"
+    },
+    {
+      "source": "/api/hospitalizacion",
+      "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/hospitalizacion/"
+    },
+    {
+      "source": "/api/hospitalizacion/:path*",
+      "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/hospitalizacion/:path*"
+    },
+    {
       "source": "/api/pharmacy/:path*",
       "destination": "https://backend-eps-pharmacy-service.onrender.com/api/pharmacy/:path*"
     },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { http } from '../../services/api/http';
 import { endpoints } from '../../services/api/endpoints';
 import { Spinner, Badge } from '../../components/ui';
@@ -8,7 +8,7 @@ const LIMIT = 10;
 const EMPTY_MED = { codigo: '', nombre_medicamento: '', reg_invima: '', principio_activo: '', presentacion: '' };
 const EMPTY_INV = { lote: '', cantidad: '', fecha_vencimiento: '', precio: '' };
 
-function Alert({ alert }) {
+function Alert({ alert, className = "" }) { // Añadimos className opcional
   if (!alert) return null;
   const colors = {
     success: 'bg-emerald-50 border-emerald-400 text-emerald-800',
@@ -16,7 +16,7 @@ function Alert({ alert }) {
     warning: 'bg-amber-50 border-amber-400 text-amber-800',
   };
   return (
-    <div className={`border-l-4 rounded-lg px-4 py-3 mb-4 text-sm font-medium ${colors[alert.type]}`}>
+    <div className={`border-l-4 rounded-lg px-4 py-3 text-sm font-medium ${colors[alert.type]} ${className}`}>
       {alert.message}
     </div>
   );
@@ -85,13 +85,13 @@ export default function Pharmacy() {
   // ── Alerts ───────────────────────────────────────
   const [alert, setAlert] = useState(null);
 
-  const showAlert = (type, message) => {
+ const showAlert = useCallback((type, message) => {
     setAlert({ type, message });
     setTimeout(() => setAlert(null), 4500);
-  };
+  }, []); // <--- Al poner [] vacío, esta función ya no cambiará nunca
 
   // ── Medications API ──────────────────────────────
-  const loadMedications = async (p = 1) => {
+ const loadMedications = useCallback(async (p = 1) => {
     setLoadingMeds(true);
     try {
       const { data } = await http.get(endpoints.pharmacy.listMedications, {
@@ -105,10 +105,11 @@ export default function Pharmacy() {
     } finally {
       setLoadingMeds(false);
     }
-  };
+  }, [showAlert]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadMedications(1); }, []);
+useEffect(() => {
+  loadMedications(1);
+}, [loadMedications]);
 
   const handleCreateMed = async () => {
     if (!medForm.codigo || !medForm.nombre_medicamento || !medForm.reg_invima || !medForm.principio_activo || !medForm.presentacion) {
@@ -182,7 +183,7 @@ export default function Pharmacy() {
   };
 
   // ── Inventory API ────────────────────────────────
-  const loadInventory = async (codigo, p = 1) => {
+  const loadInventory = useCallback(async (codigo, p = 1) => {
     setLoadingInv(true);
     try {
       const { data } = await http.get(endpoints.pharmacy.getInventory(codigo), {
@@ -196,7 +197,7 @@ export default function Pharmacy() {
     } finally {
       setLoadingInv(false);
     }
-  };
+  }, [showAlert]); // <--- Solo agrega esto al final
 
   const openInventory = (med) => {
     setSelectedMed(med);
@@ -356,7 +357,13 @@ export default function Pharmacy() {
   // ── Render ───────────────────────────────────────
   return (
     <div className="p-6 space-y-4">
-      <Alert alert={alert} />
+      
+      {/* 
+          CAMBIO CLAVE: 
+          Si 'modal' tiene algún valor (es decir, está abierto), 
+          NO renderices la alerta de la página principal.
+      */}
+      {!modal && alert && <Alert alert={alert} />}
 
       {/* ── VIEW: MEDICATIONS LIST ─────────────────── */}
       {view === 'medications' && (
@@ -538,20 +545,21 @@ export default function Pharmacy() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right space-x-3">
-                          <button
-                            onClick={() => openEditInv(inv)}
-                            className="text-slate-500 hover:text-primary-600 font-medium text-xs transition-colors"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => openDispense(inv)}
-                            disabled={inv.cantidad === 0 || expired}
-                            className="text-primary-600 hover:text-primary-800 font-medium text-xs disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          >
-                            Dispensar
-                          </button>
-                        </td>
+  <button
+    onClick={() => openEditInv(inv)}
+    disabled={expired} // - Bloquea la edición si el lote está vencido
+    className="text-slate-500 hover:text-primary-600 font-medium text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+  >
+    Editar
+  </button>
+  <button
+    onClick={() => openDispense(inv)}
+    disabled={inv.cantidad === 0 || expired}
+    className="text-primary-600 hover:text-primary-800 font-medium text-xs disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+  >
+    Dispensar
+  </button>
+</td>
                       </tr>
                     );
                   })}
@@ -636,9 +644,13 @@ export default function Pharmacy() {
         </div>
       </Modal>
 
-      {/* ── MODAL: ADD INVENTORY BATCH ────────────── */}
+{/* ── MODAL: ADD INVENTORY BATCH ────────────── */}
       <Modal open={modal === 'createInv'} title="Agregar lote al inventario" onClose={closeModal}>
         <p className="text-xs text-slate-500 -mt-3 mb-4">{selectedMed?.nombre_medicamento}</p>
+        
+        {/* Este es el cambio clave: renderizar la alerta aquí para que esté dentro del Modal */}
+        {alert && <Alert alert={alert} className="mb-4" />}
+
         <div className="space-y-3">
           <Field label="Número de lote" placeholder="Ej: LOT-A-1234" value={invForm.lote}
             onChange={(e) => setInvForm({ ...invForm, lote: e.target.value })} />
@@ -649,7 +661,7 @@ export default function Pharmacy() {
           <Field label="Precio (COP)" type="number" placeholder="0" value={invForm.precio}
             onChange={(e) => setInvForm({ ...invForm, precio: e.target.value })} />
           <div className="flex gap-2 pt-2">
-            <button onClick={closeModal} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">
+            <button onClick={closeModal} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
               Cancelar
             </button>
             <button onClick={handleCreateInventory} disabled={formLoading}
