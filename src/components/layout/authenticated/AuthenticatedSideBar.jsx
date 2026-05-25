@@ -31,6 +31,7 @@ const MENUS = {
     { label: 'Dashboard',  path: '/doctor',             icon: Icon.dashboard  , end: true },
     { label: 'Mis Citas',  path: '/doctor/citas',       icon: Icon.calendar   },
     { label: 'Prescripciones', path: '/doctor/prescriptions', icon: Icon.pill },
+    { label: 'Hospitalizaciones', path: '/doctor/hospitalizaciones', icon: Icon.hospital },
     { label: 'Remisiones', path: '/doctor/remisiones',  icon: Icon.clipboard  },
     { label: 'Historial',  path: '/doctor/historial',   icon: Icon.history    },
   ],

@@ -14,6 +14,7 @@ import DoctorLayout from "./pages/doctor/DoctorLayout"
 import DoctorAppointments from "./pages/doctor/Appointments"
 import ConsultationForm from "./pages/doctor/ConsultationForm"
 import DoctorPrescriptions from "./pages/doctor/Prescriptions"
+import DoctorHospitalizations from "./pages/doctor/Hospitalizations";
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
@@ -27,6 +28,7 @@ import { ROUTES } from "./constants";
 import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout"
 import DoctorSchedule from "./pages/hr/DoctorSchedule";
 import Profile from "./pages/patient/Profile";
+import NurseHospitalizations from "./pages/nurse/Hospitalizations";
 
 export default function App() {
   return (
@@ -53,6 +55,7 @@ export default function App() {
             <Route path="citas" element={<DoctorAppointments />} />
             <Route path="prescriptions" element={<DoctorPrescriptions />} />
             <Route path="consultation/new" element={<ConsultationForm />} />
+            <Route path="hospitalizaciones" element={<DoctorHospitalizations />} />
             <Route path="remisiones" element={<Maintenance />} />
             <Route path="historial" element={<Maintenance />} />
           </Route>
@@ -110,7 +113,7 @@ export default function App() {
             <Route index element={<Maintenance />} />
             <Route path="urgencias" element={<Maintenance />} />
             <Route path="triage" element={<Maintenance />} />
-            <Route path="hospitalizaciones" element={<Maintenance />} />
+            <Route path="hospitalizaciones" element={<NurseHospitalizations />} />
           </Route>
 
           {/* Farmaceuta */}

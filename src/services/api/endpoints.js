@@ -115,11 +115,11 @@ export const endpoints = {
       `/api/administracion_medicamentos/${id}`,
 
     /** POST crear atención hospitalización */
-  createAttention: "/api/hospitalizacion/atención",
+  createAttention: "/api/hospitalizacion/atencion",
 
     /** GET atenciones por hospitalización */
     attentionsByHospitalization: (id) =>
-      `/api/hospitalizacion/atención/${id}`,
+      `/api/hospitalizacion/atencion/${id}`,
   },
   // ── Emergency Service ─────────────────────────────
   emergency: {

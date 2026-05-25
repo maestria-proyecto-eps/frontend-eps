@@ -1,5 +1,5 @@
 import React from "react";
-import { AuthContext } from "../../services/auth/AuthProvider";
+import { AuthContext } from "../../services/auth/AuthContext";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
 
@@ -47,10 +47,10 @@ const API = {
       ((id) => `/api/administracion_medicamentos/${id}`),
     createAttention:
       endpoints?.hospitalizations?.createAttention ||
-      "/api/hospitalizacion/atención",
+      "/api/hospitalizacion/atencion",
     attentionsByHospitalization:
       endpoints?.hospitalizations?.attentionsByHospitalization ||
-      ((id) => `/api/hospitalizacion/atención/${id}`),
+      ((id) => `/api/hospitalizacion/atencion/${id}`),
   },
   diagnoses: {
     search: endpoints?.diagnosticos?.search || "/api/diagnosticos/search",
@@ -238,12 +238,13 @@ function getComputedTotalPages(totalRows, currentPage, pageSize, currentRowsCoun
 
 function getAuthDoctorId(auth) {
   return (
-    auth?.user?.id_doctor ??
-    auth?.user?.doctor?.id_doctor ??
-    auth?.user?.medico?.id_doctor ??
-    auth?.user?.idDoctor ??
-    auth?.user?.id_usuario ??
-    auth?.user?.id ??
+    auth?.payload?.id_doctor ??
+    auth?.payload?.doctor?.id_doctor ??
+    auth?.payload?.medico?.id_doctor ??
+    auth?.payload?.idDoctor ??
+    auth?.payload?.id_usuario ??
+    auth?.payload?.id ??
+    auth?.payload?.num_documento ??
     undefined
   );
 }
