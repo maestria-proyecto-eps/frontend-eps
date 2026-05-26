@@ -61,8 +61,6 @@ export default function App() {
             <Route path="prescriptions" element={<DoctorPrescriptions />} />
             <Route path="consultation/new" element={<ConsultationForm />} />
             <Route path="urgencia" element={<DoctorUrgency />} />
-            <Route path="remisiones" element={<Maintenance />} />
-            <Route path="historial" element={<Maintenance />} />
           </Route>
 
           {/* Ruta de redirección intermedia tras login */}
