@@ -1844,8 +1844,18 @@ function CreateAttentionModal({
       );
 
       if (willCreatePrescription) {
+        // Capturar el id_atencion del response de la atención creada
+        const createdAttentionId = attentionRes?.data?.id_atencion ??
+                                    attentionRes?.data?.id_urgencia ??
+                                    attentionRes?.data?.id;
+        if (!createdAttentionId) {
+          throw new Error(
+            "El backend no retornó el ID de la atención creada."
+          );
+        }
+
         const payload = {
-          id_atencion: Number(idUrgenciaAtencion),
+          id_atencion: Number(createdAttentionId),
           tipo: 1,
           prescripciones_items: validPrescriptionItems.map((item) => ({
             id_medicamento: Number(item.id_medicamento ?? item.codigo),

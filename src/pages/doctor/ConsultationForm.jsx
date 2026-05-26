@@ -27,6 +27,30 @@ function unwrapBackendResponse(responseData) {
   };
 }
 
+function getApiErrorMessage(error, fallback) {
+  const data = error?.response?.data;
+  if (typeof data?.message === "string") return data.message;
+  if (typeof data?.Message === "string") return data.Message;
+  if (typeof data?.detail === "string") return data.detail;
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail
+      .map((item) => item?.msg || item?.message || JSON.stringify(item))
+      .join(" | ");
+  }
+  if (typeof error?.message === "string" && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+}
+
+function unwrapPrescriptionRows(responseData) {
+  const payload = responseData?.data ?? responseData?.Data ?? responseData;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.Data)) return payload.Data;
+  return [];
+}
+
 function TextAreaField({
   label,
   value,
@@ -288,22 +312,57 @@ export default function ConsultationForm() {
 
     try {
       const medicamentosPayload = prescriptionItems
-        .filter((item) => item.codigo && item.dosis.trim() && item.duracion && item.cantidad)
+        .filter(
+          (item) =>
+            item.codigo &&
+            String(item.dosis || "").trim() &&
+            Number(item.duracion) > 0 &&
+            Number(item.cantidad) > 0
+        )
         .map((item) => ({
           codigo: Number(item.codigo),
-          dosis: item.dosis,
+          dosis: String(item.dosis).trim(),
           duracion: Number(item.duracion),
           cantidad: Number(item.cantidad),
         }));
 
-      // Note: "obervacion" is the field name in the API (typo in spec is intentional)
+      if (medicamentosPayload.length === 0) {
+        setFeedback({
+          type: "warning",
+          text: "Debes agregar al menos un medicamento válido para registrar la consulta con prescripción.",
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      // Some backend deployments still expect the typo "obervacion".
       const payload = {
-        obervacion: form.observacion,
-        tratamiento: form.tratamiento,
-        id_diagnostico: selectedDiagnostico.id_diagnostico,
+        obervacion: String(form.observacion).trim(),
+        observacion: String(form.observacion).trim(),
+        tratamiento: String(form.tratamiento).trim(),
+        id_diagnostico: Number(selectedDiagnostico.id_diagnostico),
         tipo_preinscripcion: 1,
         medicamentos: medicamentosPayload,
       };
+
+      // Guard against backend unique constraint (id_atencion, tipo).
+      const existingRxRes = await http.get(endpoints.medicalRecords.createPrescription, {
+        params: {
+          idAtencion: Number(appointmentId),
+          tipo: 1,
+          pag: 1,
+          cantidad: 1,
+        },
+      });
+      const existingRows = unwrapPrescriptionRows(existingRxRes.data);
+      if (existingRows.length > 0) {
+        setFeedback({
+          type: "warning",
+          text: "Esta cita ya tiene una prescripción de tipo medicamentos. No se puede crear otra para la misma atención.",
+        });
+        setIsSaving(false);
+        return;
+      }
 
       const res = await http.post(endpoints.consultations.create(appointmentId), payload);
       const wrapped = unwrapBackendResponse(res.data);
@@ -316,7 +375,7 @@ export default function ConsultationForm() {
     } catch (err) {
       setFeedback({
         type: "error",
-        text: err.message || "No fue posible guardar la consulta.",
+        text: getApiErrorMessage(err, "No fue posible guardar la consulta."),
       });
     } finally {
       setIsSaving(false);
