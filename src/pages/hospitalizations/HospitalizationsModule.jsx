@@ -1,7 +1,18 @@
 import React from "react";
 import { AuthContext } from "../../services/auth/AuthContext";
 import { http } from "../../services/api/http";
-import { endpoints } from "../../services/api/endpoints";
+import { Spinner } from "../../components/ui";
+import PrescriptionItemsForm, {
+  createPrescriptionItem,
+} from "../../components/prescriptions/PrescriptionItemsForm";
+import {
+  buildPrescriptionApiPayload,
+  getValidPrescriptionItems,
+  validatePrescriptionItems,
+} from "../../components/prescriptions/prescriptionFormUtils";
+
+const EMERGENCY_API = "/emergency-api";
+const MEDICAL_API = "/medical-api";
 
 /* -------------------------------------------------------------------------- */
 /* CONFIGURACIÓN                                                              */
@@ -29,31 +40,22 @@ const FALLBACK_DIAGNOSES = [
 
 const API = {
   hospitalizations: {
-    list: endpoints?.hospitalizations?.list || "/api/hospitalizacion",
-    ingreso:
-      endpoints?.hospitalizations?.ingreso ||
-      ((id) => `/api/hospitalizacion/ingreso/${id}`),
-    salida:
-      endpoints?.hospitalizations?.salida ||
-      ((id) => `/api/hospitalizacion/salida/${id}`),
-    prescriptionItems:
-      endpoints?.hospitalizations?.prescriptionItems ||
-      ((id) => `/api/prescriptions/items/hospitalizacion/${id}`),
-    medicationAdministration:
-      endpoints?.hospitalizations?.medicationAdministration ||
-      "/api/administracion_medicamentos",
-    medicationAdministrationByHospitalization:
-      endpoints?.hospitalizations?.medicationAdministrationByHospitalization ||
-      ((id) => `/api/administracion_medicamentos/${id}`),
-    createAttention:
-      endpoints?.hospitalizations?.createAttention ||
-      "/api/hospitalizacion/atencion",
-    attentionsByHospitalization:
-      endpoints?.hospitalizations?.attentionsByHospitalization ||
-      ((id) => `/api/hospitalizacion/atencion/${id}`),
+    list: `${EMERGENCY_API}/api/hospitalizacion/`,
+    ingreso: (id) => `${EMERGENCY_API}/api/hospitalizacion/ingreso/${id}`,
+    salida: (id) => `${EMERGENCY_API}/api/hospitalizacion/salida/${id}`,
+    prescriptionItems: (id) =>
+      `${MEDICAL_API}/api/prescriptions/items/hospitalizacion/${id}`,
+    medicationAdministration: `${MEDICAL_API}/api/administracion_medicamentos`,
+    medicationAdministrationByHospitalization: (id) =>
+      `${MEDICAL_API}/api/administracion_medicamentos/${id}`,
+    createAttention: `${EMERGENCY_API}/api/hospitalizacion/atencion`,
+    attentionsByHospitalization: (id) =>
+      `${EMERGENCY_API}/api/hospitalizacion/atencion/${id}`,
+    createPrescription: `${MEDICAL_API}/api/prescriptions/`,
+    prescriptionsList: `${MEDICAL_API}/api/prescriptions/`,
   },
   diagnoses: {
-    search: endpoints?.diagnosticos?.search || "/api/diagnosticos/search",
+    search: `${MEDICAL_API}/api/diagnosticos/search`,
   },
 };
 
@@ -67,6 +69,20 @@ function cleanParams(params) {
       return value !== "" && value !== null && value !== undefined;
     })
   );
+}
+
+function parseOptionalInt(value) {
+  if (value === "" || value === null || value === undefined) return undefined;
+  const parsed = parseInt(String(value).trim(), 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function unwrapDiagnoses(response) {
+  const payload = unwrapPayload(response);
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.Data)) return payload.Data;
+  return [];
 }
 
 function cleanPayload(payload) {
@@ -122,22 +138,116 @@ function unwrapTotal(response) {
   return found === undefined ? null : Number(found);
 }
 
+function unwrapBackendPages(response) {
+  const payload = unwrapPayload(response);
+  const pages =
+    payload?.pages ??
+    response?.pages ??
+    response?.data?.pages ??
+    payload?.data?.pages;
+  const numeric = Number(pages);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function sortHospitalizationsByEstado(rows) {
+  const order = { 1: 0, 0: 1, 2: 2 };
+  return [...rows].sort(
+    (a, b) =>
+      (order[getStatusNumber(a.estado)] ?? 9) -
+      (order[getStatusNumber(b.estado)] ?? 9)
+  );
+}
+
+function buildPagedParams(page, pageSize, extra = {}) {
+  return cleanParams({
+    pag: page,
+    cantidad: pageSize,
+    ...extra,
+  });
+}
+
+function buildAppointmentPagedParams(page, pageSize, extra = {}) {
+  return cleanParams({
+    page,
+    page_size: pageSize,
+    ...extra,
+  });
+}
+
+function toIsoDateTimeStart(dateStr) {
+  if (!dateStr) return undefined;
+  return `${dateStr}T00:00:00`;
+}
+
+function toIsoDateTimeEnd(dateStr) {
+  if (!dateStr) return undefined;
+  return `${dateStr}T23:59:59`;
+}
+
+function buildMedicationAdministrationListParams(filters) {
+  return cleanParams({
+    id_enfermera: parseOptionalInt(filters.id_enfermera),
+    fecha_inicio: toIsoDateTimeStart(filters.fecha_inicio),
+    fecha_fin: toIsoDateTimeEnd(filters.fecha_fin),
+  });
+}
+
 function getApiErrorMessage(error, fallback) {
   const data = error?.response?.data;
   if (typeof data?.Message === "string") return data.Message;
   if (typeof data?.message === "string") return data.message;
+  if (data?.hasError && typeof data?.message === "string") return data.message;
   if (typeof data?.detail === "string") return data.detail;
   if (Array.isArray(data?.detail)) {
     return data.detail
       .map((item) => item?.msg || item?.message || JSON.stringify(item))
       .join(" ");
   }
+  if (data && typeof data === "object") {
+    const nested = data?.data?.message || data?.Data?.message;
+    if (typeof nested === "string") return nested;
+  }
   return fallback;
+}
+
+function assertBackendSuccess(responseData, fallback) {
+  if (!responseData || typeof responseData !== "object") return responseData;
+  if (responseData.hasError) {
+    throw new Error(
+      responseData.message ||
+        responseData.Message ||
+        fallback ||
+        "El backend reportó un error."
+    );
+  }
+  return responseData;
 }
 
 function normalizeDate(value) {
   if (!value) return "";
   return String(value).slice(0, 10);
+}
+
+function formatDateTime(value) {
+  if (value == null || value === "") return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const pad = (n) => String(n).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+function getHospitalizationId(hospitalization) {
+  const raw =
+    hospitalization?.id_hospitalizacion ??
+    hospitalization?.idHospitalizacion ??
+    hospitalization?.id;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }
 
 function toApiValue(value) {
@@ -161,6 +271,10 @@ function getStatusNumber(value) {
 function normalizeHospitalization(row, index) {
   const paciente =
     row?.paciente || row?.Paciente || row?.patient || row?.paciente_info || {};
+  const ingresoRaw =
+    row?.ingreso ?? row?.fecha_ingreso ?? row?.fechaIngreso ?? null;
+  const salidaRaw =
+    row?.salida ?? row?.fecha_salida ?? row?.fechaSalida ?? null;
   return {
     ...row,
     id_hospitalizacion:
@@ -171,9 +285,14 @@ function normalizeHospitalization(row, index) {
     id_paciente:
       row?.id_paciente ??
       row?.idPaciente ??
+      row?.num_doc_paciente ??
       paciente?.id_paciente ??
       paciente?.idPaciente ??
       paciente?.id ??
+      "",
+    num_doc_paciente:
+      row?.num_doc_paciente ??
+      paciente?.num_doc_paciente ??
       "",
     nombres:
       row?.nombres ??
@@ -198,32 +317,18 @@ function normalizeHospitalization(row, index) {
       paciente?.documento ??
       "",
     num_cama: row?.num_cama ?? row?.cama ?? "",
+    id_urgencia:
+      row?.id_urgencia ??
+      row?.idUrgencia ??
+      row?.urgencia?.id_urgencia ??
+      row?.urgencia?.id ??
+      "",
     estado: getStatusNumber(row?.estado),
-    fecha_ingreso: normalizeDate(row?.fecha_ingreso ?? row?.fechaIngreso),
-    fecha_salida: normalizeDate(row?.fecha_salida ?? row?.fechaSalida),
+    ingreso: ingresoRaw,
+    salida: salidaRaw,
+    fecha_ingreso: normalizeDate(ingresoRaw),
+    fecha_salida: normalizeDate(salidaRaw),
   };
-}
-
-function includesValue(filter, value) {
-  if (!filter) return true;
-  return String(value ?? "")
-    .toLowerCase()
-    .includes(String(filter).toLowerCase());
-}
-
-function dateEquals(filter, value) {
-  if (!filter) return true;
-  if (!value) return false;
-  return normalizeDate(value) === filter;
-}
-
-function dateBetween(value, from, to) {
-  if (!from && !to) return true;
-  if (!value) return false;
-  const date = normalizeDate(value);
-  if (from && date < from) return false;
-  if (to && date > to) return false;
-  return true;
 }
 
 function getComputedTotalPages(totalRows, currentPage, pageSize, currentRowsCount) {
@@ -237,27 +342,37 @@ function getComputedTotalPages(totalRows, currentPage, pageSize, currentRowsCoun
 }
 
 function getAuthDoctorId(auth) {
-  return (
+  const raw =
+    auth?.payload?.num_documento ??
     auth?.payload?.id_doctor ??
     auth?.payload?.doctor?.id_doctor ??
     auth?.payload?.medico?.id_doctor ??
     auth?.payload?.idDoctor ??
+    undefined;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
+}
+
+function getAuthNurseId(auth) {
+  return (
+    auth?.payload?.id_enfermera ??
+    auth?.payload?.id_enfermero ??
+    auth?.payload?.enfermera?.id_enfermera ??
     auth?.payload?.id_usuario ??
     auth?.payload?.id ??
-    auth?.payload?.num_documento ??
     undefined
   );
 }
 
 function getPrescriptionItemId(item) {
   return (
+    item?.id_items ??
     item?.id_prescripcion_item ??
     item?.id_prescripciones_item ??
     item?.id_prescripcionItems ??
     item?.id_prescripcion_items ??
     item?.id_item ??
-    item?.id ??
-    item?.codigo
+    item?.id
   );
 }
 
@@ -271,6 +386,142 @@ function getMedicationName(item) {
     item?.compuesto ??
     "Medicamento"
   );
+}
+
+function buildMedicationMap(medicationsRows) {
+  const medicationMap = new Map();
+  (medicationsRows || []).forEach((medication) => {
+    const medicationIdRaw =
+      medication?.codigo ?? medication?.id_medicamento ?? medication?.id;
+    if (
+      medicationIdRaw === null ||
+      medicationIdRaw === undefined ||
+      medicationIdRaw === ""
+    ) {
+      return;
+    }
+    medicationMap.set(String(medicationIdRaw), medication);
+  });
+  return medicationMap;
+}
+
+function getMedicationDisplayLabel(item, medicationMap) {
+  const medicationId =
+    item?.id_medicamento ??
+    item?.codigo ??
+    item?.medicamento?.codigo ??
+    item?.medication?.codigo;
+  const catalogItem =
+    medicationId !== null &&
+    medicationId !== undefined &&
+    medicationMap?.size > 0
+      ? medicationMap.get(String(medicationId))
+      : null;
+  const med = item?.medicamento || item?.medication || catalogItem || {};
+
+  const principioActivo = [
+    item?.principio_activo,
+    med?.principio_activo,
+    item?.nombre_generico,
+    med?.nombre_generico,
+  ]
+    .map((value) => String(value ?? "").trim())
+    .find(Boolean);
+
+  const nombreMedicamento = [
+    item?.nombre_medicamento,
+    med?.nombre_medicamento,
+    item?.nombre_compuesto,
+    item?.medicamento?.nombre,
+    med?.nombre,
+    item?.nombre_generico,
+    med?.nombre_generico,
+  ]
+    .map((value) => String(value ?? "").trim())
+    .find((value) => value && value !== principioActivo);
+
+  const labelParts = [];
+  if (principioActivo) labelParts.push(principioActivo);
+  if (nombreMedicamento) labelParts.push(nombreMedicamento);
+
+  if (labelParts.length > 0) {
+    return labelParts.join(" · ");
+  }
+
+  const fallback = getMedicationName(item);
+  return fallback === "Medicamento" ? "—" : fallback;
+}
+
+function getMedicationCatalogEntry(item, medicationMap) {
+  const medicationId =
+    item?.id_medicamento ??
+    item?.codigo ??
+    item?.medicamento?.codigo ??
+    item?.medication?.codigo;
+  const catalogItem =
+    medicationId !== null &&
+    medicationId !== undefined &&
+    medicationMap?.size > 0
+      ? medicationMap.get(String(medicationId))
+      : null;
+  return item?.medicamento || item?.medication || catalogItem || {};
+}
+
+function getMedicationPresentation(item, medicationMap) {
+  const med = getMedicationCatalogEntry(item, medicationMap);
+  return String(item?.presentacion || med?.presentacion || "").trim();
+}
+
+function getQuantityUnitLabel(presentacion) {
+  const lower = presentacion.toLowerCase();
+  if (lower.includes("tableta")) return { one: "pastilla", many: "pastillas" };
+  if (lower.includes("cápsula") || lower.includes("capsula")) {
+    return { one: "cápsula", many: "cápsulas" };
+  }
+  if (lower.includes("gota")) return { one: "gota", many: "gotas" };
+  if (
+    lower.includes("jarabe") ||
+    lower.includes("solución") ||
+    lower.includes("solucion") ||
+    /\bml\b/.test(lower)
+  ) {
+    return { one: "ml", many: "ml" };
+  }
+  if (
+    lower.includes("ampolla") ||
+    lower.includes("inyectable") ||
+    lower.includes("inyección") ||
+    lower.includes("inyeccion")
+  ) {
+    return { one: "ampolla", many: "ampollas" };
+  }
+  if (lower.includes("caja")) return { one: "caja", many: "cajas" };
+  if (lower.includes("frasco")) return { one: "frasco", many: "frascos" };
+  if (lower.includes("sobre")) return { one: "sobre", many: "sobres" };
+  return { one: "unidad", many: "unidades" };
+}
+
+function formatQuantityWithUnit(cantidad, presentacion) {
+  if (cantidad === null || cantidad === undefined || String(cantidad).trim() === "") {
+    return "—";
+  }
+  const numeric = Number(cantidad);
+  const value = Number.isFinite(numeric) ? numeric : String(cantidad).trim();
+  const units = getQuantityUnitLabel(presentacion);
+  const unitLabel =
+    Number.isFinite(numeric) && Math.abs(numeric) === 1 ? units.one : units.many;
+  return `${value} ${unitLabel}`;
+}
+
+function formatDurationWithUnit(duracion) {
+  if (duracion === null || duracion === undefined || String(duracion).trim() === "") {
+    return "—";
+  }
+  const raw = String(duracion).trim();
+  if (/d[ií]as?/i.test(raw)) return raw;
+  const numeric = parseInt(raw, 10);
+  if (!Number.isFinite(numeric)) return `${raw} días`;
+  return numeric === 1 ? "1 día" : `${numeric} días`;
 }
 
 function getDiagnosisId(item) {
@@ -288,38 +539,46 @@ function getDiagnosisName(item) {
 }
 
 function buildHospitalizationParams(filters, page, pageSize) {
-  return cleanParams({
-    num_doc_paciente: filters.num_documento,
-    num_documento: filters.num_documento,
-    num_cama: filters.num_cama,
-    estado: filters.estado,
-    fecha_ingreso: filters.fecha_ingreso,
-    fecha_salida: filters.fecha_salida,
-    skip: (page - 1) * pageSize,
-    limit: pageSize,
-  });
-}
-
-function buildMedicationAdministrationParams(filters, page, pageSize) {
-  return cleanParams({
-    num_doc_enfermera: filters.num_doc_enfermera,
-    fecha_admin_desde: filters.fecha_admin_desde,
-    fecha_admin_hasta: filters.fecha_admin_hasta,
-    skip: (page - 1) * pageSize,
-    limit: pageSize,
+  return buildPagedParams(page, pageSize, {
+    id_paciente: parseOptionalInt(filters.id_paciente),
+    num_cama: parseOptionalInt(filters.num_cama),
+    estado: parseOptionalInt(filters.estado),
+    fecha_ingreso_inicio: filters.fecha_ingreso_inicio || undefined,
+    fecha_ingreso_fin: filters.fecha_ingreso_fin || undefined,
+    fecha_salida_inicio: filters.fecha_salida_inicio || undefined,
+    fecha_salida_fin: filters.fecha_salida_fin || undefined,
   });
 }
 
 function buildAttentionParams(filters, page, pageSize) {
-  return cleanParams({
-    num_doc_paciente: filters.num_doc_paciente,
-    num_doc_doctor: filters.num_doc_doctor,
-    fecha_atencionH_desde: filters.fecha_atencionH_desde,
-    fecha_atencionH_hasta: filters.fecha_atencionH_hasta,
-    id_diagnostico: filters.id_diagnostico,
-    skip: (page - 1) * pageSize,
-    limit: pageSize,
+  return buildPagedParams(page, pageSize, {
+    id_paciente: parseOptionalInt(filters.id_paciente),
+    id_doctor: parseOptionalInt(filters.id_doctor),
+    fecha_inicio: toIsoDateTimeStart(filters.fecha_inicio),
+    fecha_fin: toIsoDateTimeEnd(filters.fecha_fin),
+    id_diagnostico: parseOptionalInt(filters.id_diagnostico),
   });
+}
+
+const EMPTY_ATTENTION_FILTERS = {
+  id_paciente: "",
+  id_doctor: "",
+  fecha_inicio: "",
+  fecha_fin: "",
+  id_diagnostico: "",
+};
+
+function unwrapBackendResponse(responseData) {
+  if (!responseData || typeof responseData !== "object") {
+    return { message: "", data: responseData };
+  }
+  if (responseData.hasError) {
+    throw new Error(responseData.message || "El backend reportó un error.");
+  }
+  return {
+    message: responseData.message || "",
+    data: responseData.data ?? responseData,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -332,17 +591,20 @@ export default function HospitalizationsModule({ role }) {
   const isDoctor = role === "doctor";
 
   const [hospitalizations, setHospitalizations] = React.useState([]);
+  const [backendPages, setBackendPages] = React.useState(1);
   const [totalRows, setTotalRows] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState("");
   const [error, setError] = React.useState("");
 
   const [filters, setFilters] = React.useState({
-    num_documento: "",
+    id_paciente: "",
     num_cama: "",
     estado: "",
-    fecha_ingreso: "",
-    fecha_salida: "",
+    fecha_ingreso_inicio: "",
+    fecha_ingreso_fin: "",
+    fecha_salida_inicio: "",
+    fecha_salida_fin: "",
   });
 
   const [page, setPage] = React.useState(1);
@@ -352,19 +614,38 @@ export default function HospitalizationsModule({ role }) {
   const [selectedHospitalization, setSelectedHospitalization] =
     React.useState(null);
 
-  async function loadHospitalizations(nextPage = page, nextPageSize = pageSize) {
+  async function loadHospitalizations(
+    nextPage = page,
+    nextPageSize = pageSize,
+    filtersOverride
+  ) {
+    const activeFilters = filtersOverride ?? filters;
     setLoading(true);
     setError("");
     setMessage("");
     try {
       const { data } = await http.get(API.hospitalizations.list, {
-        params: buildHospitalizationParams(filters, nextPage, nextPageSize),
+        params: buildHospitalizationParams(
+          activeFilters,
+          nextPage,
+          nextPageSize
+        ),
       });
-      const rows = unwrapArray(data).map(normalizeHospitalization);
+      const rows = sortHospitalizationsByEstado(
+        unwrapArray(data).map(normalizeHospitalization)
+      );
+      const pages = unwrapBackendPages(data);
       setHospitalizations(rows);
-      setTotalRows(unwrapTotal(data));
+      if (pages) {
+        setBackendPages(pages);
+        setTotalRows(pages * nextPageSize);
+      } else {
+        setBackendPages(1);
+        setTotalRows(unwrapTotal(data));
+      }
     } catch (err) {
       setHospitalizations([]);
+      setBackendPages(1);
       setTotalRows(null);
       setError(
         getApiErrorMessage(err, "No fue posible cargar las hospitalizaciones.")
@@ -375,29 +656,12 @@ export default function HospitalizationsModule({ role }) {
   }
 
   React.useEffect(() => {
+    if (!auth?.token) return;
     loadHospitalizations(page, pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, [page, pageSize, auth?.token]);
 
-  const visibleRows = React.useMemo(() => {
-    return hospitalizations.filter((row) => {
-      return (
-        includesValue(filters.num_documento, row.num_documento) &&
-        includesValue(filters.num_cama, row.num_cama) &&
-        (filters.estado === "" ||
-          Number(filters.estado) === Number(row.estado)) &&
-        dateEquals(filters.fecha_ingreso, row.fecha_ingreso) &&
-        dateEquals(filters.fecha_salida, row.fecha_salida)
-      );
-    });
-  }, [hospitalizations, filters]);
-
-  const totalPages = getComputedTotalPages(
-    totalRows,
-    page,
-    pageSize,
-    hospitalizations.length
-  );
+  const totalPages = Math.max(1, backendPages);
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -409,14 +673,18 @@ export default function HospitalizationsModule({ role }) {
   }
 
   function clearFilters() {
-    setFilters({
-      num_documento: "",
+    const emptyFilters = {
+      id_paciente: "",
       num_cama: "",
       estado: "",
-      fecha_ingreso: "",
-      fecha_salida: "",
-    });
+      fecha_ingreso_inicio: "",
+      fecha_ingreso_fin: "",
+      fecha_salida_inicio: "",
+      fecha_salida_fin: "",
+    };
+    setFilters(emptyFilters);
     setPage(1);
+    loadHospitalizations(1, pageSize, emptyFilters);
   }
 
   function openModal(type, hospitalization) {
@@ -459,8 +727,8 @@ export default function HospitalizationsModule({ role }) {
           <div>
             <h2 className="text-lg font-semibold text-neutral-900">Filtros</h2>
             <p className="text-sm text-neutral-600">
-              Filtra por documento del paciente, cama, estado, fecha de
-              ingreso y fecha de salida.
+              Los filtros se aplican en el servidor. Usa ID de paciente, cama,
+              estado y rangos de fechas de ingreso/salida.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -481,12 +749,14 @@ export default function HospitalizationsModule({ role }) {
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
-          <Field label="Documento paciente">
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <Field label="ID paciente">
             <Input
-              value={filters.num_documento}
-              onChange={(e) => updateFilter("num_documento", e.target.value)}
-              placeholder="Número de documento"
+              type="number"
+              min="1"
+              value={filters.id_paciente}
+              onChange={(e) => updateFilter("id_paciente", e.target.value)}
+              placeholder="ID del paciente"
             />
           </Field>
           <Field label="Número de cama">
@@ -507,18 +777,40 @@ export default function HospitalizationsModule({ role }) {
               <option value="2">Salido</option>
             </Select>
           </Field>
-          <Field label="Fecha ingreso">
+          <Field label="Ingreso desde">
             <Input
               type="date"
-              value={filters.fecha_ingreso}
-              onChange={(e) => updateFilter("fecha_ingreso", e.target.value)}
+              value={filters.fecha_ingreso_inicio}
+              onChange={(e) =>
+                updateFilter("fecha_ingreso_inicio", e.target.value)
+              }
             />
           </Field>
-          <Field label="Fecha salida">
+          <Field label="Ingreso hasta">
             <Input
               type="date"
-              value={filters.fecha_salida}
-              onChange={(e) => updateFilter("fecha_salida", e.target.value)}
+              value={filters.fecha_ingreso_fin}
+              onChange={(e) =>
+                updateFilter("fecha_ingreso_fin", e.target.value)
+              }
+            />
+          </Field>
+          <Field label="Salida desde">
+            <Input
+              type="date"
+              value={filters.fecha_salida_inicio}
+              onChange={(e) =>
+                updateFilter("fecha_salida_inicio", e.target.value)
+              }
+            />
+          </Field>
+          <Field label="Salida hasta">
+            <Input
+              type="date"
+              value={filters.fecha_salida_fin}
+              onChange={(e) =>
+                updateFilter("fecha_salida_fin", e.target.value)
+              }
             />
           </Field>
         </div>
@@ -531,7 +823,7 @@ export default function HospitalizationsModule({ role }) {
               Hospitalizaciones
             </h2>
             <p className="text-sm text-neutral-600">
-              Registros visibles: {visibleRows.length}
+              Registros en página: {hospitalizations.length}
               {Number.isFinite(totalRows) && totalRows !== null
                 ? ` · Total backend: ${totalRows}`
                 : ""}
@@ -553,7 +845,7 @@ export default function HospitalizationsModule({ role }) {
           <div className="p-8 text-center text-neutral-600">
             Cargando hospitalizaciones...
           </div>
-        ) : visibleRows.length === 0 ? (
+        ) : hospitalizations.length === 0 ? (
           <div className="p-8 text-center text-neutral-500">
             No hay hospitalizaciones que coincidan con los filtros.
           </div>
@@ -562,10 +854,9 @@ export default function HospitalizationsModule({ role }) {
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>
-                  <Th>ID hospitalización</Th>
+                  <Th>ID</Th>
                   <Th>ID paciente</Th>
                   <Th>Paciente</Th>
-                  <Th>Documento</Th>
                   <Th>Cama</Th>
                   <Th>Estado</Th>
                   <Th>Fecha ingreso</Th>
@@ -575,7 +866,7 @@ export default function HospitalizationsModule({ role }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
-                {visibleRows.map((row) => (
+                {hospitalizations.map((row) => (
                   <HospitalizationRow
                     key={row.id_hospitalizacion}
                     row={row}
@@ -591,8 +882,7 @@ export default function HospitalizationsModule({ role }) {
       </section>
 
       {modal === "detail" && selectedHospitalization && (
-        <JsonModal
-          title="Detalle completo de hospitalización"
+        <HospitalizationDetailModal
           data={selectedHospitalization}
           onClose={closeModal}
         />
@@ -622,6 +912,7 @@ export default function HospitalizationsModule({ role }) {
         selectedHospitalization && (
           <CreateMedicationAdministrationModal
             hospitalization={selectedHospitalization}
+            auth={auth}
             onClose={closeModal}
             setError={setError}
             setMessage={setMessage}
@@ -641,6 +932,7 @@ export default function HospitalizationsModule({ role }) {
           hospitalization={selectedHospitalization}
           auth={auth}
           onClose={closeModal}
+          onDone={() => loadHospitalizations(page, pageSize)}
           setError={setError}
           setMessage={setMessage}
         />
@@ -662,6 +954,48 @@ export default function HospitalizationsModule({ role }) {
 /* -------------------------------------------------------------------------- */
 
 function HospitalizationRow({ row, isNurse, isDoctor, openModal }) {
+  const patientName =
+    `${row.nombres || ""} ${row.apellidos || ""}`.trim() || "—";
+
+  return (
+    <tr className="hover:bg-neutral-50">
+      <Td>{row.id_hospitalizacion}</Td>
+      <Td>{row.id_paciente || row.num_doc_paciente || "—"}</Td>
+      <Td>
+        <span className="font-medium text-neutral-900">{patientName}</span>
+        {row.num_documento ? (
+          <span className="block text-xs text-neutral-500">
+            Doc. {row.num_documento}
+          </span>
+        ) : null}
+      </Td>
+      <Td>{row.num_cama || "—"}</Td>
+      <Td>
+        <StatusBadge estado={row.estado} />
+      </Td>
+      <Td>{formatDateTime(row.ingreso ?? row.fecha_ingreso)}</Td>
+      <Td>{formatDateTime(row.salida ?? row.fecha_salida)}</Td>
+      <Td>
+        <RowActionsMenu
+          row={row}
+          isNurse={isNurse}
+          isDoctor={isDoctor}
+          openModal={openModal}
+        />
+      </Td>
+      <Td>
+        <DetailLink onClick={() => openModal("detail", row)}>
+          Ver detalle
+        </DetailLink>
+      </Td>
+    </tr>
+  );
+}
+
+function RowActionsMenu({ row, isNurse, isDoctor, openModal }) {
+  const [open, setOpen] = React.useState(false);
+  const menuRef = React.useRef(null);
+
   const canAdmission = row.estado === 0;
   const canCreateMedicationAdministration = row.estado === 1;
   const canDischarge = row.estado === 1;
@@ -669,74 +1003,200 @@ function HospitalizationRow({ row, isNurse, isDoctor, openModal }) {
   const canCreateAttention = row.estado === 1;
   const canViewAttentions = row.estado === 1;
 
+  const nurseActions = [
+    {
+      key: "ingreso",
+      label: "Realizar ingreso",
+      icon: "login",
+      enabled: canAdmission,
+      onClick: () => openModal("ingreso", row),
+    },
+    {
+      key: "createMedication",
+      label: "Crear adm. medicamento",
+      icon: "medication",
+      enabled: canCreateMedicationAdministration,
+      onClick: () => openModal("createMedicationAdministration", row),
+    },
+    {
+      key: "salida",
+      label: "Salida",
+      icon: "logout",
+      enabled: canDischarge,
+      onClick: () => openModal("salida", row),
+    },
+    {
+      key: "viewMedication",
+      label: "Ver adm. medicamento",
+      icon: "visibility",
+      enabled: canViewMedicationAdministration,
+      onClick: () => openModal("viewMedicationAdministration", row),
+    },
+  ];
+
+  const doctorActions = [
+    {
+      key: "createAttention",
+      label: "Crear atención",
+      icon: "add_circle",
+      enabled: canCreateAttention,
+      onClick: () => openModal("createAttention", row),
+    },
+    {
+      key: "viewAttentions",
+      label: "Ver atenciones",
+      icon: "list_alt",
+      enabled: canViewAttentions,
+      onClick: () => openModal("viewAttentions", row),
+    },
+  ];
+
+  const actions = [
+    ...(isNurse ? nurseActions : []),
+    ...(isDoctor ? doctorActions : []),
+  ];
+  const enabledActions = actions.filter((action) => action.enabled);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  function runAction(action) {
+    if (!action.enabled) return;
+    setOpen(false);
+    action.onClick();
+  }
+
   return (
-    <tr className="hover:bg-neutral-50">
-      <Td>{row.id_hospitalizacion}</Td>
-      <Td>{row.id_paciente || "—"}</Td>
-      <Td>{`${row.nombres || ""} ${row.apellidos || ""}`.trim() || "—"}</Td>
-      <Td>{row.num_documento || "—"}</Td>
-      <Td>{row.num_cama || "—"}</Td>
-      <Td>
-        <StatusBadge estado={row.estado} />
-      </Td>
-      <Td>{row.fecha_ingreso || "—"}</Td>
-      <Td>{row.fecha_salida || "—"}</Td>
-      <Td>
-        <div className="flex flex-wrap gap-2">
-          {isNurse && (
-            <>
-              <ActionButton
-                disabled={!canAdmission}
-                onClick={() => openModal("ingreso", row)}
-              >
-                Realizar ingreso
-              </ActionButton>
-              <ActionButton
-                disabled={!canCreateMedicationAdministration}
-                onClick={() =>
-                  openModal("createMedicationAdministration", row)
-                }
-              >
-                Crear adm. medicamento
-              </ActionButton>
-              <ActionButton
-                disabled={!canDischarge}
-                onClick={() => openModal("salida", row)}
-              >
-                Salida
-              </ActionButton>
-              <ActionButton
-                disabled={!canViewMedicationAdministration}
-                onClick={() => openModal("viewMedicationAdministration", row)}
-              >
-                Ver adm. medicamento
-              </ActionButton>
-            </>
-          )}
-          {isDoctor && (
-            <>
-              <ActionButton
-                disabled={!canCreateAttention}
-                onClick={() => openModal("createAttention", row)}
-              >
-                Crear atención
-              </ActionButton>
-              <ActionButton
-                disabled={!canViewAttentions}
-                onClick={() => openModal("viewAttentions", row)}
-              >
-                Ver atenciones
-              </ActionButton>
-            </>
-          )}
+    <div className="relative" ref={menuRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        disabled={enabledActions.length === 0}
+        className={
+          enabledActions.length === 0
+            ? "inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium bg-neutral-100 text-neutral-400 cursor-not-allowed"
+            : "inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium bg-primary-500 text-white hover:bg-primary-600"
+        }
+      >
+        Acciones
+        <span className="material-icons text-sm leading-none">expand_more</span>
+      </button>
+      {open && enabledActions.length > 0 && (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 min-w-[15rem] rounded-xl border border-neutral-200 bg-white py-1 shadow-lg"
+        >
+          {actions.map((action) => (
+            <button
+              key={action.key}
+              type="button"
+              role="menuitem"
+              disabled={!action.enabled}
+              onClick={() => runAction(action)}
+              className={
+                action.enabled
+                  ? "flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50"
+                  : "flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-neutral-400 cursor-not-allowed"
+              }
+            >
+              <span className="material-icons text-base text-neutral-500">
+                {action.icon}
+              </span>
+              {action.label}
+            </button>
+          ))}
         </div>
-      </Td>
-      <Td>
-        <ActionButton disabled={false} onClick={() => openModal("detail", row)}>
-          Ver detalle
-        </ActionButton>
-      </Td>
-    </tr>
+      )}
+    </div>
+  );
+}
+
+function DetailLink({ children, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-sm font-semibold text-primary-600 hover:text-primary-700 underline underline-offset-2"
+    >
+      {children}
+    </button>
+  );
+}
+
+function HospitalizationDetailModal({ data, onClose }) {
+  const patientName =
+    `${data?.nombres || ""} ${data?.apellidos || ""}`.trim() || "—";
+
+  return (
+    <Modal title="Detalle de hospitalización" onClose={onClose} size="xl">
+      <div className="space-y-6">
+        <section>
+          <h4 className="text-sm font-semibold text-neutral-900 mb-3">
+            Datos generales
+          </h4>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <DetailField label="ID hospitalización" value={data?.id_hospitalizacion} />
+            <DetailField label="Cama" value={data?.num_cama} />
+            <div className="rounded-lg border border-neutral-200 p-3">
+              <p className="text-xs uppercase text-neutral-500">Estado</p>
+              <div className="mt-2">
+                <StatusBadge estado={data?.estado} />
+              </div>
+            </div>
+            <DetailField
+              label="Urgencia"
+              value={data?.id_urgencia || data?.urgencia?.id_urgencia}
+            />
+          </div>
+        </section>
+
+        <section>
+          <h4 className="text-sm font-semibold text-neutral-900 mb-3">Fechas</h4>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <DetailField
+              label="Ingreso"
+              value={formatDateTime(data?.ingreso ?? data?.fecha_ingreso)}
+            />
+            <DetailField
+              label="Salida"
+              value={formatDateTime(data?.salida ?? data?.fecha_salida)}
+            />
+          </div>
+        </section>
+
+        <section>
+          <h4 className="text-sm font-semibold text-neutral-900 mb-3">Paciente</h4>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <DetailField
+              label="ID paciente"
+              value={data?.id_paciente ?? data?.num_doc_paciente}
+            />
+            <DetailField label="Nombre completo" value={patientName} />
+          </div>
+        </section>
+      </div>
+    </Modal>
+  );
+}
+
+function DetailField({ label, value }) {
+  const display =
+    value === null || value === undefined || String(value).trim() === ""
+      ? "—"
+      : value;
+  return (
+    <div className="rounded-lg border border-neutral-200 p-3">
+      <p className="text-xs uppercase text-neutral-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-neutral-800">{display}</p>
+    </div>
   );
 }
 
@@ -814,9 +1274,7 @@ function DischargeModal({
     setSaving(true);
     setError("");
     try {
-      await http.put(
-        API.hospitalizations.salida(hospitalization.id_hospitalizacion)
-      );
+      await http.put(API.hospitalizations.salida(hospitalization.id_hospitalizacion));
       setMessage("Salida de hospitalización registrada correctamente.");
       onClose();
       await onDone();
@@ -856,6 +1314,7 @@ function DischargeModal({
 
 function CreateMedicationAdministrationModal({
   hospitalization,
+  auth,
   onClose,
   setError,
   setMessage,
@@ -868,19 +1327,22 @@ function CreateMedicationAdministrationModal({
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
+  const hospitalizationId = getHospitalizationId(hospitalization);
+
   async function loadItems(nextPage = page, nextPageSize = pageSize) {
+    if (!hospitalizationId) {
+      setError("No se encontró un ID de hospitalización válido.");
+      setItems([]);
+      setTotalRows(null);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const { data } = await http.get(
-        API.hospitalizations.prescriptionItems(
-          hospitalization.id_hospitalizacion
-        ),
+        API.hospitalizations.prescriptionItems(hospitalizationId),
         {
-          params: cleanParams({
-            skip: (nextPage - 1) * nextPageSize,
-            limit: nextPageSize,
-          }),
+          params: buildAppointmentPagedParams(nextPage, nextPageSize),
         }
       );
       setItems(unwrapArray(data));
@@ -900,9 +1362,10 @@ function CreateMedicationAdministrationModal({
   }
 
   React.useEffect(() => {
+    if (!hospitalizationId) return;
     loadItems(page, pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, [page, pageSize, hospitalizationId]);
 
   const totalPages = getComputedTotalPages(
     totalRows,
@@ -917,32 +1380,38 @@ function CreateMedicationAdministrationModal({
     );
   }
 
-  async function createAdministrations() {
-    const normalizedIds = selectedIds.map(toApiValue);
-    await Promise.all(
-      normalizedIds.map((id) =>
-        http.post(
-          API.hospitalizations.medicationAdministration,
-          cleanPayload({
-            id_hospitalizacion: toApiValue(
-              hospitalization.id_hospitalizacion
-            ),
-            id_prescripcion_item: id,
-          })
-        )
-      )
-    );
-  }
-
   async function submit() {
     setError("");
+    if (!hospitalizationId) {
+      setError("No se encontró un ID de hospitalización válido.");
+      return;
+    }
+    const idEnfermera = getAuthNurseId(auth);
+    if (!idEnfermera) {
+      setError("No se pudo obtener el ID de la enfermera autenticada.");
+      return;
+    }
     if (selectedIds.length === 0) {
       setError("Debe seleccionar al menos un ítem de prescripción.");
       return;
     }
+    const adminMedItems = selectedIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+    if (adminMedItems.length === 0) {
+      setError("Los ítems seleccionados no tienen un id_items válido.");
+      return;
+    }
     setSaving(true);
     try {
-      await createAdministrations();
+      await http.post(
+        API.hospitalizations.medicationAdministration,
+        cleanPayload({
+          id_enfermera: Number(idEnfermera),
+          id_hospitalizacion: hospitalizationId,
+          admin_med_items: adminMedItems,
+        })
+      );
       setMessage("Administración de medicamentos creada correctamente.");
       onClose();
     } catch (err) {
@@ -965,9 +1434,7 @@ function CreateMedicationAdministrationModal({
     >
       <div className="space-y-5">
         <p className="text-sm text-neutral-600">
-          Selecciona los ítems de prescripción que serán administrados. La
-          información de enfermería debe ser resuelta por el backend desde la
-          sesión autenticada.
+          Selecciona los ítems de prescripción que serán administrados.
         </p>
 
         {loading ? (
@@ -1043,37 +1510,35 @@ function MedicationAdministrationListModal({
   setError,
 }) {
   const [rows, setRows] = React.useState([]);
-  const [totalRows, setTotalRows] = React.useState(null);
   const [filters, setFilters] = React.useState({
-    num_doc_enfermera: "",
-    fecha_admin_desde: "",
-    fecha_admin_hasta: "",
+    id_enfermera: "",
+    fecha_inicio: "",
+    fecha_fin: "",
   });
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(5);
   const [loading, setLoading] = React.useState(false);
 
-  async function loadRows(nextPage = page, nextPageSize = pageSize) {
+  const hospitalizationId = getHospitalizationId(hospitalization);
+
+  async function loadRows(activeFilters = filters) {
+    if (!hospitalizationId) {
+      setError("No se encontró un ID de hospitalización válido.");
+      setRows([]);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const { data } = await http.get(
         API.hospitalizations.medicationAdministrationByHospitalization(
-          hospitalization.id_hospitalizacion
+          hospitalizationId
         ),
         {
-          params: buildMedicationAdministrationParams(
-            filters,
-            nextPage,
-            nextPageSize
-          ),
+          params: buildMedicationAdministrationListParams(activeFilters),
         }
       );
       setRows(unwrapArray(data));
-      setTotalRows(unwrapTotal(data));
     } catch (err) {
       setRows([]);
-      setTotalRows(null);
       setError(
         getApiErrorMessage(
           err,
@@ -1086,71 +1551,60 @@ function MedicationAdministrationListModal({
   }
 
   React.useEffect(() => {
-    loadRows(page, pageSize);
+    if (!hospitalizationId) return;
+    loadRows();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
-
-  const visibleRows = React.useMemo(() => {
-    return rows.filter((row) => {
-      return (
-        includesValue(filters.num_doc_enfermera, row?.num_doc_enfermera) &&
-        dateBetween(
-          row?.fecha_admin,
-          filters.fecha_admin_desde,
-          filters.fecha_admin_hasta
-        )
-      );
-    });
-  }, [rows, filters]);
-
-  const totalPages = getComputedTotalPages(
-    totalRows,
-    page,
-    pageSize,
-    rows.length
-  );
+  }, [hospitalizationId]);
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
   function applyFilters() {
-    setPage(1);
-    loadRows(1, pageSize);
+    loadRows(filters);
+  }
+
+  function clearFilters() {
+    const empty = { id_enfermera: "", fecha_inicio: "", fecha_fin: "" };
+    setFilters(empty);
+    loadRows(empty);
   }
 
   return (
     <Modal title="Administración de medicamentos" onClose={onClose} size="xl">
       <div className="space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Field label="Documento enfermera">
+          <Field label="ID enfermera">
             <Input
-              value={filters.num_doc_enfermera}
-              onChange={(e) =>
-                updateFilter("num_doc_enfermera", e.target.value)
-              }
-              placeholder="Num. documento"
+              type="number"
+              min="1"
+              value={filters.id_enfermera}
+              onChange={(e) => updateFilter("id_enfermera", e.target.value)}
+              placeholder="ID enfermera"
             />
           </Field>
-          <Field label="Fecha admin desde">
-            <Input
-              type="date"
-              value={filters.fecha_admin_desde}
-              onChange={(e) =>
-                updateFilter("fecha_admin_desde", e.target.value)
-              }
-            />
-          </Field>
-          <Field label="Fecha admin hasta">
+          <Field label="Fecha inicio">
             <Input
               type="date"
-              value={filters.fecha_admin_hasta}
-              onChange={(e) =>
-                updateFilter("fecha_admin_hasta", e.target.value)
-              }
+              value={filters.fecha_inicio}
+              onChange={(e) => updateFilter("fecha_inicio", e.target.value)}
             />
           </Field>
-          <div className="flex items-end">
+          <Field label="Fecha fin">
+            <Input
+              type="date"
+              value={filters.fecha_fin}
+              onChange={(e) => updateFilter("fecha_fin", e.target.value)}
+            />
+          </Field>
+          <div className="flex items-end gap-2">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="w-full rounded-xl border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              Limpiar
+            </button>
             <button
               type="button"
               onClick={applyFilters}
@@ -1163,13 +1617,13 @@ function MedicationAdministrationListModal({
 
         {loading ? (
           <p className="text-neutral-600">Cargando registros...</p>
-        ) : visibleRows.length === 0 ? (
+        ) : rows.length === 0 ? (
           <p className="text-neutral-500">
             No hay administraciones de medicamentos para los filtros actuales.
           </p>
         ) : (
           <div className="space-y-3">
-            {visibleRows.map((row, index) => (
+            {rows.map((row, index) => (
               <RecordCard
                 key={row?.id_administracion ?? row?.id ?? index}
                 title={`Administración #${
@@ -1177,7 +1631,7 @@ function MedicationAdministrationListModal({
                 }`}
                 subtitle={[
                   row?.fecha_admin
-                    ? `Fecha: ${normalizeDate(row.fecha_admin)}`
+                    ? `Fecha: ${formatDateTime(row.fecha_admin)}`
                     : null,
                   row?.num_doc_enfermera
                     ? `Doc. enfermera: ${row.num_doc_enfermera}`
@@ -1190,17 +1644,6 @@ function MedicationAdministrationListModal({
             ))}
           </div>
         )}
-
-        <PaginationControls
-          page={page}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(1);
-          }}
-        />
       </div>
     </Modal>
   );
@@ -1214,160 +1657,208 @@ function CreateAttentionModal({
   hospitalization,
   auth,
   onClose,
+  onDone,
   setError,
   setMessage,
 }) {
-  const [diagnoses, setDiagnoses] = React.useState(FALLBACK_DIAGNOSES);
-  const [diagnosisSearch, setDiagnosisSearch] = React.useState("");
   const [form, setForm] = React.useState({
     observaciones: "",
     tratamiento: "",
-    id_diagnostico: "",
-    crear_prescripcion: false,
-    prescripcion: {
-      tipo_prescripcion: 0,
-      medicamentos: [],
-    },
   });
-  const [loadingDiagnoses, setLoadingDiagnoses] = React.useState(false);
+  const [formErrors, setFormErrors] = React.useState({});
+  const [diagnosticoQuery, setDiagnosticoQuery] = React.useState("");
+  const [diagnosticoOptions, setDiagnosticoOptions] = React.useState([]);
+  const [selectedDiagnostico, setSelectedDiagnostico] = React.useState(null);
+  const [loadingDiagnosticos, setLoadingDiagnosticos] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [medicamentoOptions, setMedicamentoOptions] = React.useState([]);
+  const [loadingMedicamentos, setLoadingMedicamentos] = React.useState(false);
+  const [prescriptionItems, setPrescriptionItems] = React.useState([
+    createPrescriptionItem(),
+  ]);
+  const [selectedPrincipioActivo, setSelectedPrincipioActivo] = React.useState({});
+  const [doseWarnings, setDoseWarnings] = React.useState({});
+  const [prescriptionErrors, setPrescriptionErrors] = React.useState({});
+  const diagDebounceRef = React.useRef(null);
 
-  async function searchDiagnoses() {
-    setLoadingDiagnoses(true);
+  const idUrgenciaAtencion = React.useMemo(() => {
+    const raw =
+      hospitalization?.id_urgencia ??
+      hospitalization?.idUrgencia ??
+      hospitalization?.urgencia?.id_urgencia;
+    const numeric = Number(raw);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  }, [hospitalization]);
+
+  async function finishModal() {
+    onClose();
+    if (onDone) await onDone();
+  }
+
+  async function loadDiagnosticos(nombre = "") {
+    setLoadingDiagnosticos(true);
     try {
-      const { data } = await http.get(API.diagnoses.search, {
-        params: cleanParams({
-          nombre: diagnosisSearch,
-        }),
-      });
-      const list = unwrapArray(data);
-      setDiagnoses(list.length > 0 ? list : FALLBACK_DIAGNOSES);
+      const params = nombre.trim() ? { nombre: nombre.trim() } : {};
+      const { data } = await http.get(API.diagnoses.search, { params });
+      const list = unwrapDiagnoses(data);
+      setDiagnosticoOptions(list.length > 0 ? list : FALLBACK_DIAGNOSES);
     } catch {
-      setDiagnoses(FALLBACK_DIAGNOSES);
+      setDiagnosticoOptions(FALLBACK_DIAGNOSES);
     } finally {
-      setLoadingDiagnoses(false);
+      setLoadingDiagnosticos(false);
     }
   }
 
   React.useEffect(() => {
-    searchDiagnoses();
+    loadDiagnosticos();
+    loadMedicamentos();
+    return () => {
+      if (diagDebounceRef.current) clearTimeout(diagDebounceRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function addMedicationItem() {
-    setForm((prev) => ({
-      ...prev,
-      prescripcion: {
-        ...prev.prescripcion,
-        medicamentos: [
-          ...prev.prescripcion.medicamentos,
-          {
-            codigo: "",
-            dosis: "",
-            duracion: "",
-            cantidad: "",
-          },
-        ],
-      },
-    }));
+  function handleDiagnosticoQueryChange(value) {
+    setDiagnosticoQuery(value);
+    if (diagDebounceRef.current) clearTimeout(diagDebounceRef.current);
+    diagDebounceRef.current = setTimeout(() => {
+      loadDiagnosticos(value);
+    }, 350);
   }
 
-  function updateMedicationItem(index, key, value) {
-    setForm((prev) => {
-      const medicamentos = [...prev.prescripcion.medicamentos];
-      medicamentos[index] = {
-        ...medicamentos[index],
-        [key]: value,
-      };
-      return {
-        ...prev,
-        prescripcion: {
-          ...prev.prescripcion,
-          medicamentos,
-        },
-      };
-    });
+  function selectDiagnostico(diag) {
+    setSelectedDiagnostico(diag);
+    setDiagnosticoQuery(getDiagnosisName(diag));
+    setFormErrors((prev) => ({ ...prev, diagnostico: "" }));
   }
 
-  function removeMedicationItem(index) {
-    setForm((prev) => ({
-      ...prev,
-      prescripcion: {
-        ...prev.prescripcion,
-        medicamentos: prev.prescripcion.medicamentos.filter(
-          (_, itemIndex) => itemIndex !== index
-        ),
-      },
-    }));
+  function clearDiagnostico() {
+    setSelectedDiagnostico(null);
+    setDiagnosticoQuery("");
   }
 
   function validateForm() {
+    const nextErrors = {};
     if (!form.observaciones.trim()) {
-      return "Las observaciones son obligatorias.";
+      nextErrors.observaciones = "Las observaciones son obligatorias.";
     }
     if (!form.tratamiento.trim()) {
-      return "El tratamiento es obligatorio.";
+      nextErrors.tratamiento = "El tratamiento es obligatorio.";
     }
-    if (!form.id_diagnostico) {
-      return "Debe seleccionar el nombre de la enfermedad.";
+    if (!selectedDiagnostico?.id_diagnostico) {
+      nextErrors.diagnostico = "Debe seleccionar un diagnóstico.";
     }
-    if (form.crear_prescripcion) {
-      if (form.prescripcion.medicamentos.length === 0) {
-        return "Debe agregar al menos un ítem de prescripción.";
-      }
-      const invalidItem = form.prescripcion.medicamentos.some((item) => {
-        return (
-          !String(item.codigo).trim() ||
-          !String(item.dosis).trim() ||
-          !String(item.duracion).trim() ||
-          !String(item.cantidad).trim()
-        );
-      });
-      if (invalidItem) {
-        return "Todos los ítems de prescripción deben tener código, dosis, duración y cantidad.";
-      }
-    }
-    return "";
+    setFormErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
-  async function submit(e) {
+  async function loadMedicamentos() {
+    setLoadingMedicamentos(true);
+    try {
+      const { data } = await http.get(`${MEDICAL_API}/api/medicamentos/search`);
+      const wrapped = unwrapBackendResponse(data);
+      setMedicamentoOptions(Array.isArray(wrapped.data) ? wrapped.data : []);
+    } catch {
+      setMedicamentoOptions([]);
+    } finally {
+      setLoadingMedicamentos(false);
+    }
+  }
+
+  function clearPrescriptionFieldError(localId, keys) {
+    setPrescriptionErrors((prev) => {
+      const updated = { ...prev };
+      keys.forEach((key) => delete updated[`${localId}_${key}`]);
+      return updated;
+    });
+  }
+
+  const validPrescriptionItems = React.useMemo(
+    () => getValidPrescriptionItems(prescriptionItems),
+    [prescriptionItems]
+  );
+
+  const willCreatePrescription = validPrescriptionItems.length > 0;
+
+  async function submitAttention(e) {
     e.preventDefault();
     setError("");
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+
+    const rxErrors = validatePrescriptionItems(
+      prescriptionItems,
+      selectedPrincipioActivo
+    );
+    setPrescriptionErrors(rxErrors);
+
+    if (!validateForm()) return;
+    if (Object.keys(rxErrors).length > 0) return;
+
+    if (willCreatePrescription && !idUrgenciaAtencion) {
+      setError(
+        "Esta hospitalización no tiene id_urgencia; no se puede crear la prescripción de medicamentos."
+      );
       return;
     }
+
+    const idDoctor = getAuthDoctorId(auth);
+    const idHospitalizacion = getHospitalizationId(hospitalization);
+    if (!idDoctor) {
+      setError(
+        "No se pudo obtener el documento del médico autenticado (num_documento)."
+      );
+      return;
+    }
+    if (!idHospitalizacion) {
+      setError("No se encontró un ID de hospitalización válido.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const idDoctor = getAuthDoctorId(auth);
-      const payload = cleanPayload({
-        id_hospitalizacion: toApiValue(hospitalization.id_hospitalizacion),
-        id_doctor: idDoctor,
-        observaciones: form.observaciones.trim(),
-        tratamiento: form.tratamiento.trim(),
-        id_diagnostico: toApiValue(form.id_diagnostico),
-        crear_prescripcion: form.crear_prescripcion,
-        prescripcion: form.crear_prescripcion
-          ? {
-              tipo_prescripcion: toApiValue(form.prescripcion.tipo_prescripcion),
-              medicamentos: form.prescripcion.medicamentos.map((item) => ({
-                codigo: toApiValue(item.codigo),
-                dosis: item.dosis,
-                duracion: toApiValue(item.duracion),
-                cantidad: toApiValue(item.cantidad),
-              })),
-            }
-          : undefined,
-      });
-      await http.post(API.hospitalizations.createAttention, payload);
-      setMessage("Atención de hospitalización creada correctamente.");
-      onClose();
+      const attentionRes = await http.post(
+        API.hospitalizations.createAttention,
+        {
+          id_doctor: idDoctor,
+          id_diagnostico: Number(selectedDiagnostico.id_diagnostico),
+          id_hospitalizacion: idHospitalizacion,
+          observaciones: form.observaciones.trim(),
+          tratamiento: form.tratamiento.trim(),
+        }
+      );
+      assertBackendSuccess(
+        attentionRes.data,
+        "No fue posible crear la atención de hospitalización."
+      );
+
+      if (willCreatePrescription) {
+        const payload = buildPrescriptionApiPayload(
+          idUrgenciaAtencion,
+          prescriptionItems,
+          1
+        );
+        const prescriptionRes = await http.post(
+          API.hospitalizations.createPrescription,
+          payload
+        );
+        assertBackendSuccess(
+          prescriptionRes.data,
+          "No fue posible crear la prescripción."
+        );
+        setMessage(
+          "Atención y prescripción de medicamentos registradas correctamente."
+        );
+      } else {
+        setMessage("Atención de hospitalización creada correctamente.");
+      }
+
+      await finishModal();
     } catch (err) {
       setError(
         getApiErrorMessage(
           err,
-          "No fue posible crear la atención de hospitalización."
+          willCreatePrescription
+            ? "No fue posible guardar la atención o la prescripción."
+            : "No fue posible crear la atención de hospitalización."
         )
       );
     } finally {
@@ -1377,7 +1868,7 @@ function CreateAttentionModal({
 
   return (
     <Modal title="Crear atención de hospitalización" onClose={onClose} size="xl">
-      <form onSubmit={submit} className="space-y-5">
+      <form onSubmit={submitAttention} className="space-y-5">
         <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
           <p>
             Hospitalización:{" "}
@@ -1395,194 +1886,145 @@ function CreateAttentionModal({
           </p>
         </div>
 
-        <Field label="Observaciones">
-          <Textarea
-            value={form.observaciones}
-            onChange={(e) =>
-              setForm({ ...form, observaciones: e.target.value })
-            }
-            placeholder="Observaciones clínicas"
-          />
-        </Field>
+        <section className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4">
+          <h4 className="text-sm font-semibold text-neutral-900">
+            Registro de atención
+          </h4>
 
-        <Field label="Tratamiento">
-          <Textarea
-            value={form.tratamiento}
-            onChange={(e) =>
-              setForm({ ...form, tratamiento: e.target.value })
-            }
-            placeholder="Tratamiento indicado"
-          />
-        </Field>
-
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
-          <Field label="Buscar enfermedad">
-            <Input
-              value={diagnosisSearch}
-              onChange={(e) => setDiagnosisSearch(e.target.value)}
-              placeholder="Nombre de enfermedad"
+          <Field label="Observaciones">
+            <Textarea
+              value={form.observaciones}
+              onChange={(e) => {
+                setForm({ ...form, observaciones: e.target.value });
+                setFormErrors((prev) => ({ ...prev, observaciones: "" }));
+              }}
+              placeholder="Observaciones clínicas"
+              rows={5}
             />
-          </Field>
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={searchDiagnoses}
-              disabled={loadingDiagnoses}
-              className="rounded-xl bg-secondary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-secondary-600 disabled:opacity-50"
-            >
-              {loadingDiagnoses ? "Buscando..." : "Buscar"}
-            </button>
-          </div>
-        </div>
-
-        <Field label="Nombre enfermedad">
-          <Select
-            value={form.id_diagnostico}
-            onChange={(e) =>
-              setForm({ ...form, id_diagnostico: e.target.value })
-            }
-          >
-            <option value="">Selecciona...</option>
-            {diagnoses.map((diagnosis) => (
-              <option
-                key={getDiagnosisId(diagnosis)}
-                value={getDiagnosisId(diagnosis)}
-              >
-                {getDiagnosisName(diagnosis)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <label className="flex items-center gap-2 rounded-xl border border-neutral-200 p-3 text-sm text-neutral-700">
-          <input
-            type="checkbox"
-            checked={form.crear_prescripcion}
-            onChange={(e) =>
-              setForm({ ...form, crear_prescripcion: e.target.checked })
-            }
-          />
-          Crear prescripción y prescripción items
-        </label>
-
-        {form.crear_prescripcion && (
-          <section className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div>
-                <h4 className="font-semibold text-neutral-900">
-                  Prescripción
-                </h4>
-                <p className="text-sm text-neutral-600">
-                  Registra los medicamentos asociados a la atención de
-                  hospitalización.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addMedicationItem}
-                className="rounded-xl border border-primary-500/30 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50"
-              >
-                Agregar ítem
-              </button>
-            </div>
-
-            <Field label="Tipo prescripción">
-              <Select
-                value={form.prescripcion.tipo_prescripcion}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    prescripcion: {
-                      ...form.prescripcion,
-                      tipo_prescripcion: e.target.value,
-                    },
-                  })
-                }
-              >
-                <option value="0">Medicamento</option>
-                <option value="1">Otra</option>
-              </Select>
-            </Field>
-
-            {form.prescripcion.medicamentos.length === 0 ? (
-              <p className="text-sm text-neutral-500">
-                No has agregado ítems de prescripción.
+            {formErrors.observaciones && (
+              <p className="mt-1 text-sm text-emergency-600">
+                {formErrors.observaciones}
               </p>
+            )}
+          </Field>
+
+          <Field label="Tratamiento">
+            <Textarea
+              value={form.tratamiento}
+              onChange={(e) => {
+                setForm({ ...form, tratamiento: e.target.value });
+                setFormErrors((prev) => ({ ...prev, tratamiento: "" }));
+              }}
+              placeholder="Tratamiento indicado"
+              rows={5}
+            />
+            {formErrors.tratamiento && (
+              <p className="mt-1 text-sm text-emergency-600">
+                {formErrors.tratamiento}
+              </p>
+            )}
+          </Field>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-neutral-700">
+              Diagnóstico
+            </label>
+            {selectedDiagnostico ? (
+              <div className="flex items-center gap-2 rounded-lg border border-primary-300 bg-primary-50 px-3 py-2">
+                <span className="flex-1 text-sm text-primary-800">
+                  {getDiagnosisName(selectedDiagnostico)}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearDiagnostico}
+                  className="text-xs font-medium text-primary-600 hover:text-primary-900"
+                >
+                  Cambiar
+                </button>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {form.prescripcion.medicamentos.map((item, index) => (
-                  <div
-                    key={index}
-                    className="rounded-xl border border-neutral-200 bg-white p-4 grid grid-cols-1 md:grid-cols-5 gap-3"
-                  >
-                    <Field label="Código medicamento">
-                      <Input
-                        value={item.codigo}
-                        onChange={(e) =>
-                          updateMedicationItem(index, "codigo", e.target.value)
-                        }
-                        placeholder="Código"
-                      />
-                    </Field>
-                    <Field label="Dosis">
-                      <Input
-                        value={item.dosis}
-                        onChange={(e) =>
-                          updateMedicationItem(index, "dosis", e.target.value)
-                        }
-                        placeholder="Ej: 500mg cada 8h"
-                      />
-                    </Field>
-                    <Field label="Duración">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.duracion}
-                        onChange={(e) =>
-                          updateMedicationItem(
-                            index,
-                            "duracion",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Días"
-                      />
-                    </Field>
-                    <Field label="Cantidad">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.cantidad}
-                        onChange={(e) =>
-                          updateMedicationItem(
-                            index,
-                            "cantidad",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Cantidad"
-                      />
-                    </Field>
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => removeMedicationItem(index)}
-                        className="w-full rounded-xl border border-emergency-500/30 px-3 py-2 text-sm font-semibold text-emergency-600 hover:bg-emergency-50"
+              <div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={diagnosticoQuery}
+                    onChange={(e) =>
+                      handleDiagnosticoQueryChange(e.target.value)
+                    }
+                    placeholder="Buscar por nombre de enfermedad..."
+                    className={[
+                      "block w-full rounded-xl border bg-white px-3 py-2 text-neutral-900",
+                      "focus:outline-none focus:ring-2 focus:ring-primary-200",
+                      formErrors.diagnostico
+                        ? "border-emergency-500"
+                        : "border-neutral-300",
+                    ].join(" ")}
+                  />
+                  {loadingDiagnosticos && <Spinner size="sm" />}
+                </div>
+                {diagnosticoOptions.length > 0 && (
+                  <ul className="mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50">
+                    {diagnosticoOptions.map((d) => (
+                      <li
+                        key={getDiagnosisId(d)}
+                        className="cursor-pointer px-3 py-2 text-sm text-neutral-800 hover:bg-primary-50 hover:text-primary-700"
+                        onClick={() => selectDiagnostico(d)}
                       >
-                        Quitar
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                        {getDiagnosisName(d)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {!loadingDiagnosticos &&
+                  diagnosticoQuery.trim() &&
+                  diagnosticoOptions.length === 0 && (
+                    <p className="mt-1 text-sm text-emergency-600">
+                      No se encontraron diagnósticos con ese nombre.
+                    </p>
+                  )}
               </div>
             )}
-          </section>
+            {formErrors.diagnostico && (
+              <p className="mt-1 text-sm text-emergency-600">
+                {formErrors.diagnostico}
+              </p>
+            )}
+          </div>
+        </section>
+
+        {loadingMedicamentos ? (
+          <p className="text-sm text-neutral-600">Cargando catálogo de medicamentos...</p>
+        ) : (
+          <PrescriptionItemsForm
+            medicamentoOptions={medicamentoOptions}
+            prescriptionItems={prescriptionItems}
+            onPrescriptionItemsChange={setPrescriptionItems}
+            selectedPrincipioActivo={selectedPrincipioActivo}
+            onSelectedPrincipioActivoChange={setSelectedPrincipioActivo}
+            doseWarnings={doseWarnings}
+            onDoseWarningsChange={setDoseWarnings}
+            errors={prescriptionErrors}
+            onClearError={clearPrescriptionFieldError}
+            disabled={saving}
+            title="Medicamentos"
+          />
+        )}
+
+        {!idUrgenciaAtencion && (
+          <p className="text-sm text-amber-700 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            Esta hospitalización no tiene id_urgencia asociado. Puede guardar la
+            atención, pero no se podrá registrar prescripción de medicamentos.
+          </p>
         )}
 
         <ModalActions
           onClose={onClose}
           loading={saving}
-          submitLabel="Crear atención"
+          submitLabel={
+            willCreatePrescription
+              ? "Guardar atención y prescripción"
+              : "Guardar atención"
+          }
         />
       </form>
     </Modal>
@@ -1597,13 +2039,7 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
   const [diagnoses, setDiagnoses] = React.useState(FALLBACK_DIAGNOSES);
   const [rows, setRows] = React.useState([]);
   const [totalRows, setTotalRows] = React.useState(null);
-  const [filters, setFilters] = React.useState({
-    num_doc_paciente: "",
-    num_doc_doctor: "",
-    fecha_atencionH_desde: "",
-    fecha_atencionH_hasta: "",
-    id_diagnostico: "",
-  });
+  const [filters, setFilters] = React.useState({ ...EMPTY_ATTENTION_FILTERS });
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(5);
   const [loading, setLoading] = React.useState(false);
@@ -1611,7 +2047,7 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
   async function loadDiagnoses() {
     try {
       const { data } = await http.get(API.diagnoses.search);
-      const list = unwrapArray(data);
+      const list = unwrapDiagnoses(data);
       if (list.length > 0) {
         setDiagnoses(list);
       }
@@ -1620,7 +2056,11 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
     }
   }
 
-  async function loadRows(nextPage = page, nextPageSize = pageSize) {
+  async function loadRows(
+    nextPage = page,
+    nextPageSize = pageSize,
+    activeFilters = filters
+  ) {
     setLoading(true);
     setError("");
     try {
@@ -1629,7 +2069,7 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
           hospitalization.id_hospitalizacion
         ),
         {
-          params: buildAttentionParams(filters, nextPage, nextPageSize),
+          params: buildAttentionParams(activeFilters, nextPage, nextPageSize),
         }
       );
       setRows(unwrapArray(data));
@@ -1654,22 +2094,6 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize]);
 
-  const visibleRows = React.useMemo(() => {
-    return rows.filter((row) => {
-      return (
-        includesValue(filters.num_doc_paciente, row?.num_doc_paciente) &&
-        includesValue(filters.num_doc_doctor, row?.num_doc_doctor) &&
-        dateBetween(
-          row?.fecha_atencionH,
-          filters.fecha_atencionH_desde,
-          filters.fecha_atencionH_hasta
-        ) &&
-        (filters.id_diagnostico === "" ||
-          Number(filters.id_diagnostico) === Number(row?.id_diagnostico))
-      );
-    });
-  }, [rows, filters]);
-
   const totalPages = getComputedTotalPages(
     totalRows,
     page,
@@ -1683,43 +2107,49 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
 
   function applyFilters() {
     setPage(1);
-    loadRows(1, pageSize);
+    loadRows(1, pageSize, filters);
+  }
+
+  function clearFilters() {
+    setFilters({ ...EMPTY_ATTENTION_FILTERS });
+    setPage(1);
+    loadRows(1, pageSize, { ...EMPTY_ATTENTION_FILTERS });
   }
 
   return (
     <Modal title="Atenciones de hospitalización" onClose={onClose} size="xl">
       <div className="space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-          <Field label="Doc. paciente">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+          <Field label="ID paciente">
             <Input
-              value={filters.num_doc_paciente}
-              onChange={(e) =>
-                updateFilter("num_doc_paciente", e.target.value)
-              }
+              type="number"
+              min="1"
+              value={filters.id_paciente}
+              onChange={(e) => updateFilter("id_paciente", e.target.value)}
+              placeholder="ID paciente"
             />
           </Field>
-          <Field label="Doc. doctor">
+          <Field label="ID doctor">
             <Input
-              value={filters.num_doc_doctor}
-              onChange={(e) => updateFilter("num_doc_doctor", e.target.value)}
+              type="number"
+              min="1"
+              value={filters.id_doctor}
+              onChange={(e) => updateFilter("id_doctor", e.target.value)}
+              placeholder="ID doctor"
             />
           </Field>
           <Field label="Fecha desde">
             <Input
               type="date"
-              value={filters.fecha_atencionH_desde}
-              onChange={(e) =>
-                updateFilter("fecha_atencionH_desde", e.target.value)
-              }
+              value={filters.fecha_inicio}
+              onChange={(e) => updateFilter("fecha_inicio", e.target.value)}
             />
           </Field>
           <Field label="Fecha hasta">
             <Input
               type="date"
-              value={filters.fecha_atencionH_hasta}
-              onChange={(e) =>
-                updateFilter("fecha_atencionH_hasta", e.target.value)
-              }
+              value={filters.fecha_fin}
+              onChange={(e) => updateFilter("fecha_fin", e.target.value)}
             />
           </Field>
           <Field label="Enfermedad">
@@ -1740,11 +2170,20 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
               ))}
             </Select>
           </Field>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
+            <button
+              type="button"
+              onClick={clearFilters}
+              aria-label="Limpiar filtros"
+              title="Limpiar filtros"
+              className="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-neutral-300 text-neutral-600 hover:bg-neutral-50"
+            >
+              <span className="material-icons text-xl">filter_alt_off</span>
+            </button>
             <button
               type="button"
               onClick={applyFilters}
-              className="w-full rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600"
+              className="min-w-0 flex-1 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600"
             >
               Aplicar
             </button>
@@ -1753,40 +2192,55 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
 
         {loading ? (
           <p className="text-neutral-600">Cargando atenciones...</p>
-        ) : visibleRows.length === 0 ? (
+        ) : rows.length === 0 ? (
           <p className="text-neutral-500">
             No hay atenciones de hospitalización para los filtros actuales.
           </p>
         ) : (
           <div className="space-y-3">
-            {visibleRows.map((row, index) => (
-              <RecordCard
-                key={row?.id_atencion ?? row?.id ?? index}
-                title={`Atención #${row?.id_atencion ?? row?.id ?? index + 1}`}
-                subtitle={[
-                  row?.nombre_enfermedad ||
-                  row?.diagnostico?.nombre_enfermedad
-                    ? `Diagnóstico: ${
-                        row?.nombre_enfermedad ||
-                        row?.diagnostico?.nombre_enfermedad
-                      }`
-                    : null,
-                  row?.nombre_paciente || row?.apellido_paciente
-                    ? `Paciente: ${`${row?.nombre_paciente || ""} ${
-                        row?.apellido_paciente || ""
-                      }`.trim()}`
-                    : null,
-                  row?.nombre_doctor || row?.apellido_doctor
-                    ? `Doctor: ${`${row?.nombre_doctor || ""} ${
-                        row?.apellido_doctor || ""
-                      }`.trim()}`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-                data={row}
-              />
-            ))}
+            {rows.map((row, index) => {
+              const attentionId =
+                row?.id_atencionh ?? row?.id_atencion ?? row?.id ?? index + 1;
+              const patientName =
+                `${row?.nombre_paciente || ""} ${row?.apellido_paciente || ""}`.trim();
+              const doctorName =
+                `${row?.nombre_doctor || ""} ${row?.apellido_doctor || ""}`.trim();
+              const diseaseName =
+                row?.nombre_enfermedad ||
+                row?.diagnostico?.nombre_enfermedad ||
+                "";
+
+              return (
+                <RecordCard
+                  key={attentionId}
+                  title={`Atención #${attentionId}`}
+                  subtitle={[
+                    diseaseName ? `Diagnóstico: ${diseaseName}` : null,
+                    patientName ? `Paciente: ${patientName}` : null,
+                    doctorName ? `Doctor: ${doctorName}` : null,
+                    row?.fecha_atencionh
+                      ? `Fecha: ${formatDateTime(row.fecha_atencionh)}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  detailContent={
+                    <AttentionDetailBody
+                      data={row}
+                      idPaciente={
+                        hospitalization?.id_paciente ??
+                        hospitalization?.num_doc_paciente ??
+                        row?.id_paciente
+                      }
+                      idUrgencia={
+                        hospitalization?.id_urgencia ??
+                        hospitalization?.idUrgencia
+                      }
+                    />
+                  }
+                />
+              );
+            })}
           </div>
         )}
 
@@ -1997,52 +2451,277 @@ function Td({ children }) {
   );
 }
 
-function ActionButton({ children, disabled, onClick }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={
-        disabled
-          ? "rounded-lg px-3 py-1.5 text-xs font-medium bg-neutral-100 text-neutral-400 cursor-not-allowed"
-          : "rounded-lg px-3 py-1.5 text-xs font-medium bg-primary-500 text-white hover:bg-primary-600"
-      }
-    >
-      {children}
-    </button>
-  );
-}
+function RecordCard({ title, subtitle, data, detailContent }) {
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
 
-function RecordCard({ title, subtitle, data }) {
   return (
     <article className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
       <p className="font-semibold text-neutral-900">{title}</p>
       {subtitle && <p className="mt-1 text-sm text-neutral-600">{subtitle}</p>}
-      <RecordDetails data={data} />
+      <RecordDetails
+        data={data}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        detailContent={detailsOpen ? detailContent : null}
+      />
     </article>
   );
 }
 
-function RecordDetails({ data }) {
+function RecordDetails({ data, detailContent, open, onOpenChange }) {
   return (
-    <details className="mt-3">
-      <summary className="cursor-pointer text-sm font-medium text-secondary-700">
+    <details
+      className="mt-3 group"
+      open={open}
+      onToggle={(e) => onOpenChange?.(e.currentTarget.open)}
+    >
+      <summary className="cursor-pointer text-sm font-medium text-secondary-700 hover:text-secondary-900 list-none flex items-center gap-1">
+        <span className="material-icons text-base transition-transform group-open:rotate-180">
+          expand_more
+        </span>
         Ver datos completos
       </summary>
-      <pre className="mt-2 overflow-auto rounded-lg border border-neutral-200 bg-white p-3 text-xs text-neutral-700">
-        {JSON.stringify(data, null, 2)}
-      </pre>
+      {detailContent ? (
+        detailContent
+      ) : (
+        <pre className="mt-2 overflow-auto rounded-lg border border-neutral-200 bg-white p-3 text-xs text-neutral-700">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      )}
     </details>
   );
 }
 
-function JsonModal({ title, data, onClose }) {
+function getPrescriptionItems(prescription) {
+  if (Array.isArray(prescription?.prescripciones_items)) {
+    return prescription.prescripciones_items;
+  }
+  if (Array.isArray(prescription?.medicamentos)) return prescription.medicamentos;
+  if (Array.isArray(prescription?.items)) return prescription.items;
+  return [];
+}
+
+function AttentionPrescriptionsList({ prescriptions, loading, medicationMap }) {
+  if (loading) {
+    return <p className="text-sm text-neutral-500">Cargando prescripciones...</p>;
+  }
+
+  if (!prescriptions.length) {
+    return (
+      <p className="text-sm text-neutral-500">
+        No hay prescripciones registradas para esta atención.
+      </p>
+    );
+  }
+
   return (
-    <Modal title={title} onClose={onClose} size="xl">
-      <pre className="overflow-auto rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-700">
-        {JSON.stringify(data, null, 2)}
-      </pre>
-    </Modal>
+    <div className="space-y-3">
+      {prescriptions.map((prescription, index) => {
+        const items = getPrescriptionItems(prescription);
+        const prescriptionId =
+          prescription?.id_preinscripcion ??
+          prescription?.id_prescripcion ??
+          prescription?.id ??
+          index + 1;
+
+        return (
+          <div
+            key={prescriptionId}
+            className="rounded-lg border border-neutral-200 overflow-hidden"
+          >
+            <div className="bg-neutral-50 px-3 py-2 border-b border-neutral-200">
+              <p className="text-sm font-semibold text-neutral-800">
+                Prescripción #{prescriptionId}
+                {prescription?.tipo != null
+                  ? ` · Tipo ${prescription.tipo}`
+                  : ""}
+              </p>
+            </div>
+            {items.length === 0 ? (
+              <p className="px-3 py-3 text-sm text-neutral-500">
+                Sin ítems de medicamentos.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-neutral-50 border-b border-neutral-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                        Medicamento
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                        Dosis
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                        Cantidad
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                        Duración
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {items.map((item, itemIndex) => {
+                      const presentacion = getMedicationPresentation(
+                        item,
+                        medicationMap
+                      );
+                      return (
+                        <tr key={item?.id_items ?? item?.id ?? itemIndex}>
+                          <td className="px-3 py-2 text-neutral-800">
+                            {getMedicationDisplayLabel(item, medicationMap)}
+                          </td>
+                          <td className="px-3 py-2 text-neutral-800">
+                            {item?.dosis ?? "—"}
+                          </td>
+                          <td className="px-3 py-2 text-neutral-800">
+                            {formatQuantityWithUnit(item?.cantidad, presentacion)}
+                          </td>
+                          <td className="px-3 py-2 text-neutral-800">
+                            {formatDurationWithUnit(item?.duracion)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
+
+function AttentionDetailBody({ data, idPaciente, idUrgencia }) {
+  const [prescriptions, setPrescriptions] = React.useState([]);
+  const [medicationMap, setMedicationMap] = React.useState(() => new Map());
+  const [loadingPrescriptions, setLoadingPrescriptions] = React.useState(false);
+
+  const patientName =
+    `${data?.nombre_paciente || ""} ${data?.apellido_paciente || ""}`.trim() ||
+    "—";
+  const doctorName =
+    `${data?.nombre_doctor || ""} ${data?.apellido_doctor || ""}`.trim() || "—";
+  const diseaseName =
+    data?.nombre_enfermedad ??
+    data?.diagnostico?.nombre_enfermedad ??
+    "—";
+  const resolvedPacienteId =
+    idPaciente ??
+    data?.id_paciente ??
+    data?.num_doc_paciente ??
+    null;
+  const idAtencionPrescripcion = Number(idUrgencia);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadDetailData() {
+      setLoadingPrescriptions(true);
+      try {
+        const medsPromise = http
+          .get(`${MEDICAL_API}/api/medicamentos/search`)
+          .catch(() => null);
+
+        if (
+          !Number.isFinite(idAtencionPrescripcion) ||
+          idAtencionPrescripcion <= 0
+        ) {
+          const medsRes = await medsPromise;
+          if (!cancelled && medsRes?.data) {
+            const wrapped = unwrapBackendResponse(medsRes.data);
+            const rows = Array.isArray(wrapped.data)
+              ? wrapped.data
+              : unwrapArray(medsRes.data);
+            setMedicationMap(buildMedicationMap(rows));
+          }
+          setPrescriptions([]);
+          return;
+        }
+
+        const [medsRes, rxRes] = await Promise.all([
+          medsPromise,
+          http.get(API.hospitalizations.prescriptionsList, {
+            params: {
+              idAtencion: idAtencionPrescripcion,
+              pag: 1,
+              cantidad: 50,
+            },
+          }),
+        ]);
+
+        if (!cancelled) {
+          if (medsRes?.data) {
+            const wrapped = unwrapBackendResponse(medsRes.data);
+            const rows = Array.isArray(wrapped.data)
+              ? wrapped.data
+              : unwrapArray(medsRes.data);
+            setMedicationMap(buildMedicationMap(rows));
+          }
+          setPrescriptions(unwrapArray(rxRes.data));
+        }
+      } catch {
+        if (!cancelled) {
+          setPrescriptions([]);
+          setMedicationMap(new Map());
+        }
+      } finally {
+        if (!cancelled) setLoadingPrescriptions(false);
+      }
+    }
+
+    loadDetailData();
+    return () => {
+      cancelled = true;
+    };
+  }, [idAtencionPrescripcion]);
+
+  return (
+    <div className="mt-3 space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <DetailField label="ID hospitalización" value={data?.id_hospitalizacion} />
+        <DetailField
+          label="Fecha de atención"
+          value={formatDateTime(data?.fecha_atencionh)}
+        />
+        <DetailField label="ID doctor" value={data?.id_doctor} />
+        <DetailField label="Nombre doctor" value={doctorName} />
+        <DetailField label="Nombre paciente" value={patientName} />
+        <DetailField label="ID paciente" value={resolvedPacienteId} />
+        <DetailField label="Enfermedad" value={diseaseName} />
+      </div>
+
+      <div className="rounded-lg border border-neutral-200 p-3">
+        <p className="text-xs font-semibold uppercase text-neutral-500">
+          Observaciones
+        </p>
+        <p className="mt-2 text-sm text-neutral-800 whitespace-pre-wrap">
+          {data?.observaciones?.trim() ? data.observaciones : "—"}
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-neutral-200 p-3">
+        <p className="text-xs font-semibold uppercase text-neutral-500">
+          Tratamiento
+        </p>
+        <p className="mt-2 text-sm text-neutral-800 whitespace-pre-wrap">
+          {data?.tratamiento?.trim() ? data.tratamiento : "—"}
+        </p>
+      </div>
+
+      <section>
+        <h5 className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-3">
+          Prescripciones
+        </h5>
+        <AttentionPrescriptionsList
+          prescriptions={prescriptions}
+          loading={loadingPrescriptions}
+          medicationMap={medicationMap}
+        />
+      </section>
+    </div>
+  );
+}
+

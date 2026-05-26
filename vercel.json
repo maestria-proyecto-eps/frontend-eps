@@ -85,6 +85,18 @@
       "destination": "https://backend-eps-emergency-service-xqll.onrender.com/api/hospitalizacion/:path*"
     },
     {
+      "source": "/api/administracion_medicamentos",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/administracion_medicamentos"
+    },
+    {
+      "source": "/api/administracion_medicamentos/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/administracion_medicamentos/:path*"
+    },
+    {
+      "source": "/api/prescriptions/items/:path*",
+      "destination": "https://backend-eps-medical-records-service.onrender.com/api/prescriptions/items/:path*"
+    },
+    {
       "source": "/api/pharmacy/:path*",
       "destination": "https://backend-eps-pharmacy-service.onrender.com/api/pharmacy/:path*"
     },

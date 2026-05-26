@@ -95,7 +95,7 @@ export const endpoints = {
 // ── Hospitalizations Service ───────────────────────
   hospitalizations: {
     /** GET lista de hospitalizaciones */
-    list: "/api/hospitalizacion",
+    list: "/api/hospitalizacion/",
 
     /** PUT realizar ingreso */
     ingreso: (id) => `/api/hospitalizacion/ingreso/${id}`,
