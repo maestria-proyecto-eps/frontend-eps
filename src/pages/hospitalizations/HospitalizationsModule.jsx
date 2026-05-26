@@ -6,19 +6,19 @@ import PrescriptionItemsForm, {
   createPrescriptionItem,
 } from "../../components/prescriptions/PrescriptionItemsForm";
 import {
-  buildPrescriptionApiPayload,
   getValidPrescriptionItems,
   validatePrescriptionItems,
 } from "../../components/prescriptions/prescriptionFormUtils";
 
-const EMERGENCY_API = "/emergency-api";
-const MEDICAL_API = "/medical-api";
+const EMERGENCY_API = "";
+const MEDICAL_API = "";
 
 /* -------------------------------------------------------------------------- */
 /* CONFIGURACIÓN                                                              */
 /* -------------------------------------------------------------------------- */
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
+const MEDICATION_ITEMS_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 const STATUS_LABEL = {
   0: "Por ingresar",
@@ -138,17 +138,6 @@ function unwrapTotal(response) {
   return found === undefined ? null : Number(found);
 }
 
-function unwrapBackendPages(response) {
-  const payload = unwrapPayload(response);
-  const pages =
-    payload?.pages ??
-    response?.pages ??
-    response?.data?.pages ??
-    payload?.data?.pages;
-  const numeric = Number(pages);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
-}
-
 function sortHospitalizationsByEstado(rows) {
   const order = { 1: 0, 0: 1, 2: 2 };
   return [...rows].sort(
@@ -166,14 +155,6 @@ function buildPagedParams(page, pageSize, extra = {}) {
   });
 }
 
-function buildAppointmentPagedParams(page, pageSize, extra = {}) {
-  return cleanParams({
-    page,
-    page_size: pageSize,
-    ...extra,
-  });
-}
-
 function toIsoDateTimeStart(dateStr) {
   if (!dateStr) return undefined;
   return `${dateStr}T00:00:00`;
@@ -185,11 +166,15 @@ function toIsoDateTimeEnd(dateStr) {
 }
 
 function buildMedicationAdministrationListParams(filters) {
-  return cleanParams({
-    id_enfermera: parseOptionalInt(filters.id_enfermera),
-    fecha_inicio: toIsoDateTimeStart(filters.fecha_inicio),
-    fecha_fin: toIsoDateTimeEnd(filters.fecha_fin),
-  });
+  const params = {};
+
+  if (filters.id_enfermera !== "" && filters.id_enfermera != null) {
+    params.id_enfermera = parseOptionalInt(filters.id_enfermera);
+  }
+  if (filters.fecha_inicio) params.fecha_inicio = toIsoDateTimeStart(filters.fecha_inicio);
+  if (filters.fecha_fin) params.fecha_fin = toIsoDateTimeEnd(filters.fecha_fin);
+
+  return params;
 }
 
 function getApiErrorMessage(error, fallback) {
@@ -357,6 +342,7 @@ function getAuthNurseId(auth) {
   return (
     auth?.payload?.id_enfermera ??
     auth?.payload?.id_enfermero ??
+    auth?.payload?.num_documento ??
     auth?.payload?.enfermera?.id_enfermera ??
     auth?.payload?.id_usuario ??
     auth?.payload?.id ??
@@ -539,15 +525,18 @@ function getDiagnosisName(item) {
 }
 
 function buildHospitalizationParams(filters, page, pageSize) {
-  return buildPagedParams(page, pageSize, {
-    id_paciente: parseOptionalInt(filters.id_paciente),
-    num_cama: parseOptionalInt(filters.num_cama),
-    estado: parseOptionalInt(filters.estado),
-    fecha_ingreso_inicio: filters.fecha_ingreso_inicio || undefined,
-    fecha_ingreso_fin: filters.fecha_ingreso_fin || undefined,
-    fecha_salida_inicio: filters.fecha_salida_inicio || undefined,
-    fecha_salida_fin: filters.fecha_salida_fin || undefined,
-  });
+  const params = { pag: page, cantidad: pageSize };
+
+  if (filters.num_cama !== "" && filters.num_cama != null) {
+    params.num_cama = parseOptionalInt(filters.num_cama);
+  }
+
+  if (filters.fecha_ingreso_inicio) params.fecha_ingreso_inicio = filters.fecha_ingreso_inicio;
+  if (filters.fecha_ingreso_fin) params.fecha_ingreso_fin = filters.fecha_ingreso_fin;
+  if (filters.fecha_salida_inicio) params.fecha_salida_inicio = filters.fecha_salida_inicio;
+  if (filters.fecha_salida_fin) params.fecha_salida_fin = filters.fecha_salida_fin;
+
+  return params;
 }
 
 function buildAttentionParams(filters, page, pageSize) {
@@ -581,6 +570,24 @@ function unwrapBackendResponse(responseData) {
   };
 }
 
+function filterHospitalizationsLocally(rows, filters) {
+  const idPacienteActivo = parseOptionalInt(filters.id_paciente);
+  const estadoActivo = parseOptionalInt(filters.estado);
+
+  return rows.filter((row) => {
+    if (idPacienteActivo !== undefined) {
+      const rowIdPaciente = parseOptionalInt(row.id_paciente);
+      if (rowIdPaciente !== idPacienteActivo) return false;
+    }
+
+    if (estadoActivo !== undefined) {
+      if (getStatusNumber(row.estado) !== estadoActivo) return false;
+    }
+
+    return true;
+  });
+}
+
 /* -------------------------------------------------------------------------- */
 /* COMPONENTE MAIN                                                            */
 /* -------------------------------------------------------------------------- */
@@ -591,7 +598,6 @@ export default function HospitalizationsModule({ role }) {
   const isDoctor = role === "doctor";
 
   const [hospitalizations, setHospitalizations] = React.useState([]);
-  const [backendPages, setBackendPages] = React.useState(1);
   const [totalRows, setTotalRows] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState("");
@@ -625,27 +631,25 @@ export default function HospitalizationsModule({ role }) {
     setMessage("");
     try {
       const { data } = await http.get(API.hospitalizations.list, {
-        params: buildHospitalizationParams(
-          activeFilters,
-          nextPage,
-          nextPageSize
-        ),
+        params: buildHospitalizationParams(activeFilters, 1, 9999),
       });
-      const rows = sortHospitalizationsByEstado(
+      const allRows = sortHospitalizationsByEstado(
         unwrapArray(data).map(normalizeHospitalization)
       );
-      const pages = unwrapBackendPages(data);
-      setHospitalizations(rows);
-      if (pages) {
-        setBackendPages(pages);
-        setTotalRows(pages * nextPageSize);
-      } else {
-        setBackendPages(1);
-        setTotalRows(unwrapTotal(data));
-      }
+
+      const rowsFiltradasPorEstado = filterHospitalizationsLocally(
+        allRows,
+        activeFilters
+      );
+
+      const totalRegistros = rowsFiltradasPorEstado.length;
+      const start = (nextPage - 1) * nextPageSize;
+      const paginaActual = rowsFiltradasPorEstado.slice(start, start + nextPageSize);
+
+      setHospitalizations(paginaActual);
+      setTotalRows(totalRegistros);
     } catch (err) {
       setHospitalizations([]);
-      setBackendPages(1);
       setTotalRows(null);
       setError(
         getApiErrorMessage(err, "No fue posible cargar las hospitalizaciones.")
@@ -661,10 +665,12 @@ export default function HospitalizationsModule({ role }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize, auth?.token]);
 
-  const totalPages = Math.max(1, backendPages);
+  const totalRegistros = Number.isFinite(totalRows) && totalRows !== null ? totalRows : hospitalizations.length;
+  const totalPages = Math.max(1, Math.ceil(totalRegistros / pageSize));
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
   }
 
   function applyFilters() {
@@ -823,10 +829,7 @@ export default function HospitalizationsModule({ role }) {
               Hospitalizaciones
             </h2>
             <p className="text-sm text-neutral-600">
-              Registros en página: {hospitalizations.length}
-              {Number.isFinite(totalRows) && totalRows !== null
-                ? ` · Total backend: ${totalRows}`
-                : ""}
+              Mostrando {hospitalizations.length} registros de {totalRegistros} totales
             </p>
           </div>
           <PaginationControls
@@ -1323,13 +1326,13 @@ function CreateMedicationAdministrationModal({
   const [totalRows, setTotalRows] = React.useState(null);
   const [selectedIds, setSelectedIds] = React.useState([]);
   const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(5);
+  const [pageSize, setPageSize] = React.useState(10);
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
   const hospitalizationId = getHospitalizationId(hospitalization);
 
-  async function loadItems(nextPage = page, nextPageSize = pageSize) {
+  async function loadItems() {
     if (!hospitalizationId) {
       setError("No se encontró un ID de hospitalización válido.");
       setItems([]);
@@ -1339,13 +1342,18 @@ function CreateMedicationAdministrationModal({
     setLoading(true);
     setError("");
     try {
+      const effectivePageSize = Math.min(Math.max(Number(pageSize) || 10, 10), 100);
       const { data } = await http.get(
         API.hospitalizations.prescriptionItems(hospitalizationId),
         {
-          params: buildAppointmentPagedParams(nextPage, nextPageSize),
+          params: {
+            page,
+            page_size: effectivePageSize,
+          },
         }
       );
-      setItems(unwrapArray(data));
+      const payloadItems = unwrapArray(data);
+      setItems(Array.isArray(payloadItems) ? payloadItems : []);
       setTotalRows(unwrapTotal(data));
     } catch (err) {
       setItems([]);
@@ -1363,7 +1371,7 @@ function CreateMedicationAdministrationModal({
 
   React.useEffect(() => {
     if (!hospitalizationId) return;
-    loadItems(page, pageSize);
+    loadItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize, hospitalizationId]);
 
@@ -1391,6 +1399,11 @@ function CreateMedicationAdministrationModal({
       setError("No se pudo obtener el ID de la enfermera autenticada.");
       return;
     }
+    const idEnfermeraNum = Number(idEnfermera);
+    if (!Number.isFinite(idEnfermeraNum) || idEnfermeraNum <= 0) {
+      setError("El ID de la enfermera autenticada no es válido.");
+      return;
+    }
     if (selectedIds.length === 0) {
       setError("Debe seleccionar al menos un ítem de prescripción.");
       return;
@@ -1407,7 +1420,7 @@ function CreateMedicationAdministrationModal({
       await http.post(
         API.hospitalizations.medicationAdministration,
         cleanPayload({
-          id_enfermera: Number(idEnfermera),
+          id_enfermera: idEnfermeraNum,
           id_hospitalizacion: hospitalizationId,
           admin_med_items: adminMedItems,
         })
@@ -1484,9 +1497,10 @@ function CreateMedicationAdministrationModal({
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={(size) => {
-            setPageSize(size);
+            setPageSize(Math.min(Math.max(size, 10), 100));
             setPage(1);
           }}
+          pageSizeOptions={MEDICATION_ITEMS_PAGE_SIZE_OPTIONS}
         />
 
         <ModalActions
@@ -1715,7 +1729,6 @@ function CreateAttentionModal({
     return () => {
       if (diagDebounceRef.current) clearTimeout(diagDebounceRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleDiagnosticoQueryChange(value) {
@@ -1831,11 +1844,16 @@ function CreateAttentionModal({
       );
 
       if (willCreatePrescription) {
-        const payload = buildPrescriptionApiPayload(
-          idUrgenciaAtencion,
-          prescriptionItems,
-          1
-        );
+        const payload = {
+          id_atencion: Number(idUrgenciaAtencion),
+          tipo: 1,
+          prescripciones_items: validPrescriptionItems.map((item) => ({
+            id_medicamento: Number(item.id_medicamento ?? item.codigo),
+            cantidad: Number(item.cantidad),
+            dosis: String(item.dosis ?? "").trim(),
+            duracion: String(item.duracion ?? "").trim(),
+          })),
+        };
         const prescriptionRes = await http.post(
           API.hospitalizations.createPrescription,
           payload
@@ -2269,6 +2287,7 @@ function PaginationControls({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions = PAGE_SIZE_OPTIONS,
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -2296,7 +2315,7 @@ function PaginationControls({
         onChange={(e) => onPageSizeChange(Number(e.target.value))}
         className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
       >
-        {PAGE_SIZE_OPTIONS.map((option) => (
+        {pageSizeOptions.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
@@ -2613,7 +2632,9 @@ function AttentionDetailBody({ data, idPaciente, idUrgencia }) {
     data?.id_paciente ??
     data?.num_doc_paciente ??
     null;
-  const idAtencionPrescripcion = Number(idUrgencia);
+  const idAtencionPrescripcion = Number(
+    data?.id_atencionh ?? data?.id_atencion ?? data?.id
+  );
 
   React.useEffect(() => {
     let cancelled = false;
