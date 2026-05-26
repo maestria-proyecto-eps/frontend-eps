@@ -10,8 +10,6 @@ const FOOTER_MENUS = {
   "Médico": [
     { label: 'Dashboard',  path: '/doctor'            },
     { label: 'Mis Citas',  path: '/doctor/citas'      },
-    { label: 'Remisiones', path: '/doctor/remisiones' },
-    { label: 'Historial',  path: '/doctor/historial'  },
   ],
   "Enfermero": [
     { label: 'Dashboard',         path: '/nurse'                   },
