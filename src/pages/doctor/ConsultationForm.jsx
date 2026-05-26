@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Alert, Badge, Button, Card, Input, Modal, Spinner } from "../../components/ui";
-import PrescriptionItemsForm, {
+import PrescriptionItemsForm from "../../components/prescriptions/PrescriptionItemsForm";
+import {
   createPrescriptionItem,
-} from "../../components/prescriptions/PrescriptionItemsForm";
-import { validatePrescriptionItems } from "../../components/prescriptions/prescriptionFormUtils";
+  validatePrescriptionItems,
+} from "../../components/prescriptions/prescriptionFormUtils";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
 
@@ -490,7 +491,11 @@ export default function ConsultationForm() {
         </Badge>
       </div>
 
-      {feedback && <Alert variant={feedback.type}>{feedback.text}</Alert>}
+      {feedback && (
+        <Alert variant={feedback.type} fixed>
+          {feedback.text}
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_380px]">
         {/* ── LEFT COLUMN ─────────────────────────────────────── */}

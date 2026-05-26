@@ -214,16 +214,15 @@ export default function Calendar() {
     <PageContainer>
 
       {visibleAlert && (
-        <div className="mb-4">
-          <Alert
-            variant={msg.type}
-            title={msg.title}
-            dismissible={true}
-            onDismiss={() => setVisibleAlert(false)}
-          >
-            {msg.text}
-          </Alert>
-        </div>
+        <Alert
+          variant={msg.type}
+          title={msg.title}
+          dismissible={true}
+          fixed
+          onDismiss={() => setVisibleAlert(false)}
+        >
+          {msg.text}
+        </Alert>
       )}
 
       <div className="mb-8 flex items-center justify-between gap-3">

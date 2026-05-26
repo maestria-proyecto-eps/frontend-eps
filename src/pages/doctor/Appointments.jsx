@@ -199,7 +199,7 @@ export default function Appointments() {
       </Card>
 
       {error && (
-        <Alert variant="error" title="Error">
+        <Alert variant="error" title="Error" fixed>
           {error}
         </Alert>
       )}

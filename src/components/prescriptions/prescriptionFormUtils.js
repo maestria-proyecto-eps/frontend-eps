@@ -206,7 +206,7 @@ export function buildPrescriptionApiPayload(idAtencion, prescriptionItems, tipo 
       id_medicamento: Number(item.codigo),
       dosis: item.dosis.trim(),
       duracion: String(item.duracion).trim(),
-      cantidad: String(item.cantidad).trim(),
+      cantidad: parseInt(String(item.cantidad).trim(), 10),
     })),
   };
 }

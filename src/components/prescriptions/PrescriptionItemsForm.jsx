@@ -24,6 +24,8 @@ export default function PrescriptionItemsForm({
   onClearError,
   disabled = false,
   title = "Medicamentos",
+  addLabel = "Agregar",
+  minItems = 1,
 }) {
   function updatePrescriptionItem(localId, key, value) {
     if (key === "principio_activo") {
@@ -116,7 +118,7 @@ export default function PrescriptionItemsForm({
   }
 
   function removePrescriptionItem(localId) {
-    if (prescriptionItems.length <= 1) return;
+    if (prescriptionItems.length <= minItems) return;
     onPrescriptionItemsChange((prev) =>
       prev.filter((item) => item.localId !== localId)
     );
@@ -143,7 +145,7 @@ export default function PrescriptionItemsForm({
           disabled={disabled}
           type="button"
         >
-          Agregar
+          {addLabel}
         </Button>
       </div>
 
@@ -326,5 +328,3 @@ export default function PrescriptionItemsForm({
     </div>
   );
 }
-
-export { createPrescriptionItem };

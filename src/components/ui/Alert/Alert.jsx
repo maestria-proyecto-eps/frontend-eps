@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../../utils/cn';
 
 const iconMap = {
@@ -22,15 +23,12 @@ const iconColors = {
   info: 'text-secondary-800',
 };
 
+/** Por encima de modales (z-[100]) y header sticky (z-50). */
+export const FLOATING_ALERT_Z_INDEX = 'z-[200]';
+
 /**
  * Alert para mensajes de feedback al usuario.
- * Diseño moderno con icono a la izquierda, contenido centrado y acción (botón) a la derecha.
- * @param {string} children - Contenido del alert
- * @param {string} variant - Tipo: success|warning|error|info
- * @param {string} title - Título del alert
- * @param {ReactNode} action - Componente/botón a la derecha (opcional)
- * @param {boolean} dismissible - Si true, muestra botón X para cerrar
- * @param {function} onDismiss - Callback cuando se cierra
+ * Con `fixed`, se renderiza en portal al tope de la pantalla (visible sobre modales).
  */
 export default function Alert({
   children,
@@ -39,6 +37,7 @@ export default function Alert({
   action,
   dismissible = false,
   onDismiss,
+  fixed = false,
   className = '',
   ...props
 }) {
@@ -51,40 +50,30 @@ export default function Alert({
 
   if (!visible) return null;
 
-  const icon = iconMap[variant];
+  const icon = iconMap[variant] ?? iconMap.info;
 
-  return (
+  const alertBody = (
     <div
       role="alert"
       className={cn(
         'rounded-xl border p-4 flex items-center gap-4',
-        variants[variant],
+        variants[variant] ?? variants.info,
+        fixed && 'shadow-lg',
         className
       )}
       {...props}
     >
-      {/* Icono a la izquierda */}
       <span className={cn('material-icons flex-shrink-0 text-xl', iconColors[variant])}>
         {icon}
       </span>
 
-      {/* Contenido en el centro */}
       <div className="flex-1 min-w-0">
-        {title && (
-          <p className="font-semibold text-sm mb-1">{title}</p>
-        )}
-        <div className={cn('text-sm', title ? '' : 'font-medium')}>
-          {children}
-        </div>
+        {title && <p className="font-semibold text-sm mb-1">{title}</p>}
+        <div className={cn('text-sm', title ? '' : 'font-medium')}>{children}</div>
       </div>
 
-      {/* Acción a la derecha (botón o cerrar) */}
       <div className="flex-shrink-0 flex items-center gap-2">
-        {action && (
-          <div>
-            {action}
-          </div>
-        )}
+        {action && <div>{action}</div>}
         {dismissible && (
           <button
             type="button"
@@ -111,5 +100,19 @@ export default function Alert({
         )}
       </div>
     </div>
+  );
+
+  if (!fixed) return alertBody;
+
+  return createPortal(
+    <div
+      className={cn(
+        'fixed top-4 left-0 right-0 flex justify-center px-4 pointer-events-none',
+        FLOATING_ALERT_Z_INDEX
+      )}
+    >
+      <div className="pointer-events-auto w-full max-w-2xl">{alertBody}</div>
+    </div>,
+    document.body
   );
 }

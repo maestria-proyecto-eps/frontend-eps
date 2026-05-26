@@ -1,24 +1,20 @@
 import React from "react";
 import { AuthContext } from "../../services/auth/AuthContext";
 import { http } from "../../services/api/http";
-import { Spinner } from "../../components/ui";
-import PrescriptionItemsForm, {
-  createPrescriptionItem,
-} from "../../components/prescriptions/PrescriptionItemsForm";
+import { PageFeedback, Spinner } from "../../components/ui";
+import PrescriptionItemsForm from "../../components/prescriptions/PrescriptionItemsForm";
 import {
-  getValidPrescriptionItems,
+  buildPrescriptionApiPayload,
   validatePrescriptionItems,
 } from "../../components/prescriptions/prescriptionFormUtils";
 
 const EMERGENCY_API = "";
 const MEDICAL_API = "";
 
-/* -------------------------------------------------------------------------- */
-/* CONFIGURACIÓN                                                              */
-/* -------------------------------------------------------------------------- */
-
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 const MEDICATION_ITEMS_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const HOSPITALIZATION_ATTENTION_CACHE_KEY =
+  "eps_hospitalization_attention_ids";
 
 const STATUS_LABEL = {
   0: "Por ingresar",
@@ -37,6 +33,8 @@ const FALLBACK_DIAGNOSES = [
   { id_diagnostico: 2, nombre_enfermedad: "Diabetes" },
   { id_diagnostico: 3, nombre_enfermedad: "Infección respiratoria" },
 ];
+
+const HOSPITALIZATION_PRESCRIPTION_TYPE = 3;
 
 const API = {
   hospitalizations: {
@@ -58,10 +56,6 @@ const API = {
     search: `${MEDICAL_API}/api/diagnosticos/search`,
   },
 };
-
-/* -------------------------------------------------------------------------- */
-/* HELPERS                                                                    */
-/* -------------------------------------------------------------------------- */
 
 function cleanParams(params) {
   return Object.fromEntries(
@@ -114,6 +108,149 @@ function unwrapArray(response) {
   return [];
 }
 
+function unwrapPrescriptionRows(responseData) {
+  const payload = unwrapPayload(responseData);
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.Data)) return payload.Data;
+  return [];
+}
+
+function readHospitalizationAttentionCache() {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem(HOSPITALIZATION_ATTENTION_CACHE_KEY) || "{}"
+    );
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function rememberHospitalizationAttentionId(idHospitalizacion, idAtencion) {
+  const hospitalizationId = Number(idHospitalizacion);
+  const attentionId = Number(idAtencion);
+  if (
+    !Number.isFinite(hospitalizationId) ||
+    hospitalizationId <= 0 ||
+    !Number.isFinite(attentionId) ||
+    attentionId <= 0 ||
+    typeof window === "undefined"
+  ) {
+    return;
+  }
+
+  const cache = readHospitalizationAttentionCache();
+  const key = String(hospitalizationId);
+  const current = Array.isArray(cache[key]) ? cache[key] : [];
+  const next = Array.from(new Set([...current, attentionId]));
+  window.localStorage.setItem(
+    HOSPITALIZATION_ATTENTION_CACHE_KEY,
+    JSON.stringify({ ...cache, [key]: next })
+  );
+}
+
+function rememberHospitalizationAttentionRows(idHospitalizacion, rows) {
+  (rows || []).forEach((row) => {
+    const attentionId = getHospitalizationAttentionId(row);
+    if (attentionId) {
+      rememberHospitalizationAttentionId(idHospitalizacion, attentionId);
+    }
+  });
+}
+
+function getHospitalizationAttentionId(responseData) {
+  const payload = unwrapPayload(responseData);
+  const raw =
+    payload?.id_atencionh ??
+    payload?.id_atencion ??
+    responseData?.id_atencionh ??
+    responseData?.id_atencion;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function unwrapHospitalizationPrescriptionItems(responseData) {
+  if (responseData && typeof responseData === "object") {
+    assertBackendSuccess(
+      responseData,
+      "No fue posible cargar los ítems de prescripción."
+    );
+  }
+  const rows = unwrapArray(responseData);
+  if (rows.length > 0) {
+    return { rows, total: unwrapTotal(responseData) };
+  }
+  const payload = unwrapPayload(responseData);
+  if (Array.isArray(payload?.data)) {
+    return {
+      rows: payload.data,
+      total:
+        unwrapTotal(responseData) ??
+        payload.total ??
+        payload.total_items ??
+        payload.data.length,
+    };
+  }
+  return { rows: [], total: 0 };
+}
+
+function buildHospitalizationPrescriptionItemsParams(page, pageSize) {
+  return {
+    page: Number(page) || 1,
+    page_size: Math.min(Math.max(Number(pageSize) || 10, 10), 100),
+  };
+}
+
+function buildPrescriptionListParams(idAtencion) {
+  return cleanParams({
+    idAtencion: Number(idAtencion),
+    tipo: HOSPITALIZATION_PRESCRIPTION_TYPE,
+    pag: 1,
+    cantidad: 50,
+  });
+}
+
+async function loadPrescriptionsByAttentionId(idAtencion) {
+  const attentionId = Number(idAtencion);
+  if (!Number.isFinite(attentionId) || attentionId <= 0) return [];
+
+  const { data } = await http.get(API.hospitalizations.prescriptionsList, {
+    params: buildPrescriptionListParams(attentionId),
+  });
+  if (data && typeof data === "object") {
+    assertBackendSuccess(
+      data,
+      "No fue posible cargar las prescripciones de la atención."
+    );
+  }
+  return unwrapPrescriptionRows(data);
+}
+
+async function postHospitalizationPrescription({
+  idAtencionHospitalizacion,
+  idHospitalizacion,
+  prescriptionItems,
+}) {
+  const payload = buildPrescriptionApiPayload(
+    idAtencionHospitalizacion,
+    prescriptionItems,
+    HOSPITALIZATION_PRESCRIPTION_TYPE
+  );
+
+  try {
+    const response = await http.post(API.hospitalizations.createPrescription, payload);
+    return { response, payload };
+  } catch (error) {
+    console.error("Error creando prescripción de hospitalización:", {
+      payload,
+      response: error?.response?.data,
+    });
+    throw error;
+  }
+}
+
 function unwrapTotal(response) {
   const payload = unwrapPayload(response);
   const candidates = [
@@ -140,10 +277,42 @@ function unwrapTotal(response) {
 
 function sortHospitalizationsByEstado(rows) {
   const order = { 1: 0, 0: 1, 2: 2 };
+  function getDateValue(value) {
+    if (!value) return null;
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
   return [...rows].sort(
-    (a, b) =>
-      (order[getStatusNumber(a.estado)] ?? 9) -
-      (order[getStatusNumber(b.estado)] ?? 9)
+    (a, b) => {
+      const statusDiff =
+        (order[getStatusNumber(a.estado)] ?? 9) -
+        (order[getStatusNumber(b.estado)] ?? 9);
+      if (statusDiff !== 0) return statusDiff;
+
+      const aSalida = getDateValue(a.salida ?? a.fecha_salida);
+      const bSalida = getDateValue(b.salida ?? b.fecha_salida);
+      const aHasSalida = aSalida !== null;
+      const bHasSalida = bSalida !== null;
+
+      if (aHasSalida !== bHasSalida) {
+        return aHasSalida ? 1 : -1;
+      }
+
+      if (aHasSalida && bHasSalida && aSalida !== bSalida) {
+        return bSalida - aSalida;
+      }
+
+      const aIngreso = getDateValue(a.ingreso ?? a.fecha_ingreso);
+      const bIngreso = getDateValue(b.ingreso ?? b.fecha_ingreso);
+      if (aIngreso !== bIngreso) {
+        if (aIngreso === null) return 1;
+        if (bIngreso === null) return -1;
+        return bIngreso - aIngreso;
+      }
+
+      return 0;
+    }
   );
 }
 
@@ -167,12 +336,17 @@ function toIsoDateTimeEnd(dateStr) {
 
 function buildMedicationAdministrationListParams(filters) {
   const params = {};
+  const idEnfermera = parseOptionalInt(filters.id_enfermera);
 
-  if (filters.id_enfermera !== "" && filters.id_enfermera != null) {
-    params.id_enfermera = parseOptionalInt(filters.id_enfermera);
+  if (idEnfermera !== undefined) {
+    params.id_enfermera = idEnfermera;
   }
-  if (filters.fecha_inicio) params.fecha_inicio = toIsoDateTimeStart(filters.fecha_inicio);
-  if (filters.fecha_fin) params.fecha_fin = toIsoDateTimeEnd(filters.fecha_fin);
+  if (filters.fecha_inicio) {
+    params.fecha_inicio = toIsoDateTimeStart(filters.fecha_inicio);
+  }
+  if (filters.fecha_fin) {
+    params.fecha_fin = toIsoDateTimeEnd(filters.fecha_fin);
+  }
 
   return params;
 }
@@ -191,6 +365,12 @@ function getApiErrorMessage(error, fallback) {
   if (data && typeof data === "object") {
     const nested = data?.data?.message || data?.Data?.message;
     if (typeof nested === "string") return nested;
+    try {
+      const serialized = JSON.stringify(data);
+      if (serialized && serialized !== "{}") return serialized;
+    } catch {
+      // Continúa con el fallback si la respuesta no es serializable.
+    }
   }
   return fallback;
 }
@@ -358,18 +538,78 @@ function getPrescriptionItemId(item) {
     item?.id_prescripcionItems ??
     item?.id_prescripcion_items ??
     item?.id_item ??
+    item?.prescripcion_item?.id_items ??
+    item?.prescripcion_item?.id_prescripcion_item ??
+    item?.prescripcion_item?.id_prescripciones_item ??
+    item?.prescripcion_item?.id_prescripcion_items ??
+    item?.admin_item_detalle?.id_prescripcion_item ??
     item?.id
   );
 }
 
+function parsePositiveInt(value) {
+  const parsed = parseOptionalInt(value);
+  return parsed !== undefined && parsed > 0 ? parsed : undefined;
+}
+
+/** Máximo de administraciones: duración (veces/días) o cantidad como respaldo. */
+function getPrescribedAdministrationLimit(item) {
+  const prescriptionItem = item?.prescripcion_item || item;
+  const duracion = parsePositiveInt(prescriptionItem?.duracion);
+  if (duracion) return duracion;
+  const cantidad = parsePositiveInt(prescriptionItem?.cantidad);
+  if (cantidad) return cantidad;
+  return 1;
+}
+
+function buildAdministrationCountByItemId(administrations) {
+  const counts = new Map();
+  (administrations || []).forEach((admin) => {
+    const entries = admin?.items_administrados;
+    if (!Array.isArray(entries)) return;
+    entries.forEach((entry) => {
+      const id =
+        entry?.prescripcion_item?.id_items ??
+        entry?.prescripcion_item?.id_prescripcion_item ??
+        entry?.admin_item_detalle?.id_prescripcion_item;
+      if (id === null || id === undefined) return;
+      const key = String(id);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+  });
+  return counts;
+}
+
+function getItemAdministrationStatus(item, adminCountByItemId) {
+  const itemId = getPrescriptionItemId(item);
+  const limit = getPrescribedAdministrationLimit(item);
+  if (itemId === null || itemId === undefined || itemId === "") {
+    return { administered: 0, limit, remaining: 0, exhausted: true };
+  }
+  const administered = adminCountByItemId.get(String(itemId)) || 0;
+  const remaining = Math.max(0, limit - administered);
+  return {
+    administered,
+    limit,
+    remaining,
+    exhausted: remaining <= 0,
+  };
+}
+
 function getMedicationName(item) {
+  const prescriptionItem = item?.prescripcion_item || item;
+  const medication = item?.medicamento || prescriptionItem?.medicamento || {};
   return (
-    item?.medicamento?.nombre_generico ??
-    item?.medicamento?.nombre ??
-    item?.medicamento?.compuesto ??
-    item?.nombre_generico ??
-    item?.nombre ??
-    item?.compuesto ??
+    medication?.nombre_medicamento ??
+    medication?.nombre_generico ??
+    medication?.principio_activo ??
+    medication?.nombre ??
+    medication?.compuesto ??
+    prescriptionItem?.nombre_medicamento ??
+    prescriptionItem?.nombre_generico ??
+    prescriptionItem?.principio_activo ??
+    prescriptionItem?.nombre ??
+    prescriptionItem?.compuesto ??
     "Medicamento"
   );
 }
@@ -588,10 +828,6 @@ function filterHospitalizationsLocally(rows, filters) {
   });
 }
 
-/* -------------------------------------------------------------------------- */
-/* COMPONENTE MAIN                                                            */
-/* -------------------------------------------------------------------------- */
-
 export default function HospitalizationsModule({ role }) {
   const auth = React.useContext(AuthContext);
   const isNurse = role === "nurse";
@@ -620,50 +856,51 @@ export default function HospitalizationsModule({ role }) {
   const [selectedHospitalization, setSelectedHospitalization] =
     React.useState(null);
 
-  async function loadHospitalizations(
-    nextPage = page,
-    nextPageSize = pageSize,
-    filtersOverride
-  ) {
-    const activeFilters = filtersOverride ?? filters;
-    setLoading(true);
-    setError("");
-    setMessage("");
-    try {
-      const { data } = await http.get(API.hospitalizations.list, {
-        params: buildHospitalizationParams(activeFilters, 1, 9999),
-      });
-      const allRows = sortHospitalizationsByEstado(
-        unwrapArray(data).map(normalizeHospitalization)
-      );
+  const loadHospitalizations = React.useCallback(
+    async (nextPage = page, nextPageSize = pageSize, filtersOverride) => {
+      const activeFilters = filtersOverride ?? filters;
+      setLoading(true);
+      setError("");
+      setMessage("");
+      try {
+        const { data } = await http.get(API.hospitalizations.list, {
+          params: buildHospitalizationParams(activeFilters, 1, 9999),
+        });
+        const allRows = sortHospitalizationsByEstado(
+          unwrapArray(data).map(normalizeHospitalization)
+        );
 
-      const rowsFiltradasPorEstado = filterHospitalizationsLocally(
-        allRows,
-        activeFilters
-      );
+        const rowsFiltradasPorEstado = filterHospitalizationsLocally(
+          allRows,
+          activeFilters
+        );
 
-      const totalRegistros = rowsFiltradasPorEstado.length;
-      const start = (nextPage - 1) * nextPageSize;
-      const paginaActual = rowsFiltradasPorEstado.slice(start, start + nextPageSize);
+        const totalRegistros = rowsFiltradasPorEstado.length;
+        const start = (nextPage - 1) * nextPageSize;
+        const paginaActual = rowsFiltradasPorEstado.slice(
+          start,
+          start + nextPageSize
+        );
 
-      setHospitalizations(paginaActual);
-      setTotalRows(totalRegistros);
-    } catch (err) {
-      setHospitalizations([]);
-      setTotalRows(null);
-      setError(
-        getApiErrorMessage(err, "No fue posible cargar las hospitalizaciones.")
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+        setHospitalizations(paginaActual);
+        setTotalRows(totalRegistros);
+      } catch (err) {
+        setHospitalizations([]);
+        setTotalRows(null);
+        setError(
+          getApiErrorMessage(err, "No fue posible cargar las hospitalizaciones.")
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters, page, pageSize]
+  );
 
   React.useEffect(() => {
     if (!auth?.token) return;
     loadHospitalizations(page, pageSize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, auth?.token]);
+  }, [auth?.token, loadHospitalizations, page, pageSize]);
 
   const totalRegistros = Number.isFinite(totalRows) && totalRows !== null ? totalRows : hospitalizations.length;
   const totalPages = Math.max(1, Math.ceil(totalRegistros / pageSize));
@@ -725,8 +962,7 @@ export default function HospitalizationsModule({ role }) {
         </div>
       </section>
 
-      {message && <Notice type="info">{message}</Notice>}
-      {error && <Notice type="error">{error}</Notice>}
+      <PageFeedback message={message} error={error} />
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -738,6 +974,15 @@ export default function HospitalizationsModule({ role }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => loadHospitalizations(page, pageSize)}
+              className="rounded-xl border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              title="Refrescar hospitalizaciones"
+              aria-label="Refrescar hospitalizaciones"
+            >
+              Refrescar
+            </button>
             <button
               type="button"
               onClick={clearFilters}
@@ -932,6 +1177,7 @@ export default function HospitalizationsModule({ role }) {
 
       {modal === "createAttention" && selectedHospitalization && (
         <CreateAttentionModal
+          key={selectedHospitalization.id_hospitalizacion}
           hospitalization={selectedHospitalization}
           auth={auth}
           onClose={closeModal}
@@ -951,10 +1197,6 @@ export default function HospitalizationsModule({ role }) {
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* FILA PRINCIPAL                                                             */
-/* -------------------------------------------------------------------------- */
 
 function HospitalizationRow({ row, isNurse, isDoctor, openModal }) {
   const patientName =
@@ -1022,18 +1264,18 @@ function RowActionsMenu({ row, isNurse, isDoctor, openModal }) {
       onClick: () => openModal("createMedicationAdministration", row),
     },
     {
-      key: "salida",
-      label: "Salida",
-      icon: "logout",
-      enabled: canDischarge,
-      onClick: () => openModal("salida", row),
-    },
-    {
       key: "viewMedication",
       label: "Ver adm. medicamento",
       icon: "visibility",
       enabled: canViewMedicationAdministration,
       onClick: () => openModal("viewMedicationAdministration", row),
+    },
+    {
+      key: "salida",
+      label: "Salida",
+      icon: "logout",
+      enabled: canDischarge,
+      onClick: () => openModal("salida", row),
     },
   ];
 
@@ -1203,10 +1445,6 @@ function DetailField({ label, value }) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* MODAL INGRESO                                                              */
-/* -------------------------------------------------------------------------- */
-
 function AdmissionModal({
   hospitalization,
   onClose,
@@ -1220,16 +1458,48 @@ function AdmissionModal({
   async function submit(e) {
     e.preventDefault();
     setError("");
+    const numCamaValue = parsePositiveInt(numCama);
     if (!String(numCama).trim()) {
       setError("El número de cama es obligatorio.");
       return;
     }
+    if (!numCamaValue) {
+      setError("El número de cama debe ser un número mayor que cero.");
+      return;
+    }
+
+    try {
+      const { data } = await http.get(API.hospitalizations.list, {
+        params: buildHospitalizationParams({}, 1, 9999),
+      });
+      const occupiedBed = unwrapArray(data)
+        .map(normalizeHospitalization)
+        .find((row) => {
+          const rowBed = parsePositiveInt(row?.num_cama);
+          return (
+            rowBed === numCamaValue &&
+            getStatusNumber(row?.estado) === 1 &&
+            Number(row?.id_hospitalizacion) !== Number(hospitalization.id_hospitalizacion)
+          );
+        });
+
+      if (occupiedBed) {
+        setError(
+          `La cama ${numCamaValue} ya está ocupada por la hospitalización #${occupiedBed.id_hospitalizacion} en estado ingresado.`
+        );
+        return;
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, "No fue posible validar la disponibilidad de la cama."));
+      return;
+    }
+
     setSaving(true);
     try {
       await http.put(
         API.hospitalizations.ingreso(hospitalization.id_hospitalizacion),
         {
-          num_cama: toApiValue(String(numCama).trim()),
+          num_cama: numCamaValue,
         }
       );
       setMessage("Ingreso de hospitalización registrado correctamente.");
@@ -1249,6 +1519,10 @@ function AdmissionModal({
       <form onSubmit={submit} className="space-y-4">
         <Field label="Número de cama">
           <Input
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
             value={numCama}
             onChange={(e) => setNumCama(e.target.value)}
             placeholder="Ej: 302"
@@ -1259,10 +1533,6 @@ function AdmissionModal({
     </Modal>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* MODAL SALIDA                                                               */
-/* -------------------------------------------------------------------------- */
 
 function DischargeModal({
   hospitalization,
@@ -1311,10 +1581,6 @@ function DischargeModal({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* CREAR ADMINISTRACIÓN DE MEDICAMENTOS                                       */
-/* -------------------------------------------------------------------------- */
-
 function CreateMedicationAdministrationModal({
   hospitalization,
   auth,
@@ -1324,6 +1590,7 @@ function CreateMedicationAdministrationModal({
 }) {
   const [items, setItems] = React.useState([]);
   const [totalRows, setTotalRows] = React.useState(null);
+  const [administrations, setAdministrations] = React.useState([]);
   const [selectedIds, setSelectedIds] = React.useState([]);
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
@@ -1332,7 +1599,35 @@ function CreateMedicationAdministrationModal({
 
   const hospitalizationId = getHospitalizationId(hospitalization);
 
-  async function loadItems() {
+  const adminCountByItemId = React.useMemo(
+    () => buildAdministrationCountByItemId(administrations),
+    [administrations]
+  );
+
+  const loadAdministrations = React.useCallback(async () => {
+    if (!hospitalizationId) {
+      setAdministrations([]);
+      return;
+    }
+    try {
+      const { data } = await http.get(
+        API.hospitalizations.medicationAdministrationByHospitalization(
+          hospitalizationId
+        )
+      );
+      if (data && typeof data === "object") {
+        assertBackendSuccess(
+          data,
+          "No fue posible cargar el historial de administraciones."
+        );
+      }
+      setAdministrations(unwrapArray(data));
+    } catch {
+      setAdministrations([]);
+    }
+  }, [hospitalizationId]);
+
+  const loadPrescriptionItems = React.useCallback(async () => {
     if (!hospitalizationId) {
       setError("No se encontró un ID de hospitalización válido.");
       setItems([]);
@@ -1342,19 +1637,22 @@ function CreateMedicationAdministrationModal({
     setLoading(true);
     setError("");
     try {
-      const effectivePageSize = Math.min(Math.max(Number(pageSize) || 10, 10), 100);
-      const { data } = await http.get(
-        API.hospitalizations.prescriptionItems(hospitalizationId),
-        {
-          params: {
-            page,
-            page_size: effectivePageSize,
-          },
-        }
-      );
-      const payloadItems = unwrapArray(data);
-      setItems(Array.isArray(payloadItems) ? payloadItems : []);
-      setTotalRows(unwrapTotal(data));
+      const primaryRes = await http
+        .get(API.hospitalizations.prescriptionItems(hospitalizationId), {
+          params: buildHospitalizationPrescriptionItemsParams(page, pageSize),
+        })
+        .catch((error) => ({ error }));
+
+      let primaryRows = [];
+      let primaryTotal = null;
+      if (!primaryRes?.error) {
+        const normalized = unwrapHospitalizationPrescriptionItems(primaryRes.data);
+        primaryRows = normalized.rows;
+        primaryTotal = normalized.total;
+      }
+
+      setItems(primaryRows);
+      setTotalRows(primaryTotal ?? primaryRows.length);
     } catch (err) {
       setItems([]);
       setTotalRows(null);
@@ -1367,13 +1665,29 @@ function CreateMedicationAdministrationModal({
     } finally {
       setLoading(false);
     }
-  }
+  }, [hospitalizationId, page, pageSize, setError]);
 
   React.useEffect(() => {
     if (!hospitalizationId) return;
-    loadItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, hospitalizationId]);
+    loadAdministrations();
+  }, [hospitalizationId, loadAdministrations]);
+
+  React.useEffect(() => {
+    if (!hospitalizationId) return;
+    loadPrescriptionItems();
+  }, [hospitalizationId, loadPrescriptionItems]);
+
+  React.useEffect(() => {
+    setSelectedIds((prev) =>
+      prev.filter((id) => {
+        const item = items.find(
+          (row) => String(getPrescriptionItemId(row)) === String(id)
+        );
+        if (!item) return true;
+        return !getItemAdministrationStatus(item, adminCountByItemId).exhausted;
+      })
+    );
+  }, [items, adminCountByItemId]);
 
   const totalPages = getComputedTotalPages(
     totalRows,
@@ -1382,9 +1696,20 @@ function CreateMedicationAdministrationModal({
     items.length
   );
 
-  function toggle(id) {
+  const selectableItemsCount = React.useMemo(
+    () =>
+      items.filter(
+        (item) => !getItemAdministrationStatus(item, adminCountByItemId).exhausted
+      ).length,
+    [items, adminCountByItemId]
+  );
+
+  function toggle(id, item) {
+    if (item && getItemAdministrationStatus(item, adminCountByItemId).exhausted) {
+      return;
+    }
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
     );
   }
 
@@ -1413,6 +1738,20 @@ function CreateMedicationAdministrationModal({
       .filter((id) => Number.isFinite(id));
     if (adminMedItems.length === 0) {
       setError("Los ítems seleccionados no tienen un id_items válido.");
+      return;
+    }
+
+    const exhaustedSelection = adminMedItems.filter((id) => {
+      const item = items.find(
+        (row) => String(getPrescriptionItemId(row)) === String(id)
+      );
+      if (!item) return false;
+      return getItemAdministrationStatus(item, adminCountByItemId).exhausted;
+    });
+    if (exhaustedSelection.length > 0) {
+      setError(
+        "Uno o más medicamentos ya alcanzaron las administraciones prescritas."
+      );
       return;
     }
     setSaving(true);
@@ -1447,7 +1786,9 @@ function CreateMedicationAdministrationModal({
     >
       <div className="space-y-5">
         <p className="text-sm text-neutral-600">
-          Selecciona los ítems de prescripción que serán administrados.
+          Selecciona los ítems de prescripción que serán administrados. Cada
+          medicamento se puede administrar solo hasta completar las veces
+          indicadas en la duración de la prescripción.
         </p>
 
         {loading ? (
@@ -1456,34 +1797,101 @@ function CreateMedicationAdministrationModal({
           <p className="text-neutral-500">
             No hay ítems de prescripción disponibles para esta hospitalización.
           </p>
+        ) : selectableItemsCount === 0 ? (
+          <div className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+            <span className="material-icons text-neutral-500">check_circle</span>
+            <div>
+              <p className="text-sm font-semibold text-neutral-800">
+                Todos los medicamentos prescritos ya fueron administrados
+              </p>
+              <p className="mt-1 text-sm text-neutral-600">
+                No quedan administraciones pendientes según la prescripción
+                médica.
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="space-y-3">
             {items.map((item, index) => {
               const id = getPrescriptionItemId(item) ?? index;
               const selected = selectedIds.includes(id);
+              const adminStatus = getItemAdministrationStatus(
+                item,
+                adminCountByItemId
+              );
+              const { exhausted, administered, limit, remaining } = adminStatus;
+              const prescriptionItem = item?.prescripcion_item || item;
+              const medication = item?.medicamento || prescriptionItem?.medicamento || {};
+              const principioActivo = String(
+                medication?.principio_activo ??
+                  prescriptionItem?.principio_activo ??
+                  ""
+              ).trim();
+              const presentacion = String(
+                medication?.presentacion ?? prescriptionItem?.presentacion ?? ""
+              ).trim();
               return (
                 <label
                   key={id}
-                  className="flex gap-3 rounded-xl border border-neutral-200 p-4 hover:bg-neutral-50 cursor-pointer"
+                  className={[
+                    "flex gap-3 rounded-xl border p-4",
+                    exhausted
+                      ? "border-neutral-200 bg-neutral-50 opacity-75 cursor-not-allowed"
+                      : "border-neutral-200 hover:bg-neutral-50 cursor-pointer",
+                  ].join(" ")}
                 >
                   <input
                     type="checkbox"
                     checked={selected}
-                    onChange={() => toggle(id)}
-                    className="mt-1"
+                    disabled={exhausted}
+                    onChange={() => toggle(id, item)}
+                    className="mt-1 disabled:cursor-not-allowed"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-neutral-900">
-                      {getMedicationName(item)}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-neutral-900">
+                        {getMedicationName(item)}
+                      </p>
+                      {exhausted ? (
+                        <span className="inline-flex items-center rounded-full border border-neutral-300 bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+                          Completado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary-700">
+                          {remaining}{" "}
+                          {remaining === 1
+                            ? "administración restante"
+                            : "administraciones restantes"}
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-1 text-sm text-neutral-600">
                       Código:{" "}
-                      {item?.medicamento?.codigo ?? item?.codigo ?? "—"} ·
-                      Dosis: {item?.dosis ?? "—"} · Duración:{" "}
-                      {item?.duracion ?? "—"} · Cantidad:{" "}
-                      {item?.cantidad ?? "—"}
+                      {medication?.codigo ??
+                        prescriptionItem?.codigo ??
+                        prescriptionItem?.id_medicamento ??
+                        "—"} ·
+                      Dosis: {prescriptionItem?.dosis ?? "—"} · Duración:{" "}
+                      {prescriptionItem?.duracion ?? "—"} · Cantidad:{" "}
+                      {prescriptionItem?.cantidad ?? "—"}
                     </p>
-                    <RecordDetails data={item} />
+                    <p
+                      className={
+                        exhausted
+                          ? "mt-1 text-xs font-medium text-neutral-500"
+                          : "mt-1 text-xs text-neutral-500"
+                      }
+                    >
+                      Administrado {administered} de {limit}{" "}
+                      {limit === 1 ? "vez prescrita" : "veces prescritas"}
+                    </p>
+                    {(principioActivo || presentacion) && (
+                      <p className="mt-2 text-xs text-neutral-500">
+                        {[principioActivo ? `Principio activo: ${principioActivo}` : null, presentacion ? `Presentación: ${presentacion}` : null]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
                   </div>
                 </label>
               );
@@ -1508,15 +1916,12 @@ function CreateMedicationAdministrationModal({
           loading={saving}
           submitLabel="Crear administración"
           onSubmit={submit}
+          submitDisabled={selectableItemsCount === 0}
         />
       </div>
     </Modal>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* VER ADMINISTRACIÓN DE MEDICAMENTOS                                         */
-/* -------------------------------------------------------------------------- */
 
 function MedicationAdministrationListModal({
   hospitalization,
@@ -1533,42 +1938,50 @@ function MedicationAdministrationListModal({
 
   const hospitalizationId = getHospitalizationId(hospitalization);
 
-  async function loadRows(activeFilters = filters) {
-    if (!hospitalizationId) {
-      setError("No se encontró un ID de hospitalización válido.");
-      setRows([]);
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await http.get(
-        API.hospitalizations.medicationAdministrationByHospitalization(
-          hospitalizationId
-        ),
-        {
-          params: buildMedicationAdministrationListParams(activeFilters),
+  const loadRows = React.useCallback(
+    async (activeFilters = filters) => {
+      if (!hospitalizationId) {
+        setError("No se encontró un ID de hospitalización válido.");
+        setRows([]);
+        return;
+      }
+      setLoading(true);
+      setError("");
+      try {
+        const { data } = await http.get(
+          API.hospitalizations.medicationAdministrationByHospitalization(
+            hospitalizationId
+          ),
+          {
+            params: buildMedicationAdministrationListParams(activeFilters),
+          }
+        );
+        if (data && typeof data === "object") {
+          assertBackendSuccess(
+            data,
+            "No fue posible cargar la administración de medicamentos."
+          );
         }
-      );
-      setRows(unwrapArray(data));
-    } catch (err) {
-      setRows([]);
-      setError(
-        getApiErrorMessage(
-          err,
-          "No fue posible cargar la administración de medicamentos."
-        )
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+        setRows(unwrapArray(data));
+      } catch (err) {
+        setRows([]);
+        setError(
+          getApiErrorMessage(
+            err,
+            "No fue posible cargar la administración de medicamentos."
+          )
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters, hospitalizationId, setError]
+  );
 
   React.useEffect(() => {
     if (!hospitalizationId) return;
     loadRows();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hospitalizationId]);
+  }, [hospitalizationId, loadRows]);
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -1650,10 +2063,13 @@ function MedicationAdministrationListModal({
                   row?.num_doc_enfermera
                     ? `Doc. enfermera: ${row.num_doc_enfermera}`
                     : null,
+                  Array.isArray(row?.items_administrados)
+                    ? `${row.items_administrados.length} ítem(s)`
+                    : null,
                 ]
                   .filter(Boolean)
                   .join(" · ")}
-                data={row}
+                detailContent={<MedicationAdministrationDetailBody data={row} />}
               />
             ))}
           </div>
@@ -1663,9 +2079,126 @@ function MedicationAdministrationListModal({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* CREAR ATENCIÓN DE HOSPITALIZACIÓN                                          */
-/* -------------------------------------------------------------------------- */
+function MedicationAdministrationDetailBody({ data }) {
+  const items = Array.isArray(data?.items_administrados) ? data.items_administrados : [];
+  const headerFields = [
+    { label: "ID administración", value: data?.id_admin_med ?? data?.id_administracion ?? data?.id },
+    { label: "ID hospitalización", value: data?.id_hospitalizacion },
+    { label: "ID enfermera", value: data?.id_enfermera ?? data?.num_doc_enfermera },
+    { label: "Fecha administración", value: data?.fecha_admin ? formatDateTime(data.fecha_admin) : "—" },
+  ];
+
+  return (
+    <div className="mt-3 space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {headerFields.map((field) => (
+          <div key={field.label} className="rounded-lg border border-neutral-200 p-3">
+            <p className="text-xs uppercase text-neutral-500">{field.label}</p>
+            <p className="mt-1 text-sm font-semibold text-neutral-800">
+              {field.value === null || field.value === undefined || String(field.value).trim() === ""
+                ? "—"
+                : field.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <section className="space-y-2">
+        <h5 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          Ítems administrados
+        </h5>
+        {items.length === 0 ? (
+          <div className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+            <span className="material-icons text-neutral-500">inventory_2</span>
+            <div>
+              <p className="text-sm font-semibold text-neutral-800">
+                No hay ítems administrados
+              </p>
+              <p className="mt-1 text-sm text-neutral-600">
+                Esta administración no tiene ítems asociados.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-neutral-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-neutral-50 border-b border-neutral-200">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                    Medicamento
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                    Dosis
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                    Cantidad
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                    Duración
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-neutral-600">
+                    Detalle
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 bg-white">
+                {items.map((entry, idx) => {
+                  const prescItem = entry?.prescripcion_item || {};
+                  const med = entry?.medicamento || {};
+                  const medicamentoNombre = String(
+                    med?.nombre_medicamento || med?.nombre || med?.nombre_generico || ""
+                  ).trim();
+                  const principioActivo = String(med?.principio_activo || "").trim();
+                  const presentacion = String(med?.presentacion || "").trim();
+                  const codigo = med?.codigo ?? prescItem?.id_medicamento ?? null;
+                  const detalleBadges = [
+                    prescItem?.id_items ? { label: `Ítem #${prescItem.id_items}` } : null,
+                    codigo ? { label: `Código ${codigo}` } : null,
+                    prescItem?.id_prescripcion ? { label: `Rx #${prescItem.id_prescripcion}` } : null,
+                  ].filter(Boolean);
+
+                  return (
+                    <tr key={entry?.admin_item_detalle?.id_admin_items ?? prescItem?.id_items ?? idx}>
+                      <td className="px-3 py-2 text-neutral-800">
+                        <div className="font-medium">
+                          {medicamentoNombre || principioActivo || "—"}
+                        </div>
+                        <div className="mt-0.5 text-xs text-neutral-500">
+                          {[principioActivo || null, presentacion || null].filter(Boolean).join(" · ") || "—"}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-neutral-800">{prescItem?.dosis ?? "—"}</td>
+                      <td className="px-3 py-2 text-neutral-800">{prescItem?.cantidad ?? "—"}</td>
+                      <td className="px-3 py-2 text-neutral-800">
+                        {formatDurationWithUnit(prescItem?.duracion)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          {detalleBadges.length > 0 ? (
+                            detalleBadges.map((badge) => (
+                              <span
+                                key={badge.label}
+                                className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] font-medium text-neutral-700"
+                              >
+                                {badge.label}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-neutral-500">—</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
 
 function CreateAttentionModal({
   hospitalization,
@@ -1687,24 +2220,39 @@ function CreateAttentionModal({
   const [saving, setSaving] = React.useState(false);
   const [medicamentoOptions, setMedicamentoOptions] = React.useState([]);
   const [loadingMedicamentos, setLoadingMedicamentos] = React.useState(false);
-  const [prescriptionItems, setPrescriptionItems] = React.useState([
-    createPrescriptionItem(),
-  ]);
+  const [prescriptionItems, setPrescriptionItems] = React.useState([]);
   const [selectedPrincipioActivo, setSelectedPrincipioActivo] = React.useState({});
   const [doseWarnings, setDoseWarnings] = React.useState({});
   const [prescriptionErrors, setPrescriptionErrors] = React.useState({});
   const diagDebounceRef = React.useRef(null);
 
-  const idUrgenciaAtencion = React.useMemo(() => {
+  const idHospitalizacionAtencion = React.useMemo(() => {
     const raw =
-      hospitalization?.id_urgencia ??
-      hospitalization?.idUrgencia ??
-      hospitalization?.urgencia?.id_urgencia;
+      hospitalization?.id_hospitalizacion ??
+      hospitalization?.idHospitalizacion ??
+      hospitalization?.hospitalizacion?.id_hospitalizacion;
     const numeric = Number(raw);
     return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
   }, [hospitalization]);
 
+  function resetFormState() {
+    setForm({ observaciones: "", tratamiento: "" });
+    setFormErrors({});
+    setDiagnosticoQuery("");
+    setDiagnosticoOptions([]);
+    setSelectedDiagnostico(null);
+    setLoadingDiagnosticos(false);
+    setSaving(false);
+    setMedicamentoOptions([]);
+    setLoadingMedicamentos(false);
+    setPrescriptionItems([]);
+    setSelectedPrincipioActivo({});
+    setDoseWarnings({});
+    setPrescriptionErrors({});
+  }
+
   async function finishModal() {
+    resetFormState();
     onClose();
     if (onDone) await onDone();
   }
@@ -1724,12 +2272,13 @@ function CreateAttentionModal({
   }
 
   React.useEffect(() => {
+    resetFormState();
     loadDiagnosticos();
     loadMedicamentos();
     return () => {
       if (diagDebounceRef.current) clearTimeout(diagDebounceRef.current);
     };
-  }, []);
+  }, [hospitalization?.id_hospitalizacion]);
 
   function handleDiagnosticoQueryChange(value) {
     setDiagnosticoQuery(value);
@@ -1786,12 +2335,15 @@ function CreateAttentionModal({
     });
   }
 
-  const validPrescriptionItems = React.useMemo(
-    () => getValidPrescriptionItems(prescriptionItems),
-    [prescriptionItems]
+  const hasPrescriptionItems = prescriptionItems.length > 0;
+  const hasIncompletePrescriptionItems = prescriptionItems.some(
+    (item) =>
+      !item.codigo ||
+      !String(item.dosis || "").trim() ||
+      Number(item.duracion) <= 0 ||
+      Number(item.cantidad) <= 0
   );
-
-  const willCreatePrescription = validPrescriptionItems.length > 0;
+  const willCreatePrescription = hasPrescriptionItems;
 
   async function submitAttention(e) {
     e.preventDefault();
@@ -1804,17 +2356,24 @@ function CreateAttentionModal({
     setPrescriptionErrors(rxErrors);
 
     if (!validateForm()) return;
-    if (Object.keys(rxErrors).length > 0) return;
+    if (hasPrescriptionItems && Object.keys(rxErrors).length > 0) {
+      setError("Completa todos los campos de cada medicamento antes de guardar.");
+      return;
+    }
+    if (hasIncompletePrescriptionItems) {
+      setError("Completa todos los campos de cada medicamento antes de guardar.");
+      return;
+    }
 
-    if (willCreatePrescription && !idUrgenciaAtencion) {
+    if (willCreatePrescription && !idHospitalizacionAtencion) {
       setError(
-        "Esta hospitalización no tiene id_urgencia; no se puede crear la prescripción de medicamentos."
+        "Esta hospitalización no tiene id_hospitalizacion; no se puede crear la prescripción de medicamentos."
       );
       return;
     }
 
     const idDoctor = getAuthDoctorId(auth);
-    const idHospitalizacion = getHospitalizationId(hospitalization);
+    const idHospitalizacion = idHospitalizacionAtencion;
     if (!idDoctor) {
       setError(
         "No se pudo obtener el documento del médico autenticado (num_documento)."
@@ -1827,6 +2386,7 @@ function CreateAttentionModal({
     }
 
     setSaving(true);
+    let attentionWasCreated = false;
     try {
       const attentionRes = await http.post(
         API.hospitalizations.createAttention,
@@ -1842,45 +2402,50 @@ function CreateAttentionModal({
         attentionRes.data,
         "No fue posible crear la atención de hospitalización."
       );
+      attentionWasCreated = true;
+      const idAtencionHospitalizacion = getHospitalizationAttentionId(
+        attentionRes.data
+      );
+      if (idAtencionHospitalizacion) {
+        rememberHospitalizationAttentionId(
+          idHospitalizacion,
+          idAtencionHospitalizacion
+        );
+      }
 
       if (willCreatePrescription) {
-        // Capturar el id_atencion del response de la atención creada
-        const createdAttentionId = attentionRes?.data?.id_atencion ??
-                                    attentionRes?.data?.id_urgencia ??
-                                    attentionRes?.data?.id;
-        if (!createdAttentionId) {
+        if (!idAtencionHospitalizacion) {
           throw new Error(
-            "El backend no retornó el ID de la atención creada."
+            "La atención fue creada, pero la respuesta no incluyó id_atencionh para registrar la prescripción."
           );
         }
 
-        const payload = {
-          id_atencion: Number(createdAttentionId),
-          tipo: 1,
-          prescripciones_items: validPrescriptionItems.map((item) => ({
-            id_medicamento: Number(item.id_medicamento ?? item.codigo),
-            cantidad: Number(item.cantidad),
-            dosis: String(item.dosis ?? "").trim(),
-            duracion: String(item.duracion ?? "").trim(),
-          })),
-        };
-        const prescriptionRes = await http.post(
-          API.hospitalizations.createPrescription,
-          payload
-        );
+        const { response: prescriptionRes } = await postHospitalizationPrescription({
+          idAtencionHospitalizacion,
+          idHospitalizacion,
+          prescriptionItems,
+        });
         assertBackendSuccess(
           prescriptionRes.data,
           "No fue posible crear la prescripción."
         );
-        setMessage(
-          "Atención y prescripción de medicamentos registradas correctamente."
-        );
+        setMessage("Atención y prescripción de medicamentos registradas correctamente.");
       } else {
         setMessage("Atención de hospitalización creada correctamente.");
       }
 
       await finishModal();
     } catch (err) {
+      if (willCreatePrescription && attentionWasCreated) {
+        setError(
+          `${getApiErrorMessage(
+            err,
+            "No fue posible crear la prescripción."
+          )} La atención ya fue creada; agrega la prescripción manualmente o reintenta.`
+        );
+        return;
+      }
+
       setError(
         getApiErrorMessage(
           err,
@@ -2034,13 +2599,15 @@ function CreateAttentionModal({
             errors={prescriptionErrors}
             onClearError={clearPrescriptionFieldError}
             disabled={saving}
-            title="Medicamentos"
+            title="Prescripciones"
+            addLabel="Agregar medicamento"
+            minItems={0}
           />
         )}
 
-        {!idUrgenciaAtencion && (
+        {!idHospitalizacionAtencion && hasPrescriptionItems && (
           <p className="text-sm text-amber-700 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-            Esta hospitalización no tiene id_urgencia asociado. Puede guardar la
+            Esta hospitalización no tiene id_hospitalizacion asociado. Puede guardar la
             atención, pero no se podrá registrar prescripción de medicamentos.
           </p>
         )}
@@ -2053,15 +2620,12 @@ function CreateAttentionModal({
               ? "Guardar atención y prescripción"
               : "Guardar atención"
           }
+          submitDisabled={hasIncompletePrescriptionItems}
         />
       </form>
     </Modal>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* VER ATENCIONES DE HOSPITALIZACIÓN                                          */
-/* -------------------------------------------------------------------------- */
 
 function AttentionListModal({ hospitalization, onClose, setError }) {
   const [diagnoses, setDiagnoses] = React.useState(FALLBACK_DIAGNOSES);
@@ -2072,7 +2636,7 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
   const [pageSize, setPageSize] = React.useState(5);
   const [loading, setLoading] = React.useState(false);
 
-  async function loadDiagnoses() {
+  const loadDiagnoses = React.useCallback(async () => {
     try {
       const { data } = await http.get(API.diagnoses.search);
       const list = unwrapDiagnoses(data);
@@ -2082,45 +2646,48 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
     } catch {
       setDiagnoses(FALLBACK_DIAGNOSES);
     }
-  }
+  }, []);
 
-  async function loadRows(
-    nextPage = page,
-    nextPageSize = pageSize,
-    activeFilters = filters
-  ) {
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await http.get(
-        API.hospitalizations.attentionsByHospitalization(
-          hospitalization.id_hospitalizacion
-        ),
-        {
-          params: buildAttentionParams(activeFilters, nextPage, nextPageSize),
-        }
-      );
-      setRows(unwrapArray(data));
-      setTotalRows(unwrapTotal(data));
-    } catch (err) {
-      setRows([]);
-      setTotalRows(null);
-      setError(
-        getApiErrorMessage(
-          err,
-          "No fue posible cargar las atenciones de hospitalización."
-        )
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+  const loadRows = React.useCallback(
+    async (nextPage = page, nextPageSize = pageSize, activeFilters = filters) => {
+      setLoading(true);
+      setError("");
+      try {
+        const { data } = await http.get(
+          API.hospitalizations.attentionsByHospitalization(
+            hospitalization.id_hospitalizacion
+          ),
+          {
+            params: buildAttentionParams(activeFilters, nextPage, nextPageSize),
+          }
+        );
+        const nextRows = unwrapArray(data);
+        rememberHospitalizationAttentionRows(
+          hospitalization.id_hospitalizacion,
+          nextRows
+        );
+        setRows(nextRows);
+        setTotalRows(unwrapTotal(data));
+      } catch (err) {
+        setRows([]);
+        setTotalRows(null);
+        setError(
+          getApiErrorMessage(
+            err,
+            "No fue posible cargar las atenciones de hospitalización."
+          )
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters, hospitalization.id_hospitalizacion, page, pageSize, setError]
+  );
 
   React.useEffect(() => {
     loadDiagnoses();
     loadRows(page, pageSize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, [loadDiagnoses, loadRows, page, pageSize]);
 
   const totalPages = getComputedTotalPages(
     totalRows,
@@ -2260,9 +2827,10 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
                         hospitalization?.num_doc_paciente ??
                         row?.id_paciente
                       }
-                      idUrgencia={
-                        hospitalization?.id_urgencia ??
-                        hospitalization?.idUrgencia
+                      idHospitalizacion={
+                        hospitalization?.id_hospitalizacion ??
+                        hospitalization?.idHospitalizacion ??
+                        row?.id_hospitalizacion
                       }
                     />
                   }
@@ -2286,10 +2854,6 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
     </Modal>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* UI COMPONENTS                                                              */
-/* -------------------------------------------------------------------------- */
 
 function PaginationControls({
   page,
@@ -2365,7 +2929,13 @@ function Modal({ title, children, onClose, size = "lg" }) {
   );
 }
 
-function ModalActions({ onClose, loading, submitLabel, onSubmit }) {
+function ModalActions({
+  onClose,
+  loading,
+  submitLabel,
+  onSubmit,
+  submitDisabled = false,
+}) {
   return (
     <div className="flex justify-end gap-3">
       <button
@@ -2378,23 +2948,11 @@ function ModalActions({ onClose, loading, submitLabel, onSubmit }) {
       <button
         type={onSubmit ? "button" : "submit"}
         onClick={onSubmit}
-        disabled={loading}
+        disabled={loading || submitDisabled}
         className="rounded-xl bg-primary-500 px-4 py-2 font-semibold text-white hover:bg-primary-600 disabled:opacity-50"
       >
         {loading ? "Procesando..." : submitLabel}
       </button>
-    </div>
-  );
-}
-
-function Notice({ children, type }) {
-  const classes =
-    type === "error"
-      ? "bg-emergency-50 text-emergency-700 border-emergency-500/20"
-      : "bg-secondary-50 text-secondary-700 border-secondary-100";
-  return (
-    <div className={`rounded-2xl border p-4 text-sm ${classes}`}>
-      {children}
     </div>
   );
 }
@@ -2480,24 +3038,26 @@ function Td({ children }) {
   );
 }
 
-function RecordCard({ title, subtitle, data, detailContent }) {
+function RecordCard({ title, subtitle, detailContent, detailLabel = "Ver detalle" }) {
   const [detailsOpen, setDetailsOpen] = React.useState(false);
 
   return (
     <article className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
       <p className="font-semibold text-neutral-900">{title}</p>
       {subtitle && <p className="mt-1 text-sm text-neutral-600">{subtitle}</p>}
-      <RecordDetails
-        data={data}
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        detailContent={detailsOpen ? detailContent : null}
-      />
+      {detailContent ? (
+        <RecordDetails
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          detailContent={detailsOpen ? detailContent : null}
+          detailLabel={detailLabel}
+        />
+      ) : null}
     </article>
   );
 }
 
-function RecordDetails({ data, detailContent, open, onOpenChange }) {
+function RecordDetails({ detailContent, open, onOpenChange, detailLabel = "Ver detalle" }) {
   return (
     <details
       className="mt-3 group"
@@ -2508,15 +3068,9 @@ function RecordDetails({ data, detailContent, open, onOpenChange }) {
         <span className="material-icons text-base transition-transform group-open:rotate-180">
           expand_more
         </span>
-        Ver datos completos
+        {detailLabel}
       </summary>
-      {detailContent ? (
-        detailContent
-      ) : (
-        <pre className="mt-2 overflow-auto rounded-lg border border-neutral-200 bg-white p-3 text-xs text-neutral-700">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      )}
+      {detailContent}
     </details>
   );
 }
@@ -2623,7 +3177,7 @@ function AttentionPrescriptionsList({ prescriptions, loading, medicationMap }) {
   );
 }
 
-function AttentionDetailBody({ data, idPaciente, idUrgencia }) {
+function AttentionDetailBody({ data, idPaciente, idHospitalizacion }) {
   const [prescriptions, setPrescriptions] = React.useState([]);
   const [medicationMap, setMedicationMap] = React.useState(() => new Map());
   const [loadingPrescriptions, setLoadingPrescriptions] = React.useState(false);
@@ -2642,9 +3196,21 @@ function AttentionDetailBody({ data, idPaciente, idUrgencia }) {
     data?.id_paciente ??
     data?.num_doc_paciente ??
     null;
-  const idAtencionPrescripcion = Number(
-    data?.id_atencionh ?? data?.id_atencion ?? data?.id
-  );
+  const idAtencionPrescripcion = React.useMemo(() => {
+    const raw = data?.id_atencionh ?? data?.id_atencion;
+    const numeric = Number(raw);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  }, [data?.id_atencionh, data?.id_atencion]);
+  const prescriptionLookupIds = React.useMemo(() => {
+    const ids = [
+      idAtencionPrescripcion,
+    ]
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+    return Array.from(new Set(ids));
+  }, [
+    idAtencionPrescripcion,
+  ]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -2656,10 +3222,7 @@ function AttentionDetailBody({ data, idPaciente, idUrgencia }) {
           .get(`${MEDICAL_API}/api/medicamentos/search`)
           .catch(() => null);
 
-        if (
-          !Number.isFinite(idAtencionPrescripcion) ||
-          idAtencionPrescripcion <= 0
-        ) {
+        if (prescriptionLookupIds.length === 0) {
           const medsRes = await medsPromise;
           if (!cancelled && medsRes?.data) {
             const wrapped = unwrapBackendResponse(medsRes.data);
@@ -2674,13 +3237,11 @@ function AttentionDetailBody({ data, idPaciente, idUrgencia }) {
 
         const [medsRes, rxRes] = await Promise.all([
           medsPromise,
-          http.get(API.hospitalizations.prescriptionsList, {
-            params: {
-              idAtencion: idAtencionPrescripcion,
-              pag: 1,
-              cantidad: 50,
-            },
-          }),
+          Promise.all(
+            prescriptionLookupIds.map((id) =>
+              loadPrescriptionsByAttentionId(id).catch(() => [])
+            )
+          ),
         ]);
 
         if (!cancelled) {
@@ -2691,7 +3252,7 @@ function AttentionDetailBody({ data, idPaciente, idUrgencia }) {
               : unwrapArray(medsRes.data);
             setMedicationMap(buildMedicationMap(rows));
           }
-          setPrescriptions(unwrapArray(rxRes.data));
+          setPrescriptions(rxRes.flat());
         }
       } catch {
         if (!cancelled) {
@@ -2707,7 +3268,7 @@ function AttentionDetailBody({ data, idPaciente, idUrgencia }) {
     return () => {
       cancelled = true;
     };
-  }, [idAtencionPrescripcion]);
+  }, [prescriptionLookupIds]);
 
   return (
     <div className="mt-3 space-y-4 rounded-xl border border-neutral-200 bg-white p-4">

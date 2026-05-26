@@ -1,24 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { http } from '../../services/api/http';
 import { endpoints } from '../../services/api/endpoints';
-import { Spinner, Badge } from '../../components/ui';
+import { Spinner, Badge, Alert as UiAlert } from '../../components/ui';
 
 const LIMIT = 10;
 
 const EMPTY_MED = { codigo: '', nombre_medicamento: '', reg_invima: '', principio_activo: '', presentacion: '' };
 const EMPTY_INV = { lote: '', cantidad: '', fecha_vencimiento: '', precio: '' };
 
-function Alert({ alert, className = "" }) { // Añadimos className opcional
+function PharmacyPageAlert({ alert }) {
   if (!alert) return null;
-  const colors = {
-    success: 'bg-emerald-50 border-emerald-400 text-emerald-800',
-    error:   'bg-red-50 border-red-400 text-red-800',
-    warning: 'bg-amber-50 border-amber-400 text-amber-800',
-  };
+  const variant =
+    alert.type === 'success'
+      ? 'success'
+      : alert.type === 'warning'
+        ? 'warning'
+        : 'error';
   return (
-    <div className={`border-l-4 rounded-lg px-4 py-3 text-sm font-medium ${colors[alert.type]} ${className}`}>
+    <UiAlert variant={variant} fixed>
       {alert.message}
-    </div>
+    </UiAlert>
   );
 }
 
@@ -38,7 +39,7 @@ function Modal({ open, title, onClose, children, size = 'sm' }) {
   if (!open) return null;
   const widths = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg' };
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className={`bg-white rounded-2xl shadow-2xl w-full ${widths[size]} p-6`}>
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-lg font-bold text-slate-800">{title}</h2>
@@ -363,7 +364,7 @@ useEffect(() => {
           Si 'modal' tiene algún valor (es decir, está abierto), 
           NO renderices la alerta de la página principal.
       */}
-      {!modal && alert && <Alert alert={alert} />}
+      {alert && <PharmacyPageAlert alert={alert} />}
 
       {/* ── VIEW: MEDICATIONS LIST ─────────────────── */}
       {view === 'medications' && (
@@ -648,9 +649,6 @@ useEffect(() => {
       <Modal open={modal === 'createInv'} title="Agregar lote al inventario" onClose={closeModal}>
         <p className="text-xs text-slate-500 -mt-3 mb-4">{selectedMed?.nombre_medicamento}</p>
         
-        {/* Este es el cambio clave: renderizar la alerta aquí para que esté dentro del Modal */}
-        {alert && <Alert alert={alert} className="mb-4" />}
-
         <div className="space-y-3">
           <Field label="Número de lote" placeholder="Ej: LOT-A-1234" value={invForm.lote}
             onChange={(e) => setInvForm({ ...invForm, lote: e.target.value })} />

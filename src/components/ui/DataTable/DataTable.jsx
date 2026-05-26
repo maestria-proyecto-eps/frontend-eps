@@ -334,7 +334,11 @@ export default function DataTable({
   return (
     <div className="space-y-4">
       {feedback && (
-        <Alert variant={feedback.type} title={feedback.type === 'success' ? 'Éxito' : 'Error'}>
+        <Alert
+          variant={feedback.type}
+          title={feedback.type === 'success' ? 'Éxito' : 'Error'}
+          fixed
+        >
           {feedback.message}
         </Alert>
       )}
