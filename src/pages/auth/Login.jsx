@@ -1,76 +1,108 @@
 import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
+
 import { AuthContext } from "../../services/auth/AuthContext";
+
+import { Button, Input, Card, Spinner } from '../../components/ui';
+import { MainLayout } from "../../components/layout";
+
+//feature flag
+import { usePostHog } from 'posthog-js/react'
 
 export default function Login() {
   const nav = useNavigate();
   const auth = useContext(AuthContext);
+  const posthog = usePostHog()
 
-  const [user_name, setUser] = useState("");
+  const [num_documento, setUser] = useState("");
   const [password, setPass] = useState("");
   const [msg, setMsg] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setMsg("");
+    setLoading(true);
 
     try {
       const { data } = await http.post(endpoints.auth.login, {
-        user_name,
+        num_documento: parseInt(num_documento),
         password,
       });
 
-      auth.login(data.access_token);
+      if (data.hasError) {
+        setMsg(data.Message);
+        return;
+      }
 
-      if (data.role === "admin") nav("/admin");
-      else nav("/user");
-    } catch {
-      setMsg("Login inválido");
+      // set id to feature flag
+      posthog.reset()
+      console.log(num_documento)
+      posthog.identify(num_documento, {
+        num_documento: num_documento
+      })
+      auth.login(data.Data.access_token);
+      nav("/bridge");
+
+    } catch (err){
+      console.error("Error capturado:", err) 
+      setMsg("Error de conexión. Intente nuevamente.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const EyeToggle = (
+    <button
+      type="button"
+      onClick={() => setShowPassword((prev) => !prev)}
+      tabIndex={-1}
+      aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+      className="pointer-events-auto text-neutral-400 hover:text-neutral-600 focus:outline-none"
+    >
+      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+    </button>
+  );
+
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <form
-        onSubmit={submit}
-        className="border p-6 rounded space-y-3 w-80"
-      >
-        <h2 className="text-lg font-bold text-center">
-          Iniciar sesión
-        </h2>
+    <MainLayout showFooter={false}>
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-80">
+          <Card.Header>
+            <h2 className="text-lg font-bold text-center">Iniciar sesión</h2>
+          </Card.Header>
 
-        <input
-          placeholder="Usuario"
-          value={user_name}
-          onChange={(e) => setUser(e.target.value)}
-          className="border p-2 w-full rounded"
-          required
-        />
+          <Card.Body>
+            <form onSubmit={submit} className="space-y-3">
+              <Input
+                placeholder="Num documento"
+                name="num_documento"
+                value={num_documento}
+                onChange={(e) => setUser(e.target.value)}
+                required
+              />
 
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPass(e.target.value)}
-          className="border p-2 w-full rounded"
-          required
-        />
-
-        <button
-          type="submit"
-          className="bg-blue-500 text-white p-2 w-full rounded"
-        >
-          Entrar
-        </button>
-
-        {msg && (
-          <div className="text-red-500 text-sm text-center">
-            {msg}
-          </div>
-        )}
-      </form>
-    </div>
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Contraseña"
+                name="password"
+                value={password}
+                onChange={(e) => setPass(e.target.value)}
+                error={msg || undefined}
+                required
+                rightIcon={EyeToggle}
+              />
+              <Button type="submit" fullWidth disabled={loading}>
+                {loading ? <Spinner size="sm" className="mx-auto" /> : "Entrar"}
+              </Button>
+            </form>
+          </Card.Body>
+        </Card>
+      </div>
+    </MainLayout>
   );
 }

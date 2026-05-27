@@ -6,10 +6,35 @@ import ProtectedRoute from "./services/auth/ProtectedRoute";
 import Login from "./pages/auth/Login";
 import Home from "./pages/Home";
 import Components from "./pages/Components";
+import ComponentsOld from "./pages/ComponentsOld";
 import Usuarios from "./pages/Usuarios/usuarios";
-import DoctorExample from "./pages/doctor/DoctorExample"
-import DoctorLayout from "./pages/doctor/DoctorLayout"
+import DoctorExample from "./pages/doctor/DoctorExample";
+import DoctorManager from "./pages/Usuarios/DoctorManager";
+import DoctorLayout from "./pages/doctor/DoctorLayout";
+import DoctorAppointments from "./pages/doctor/Appointments";
+import ConsultationForm from "./pages/doctor/ConsultationForm";
+import DoctorPrescriptions from "./pages/doctor/Prescriptions";
+import DoctorUrgency from "./pages/doctor/Urgency";
+import DoctorHospitalizations from "./pages/doctor/Hospitalizations";
+import NewPatient from "./pages/receptionist/newpatient";
+import Calendar from "./pages/patient/calendar";
+import PatientAppointments from "./pages/patient/Appointments";
+import PatientPrescriptions from "./pages/patient/Prescriptions";
+import PatientReferrals from "./pages/patient/PatientReferrals";
+import MedicalHistory from "./pages/patient/MedicalHistory";
+import Bridge from "./pages/Bridge";
+import Maintenance from "./pages/Maintenance";
+import Pharmacy from "./pages/pharmacy/Pharmacy";
 import { ROUTES } from "./constants";
+import AuthenticatedLayout from "./components/layout/authenticated/AuthenticatedLayout";
+import DoctorSchedule from "./pages/hr/DoctorSchedule";
+import Profile from "./pages/patient/Profile";
+import Triages from "./pages/nurse/Triages";
+import TriageForm from "./pages/nurse/TriageForm";
+import PerfilRoute from './feature-flags/PerfilRoute'
+// Importamos el Dashboard del Sprint
+import Dashboard from "./pages/Dashboard";
+import NurseHospitalizations from "./pages/nurse/Hospitalizations";
 
 export default function App() {
   return (
@@ -20,23 +45,127 @@ export default function App() {
           {/* RUTAS PÚBLICAS */}
           <Route path="/" element={<Home />} />
           <Route path="/components" element={<Components />} />
-          <Route path="/usuarios" element={<Usuarios />} />
-
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
 
-          {/* DOCTOR ROLE EXAMPLE */}
+          {/* DOCTOR ROLE */}
           <Route
             path="/doctor"
             element={
-              <ProtectedRoute allowRoles={["doctor"]}>
-                <DoctorLayout />
+              <ProtectedRoute allowRoles={["Médico"]}>
+                <AuthenticatedLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<DoctorExample />} />
-            <Route path="example1" element={<DoctorExample />} />
-            <Route path="example2" element={<DoctorExample />} />
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="citas" element={<DoctorAppointments />} />
+            <Route path="prescriptions" element={<DoctorPrescriptions />} />
+            <Route path="consultation/new" element={<ConsultationForm />} />
+            <Route path="urgencia" element={<DoctorUrgency />} />
+            <Route path="hospitalizaciones" element={<DoctorHospitalizations />} />
+          </Route>
+
+          {/* Ruta de redirección intermedia tras login */}
+          <Route
+            path="/bridge"
+            element={
+              <ProtectedRoute>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+          </Route>
+          
+          {/* Recepcionista */}
+          <Route
+            path="/receptionist"
+            element={
+              <ProtectedRoute allowRoles={["Recepcionista"]}>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<NewPatient />} />
+            <Route path="afiliacion" element={<NewPatient />} />
+          </Route>
+
+          {/* Talento Humano */}
+          <Route
+            path="/hr"
+            element={
+              <ProtectedRoute allowRoles={["Talento Humano"]}>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="usuarios" element={<Usuarios />} />
+            <Route path="doctors" element={<DoctorManager />} />
+            <Route path="doctors/:idDoctor/schedule" element={<DoctorSchedule />} />
+          </Route>
+
+          {/* Enfermero */}
+          <Route
+            path="/nurse"
+            element={
+              <ProtectedRoute allowRoles={["Enfermero", "Enfermera"]}>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="urgencias" element={<Maintenance />} />
+            <Route path="triage" element={<Triages />} />
+            <Route path="triage/new" element={<TriageForm />} />
+            <Route path="hospitalizaciones" element={<NurseHospitalizations />} />
+          </Route>
+
+          {/* Farmaceuta - SECCIÓN ACTUALIZADA SOLO PARA HABILITAR EL DASHBOARD */}
+          <Route
+            path="/pharmacist"
+            element={
+              <ProtectedRoute allowRoles={["Farmaceuta"]}>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Pharmacy />} />
+            <Route path="farmacia" element={<Pharmacy />} />
+            {/* Habilitamos el subpath de manera explícita para que la URL /pharmacist/dashboard funcione */}
+            <Route path="dashboard" element={<Dashboard />} />
+          </Route>
+
+          {/* PACIENTE */}
+          <Route
+            path="/patient"
+            element={
+              <ProtectedRoute allowRoles={["Paciente"]}>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="citas" element={<PatientAppointments />} />
+            
+            {/* Rutas duplicadas para soportar historial en inglés y español */}
+            <Route path="historia" element={<MedicalHistory />} />
+            <Route path="medical-history" element={<MedicalHistory />} />
+            <Route path="appointments/history" element={<MedicalHistory />} />
+            
+            {/* Rutas duplicadas para soportar fórmulas en inglés y español */}
+            <Route path="prescripciones" element={<PatientPrescriptions />} />
+            
+            {/* Rutas duplicadas para soportar datos personales en inglés y español */}
+            <Route path="perfil" element={<PerfilRoute />} />
+            {/* <Route path="perfil" element={<Profile />} /> */}
+            
+            <Route path="referrals" element={<PatientReferrals />} />
+            <Route path="appointments/new" element={<Calendar />} />
           </Route>
 
           {/* Cualquier otra ruta → redirigir al home */}

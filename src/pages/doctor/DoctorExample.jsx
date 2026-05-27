@@ -35,7 +35,7 @@ export default function DoctorExample() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="bg-white shadow rounded-xl p-6 space-y-4">
-        <h2 className="text-2xl font-bold">Doctor Example</h2>
+        <h2 className="text-2xl font-bold">Example page</h2>
 
         {loading && <p className="text-gray-500">Cargando...</p>}
 
