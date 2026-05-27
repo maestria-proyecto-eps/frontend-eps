@@ -9,9 +9,13 @@ import { AuthContext } from "../../services/auth/AuthContext";
 import { Button, Input, Card, Spinner } from '../../components/ui';
 import { MainLayout } from "../../components/layout";
 
+//feature flag
+import { usePostHog } from 'posthog-js/react'
+
 export default function Login() {
   const nav = useNavigate();
   const auth = useContext(AuthContext);
+  const posthog = usePostHog()
 
   const [num_documento, setUser] = useState("");
   const [password, setPass] = useState("");
@@ -35,10 +39,17 @@ export default function Login() {
         return;
       }
 
+      // set id to feature flag
+      posthog.reset()
+      console.log(num_documento)
+      posthog.identify(num_documento, {
+        num_documento: num_documento
+      })
       auth.login(data.Data.access_token);
       nav("/bridge");
 
-    } catch {
+    } catch (err){
+      console.error("Error capturado:", err) 
       setMsg("Error de conexión. Intente nuevamente.");
     } finally {
       setLoading(false);
