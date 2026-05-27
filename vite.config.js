@@ -4,4 +4,50 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      '/emergency-api': {
+        target: 'https://backend-eps-emergency-service-xqll.onrender.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/emergency-api/, ''),
+      },
+      '/appointments-api': {
+        target: 'https://backend-eps-appointments-service.onrender.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/appointments-api/, ''),
+      },
+      '/medical-api': {
+        target: 'https://backend-eps-medical-records-service.onrender.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/medical-api/, ''),
+      },
+      '/api/auth':            'https://backend-eps-auth-service-xzgs.onrender.com',
+      '/api/patients':        'https://backend-eps-auth-service-xzgs.onrender.com',
+      '/api/users':           'https://backend-eps-users-service.onrender.com',
+      '/api/doctors':         'https://backend-eps-users-service.onrender.com',
+      '/api/schedules':       'https://backend-eps-users-service.onrender.com',
+      '/api/persons':         'https://backend-eps-users-service.onrender.com',
+      '/api/specialties':     'https://backend-eps-users-service.onrender.com',
+      '/api/appointments':    'https://backend-eps-appointments-service.onrender.com',
+      '/api/hospitalizacion': 'https://backend-eps-emergency-service-xqll.onrender.com',
+      '/api/emergency':       'https://backend-eps-emergency-service-xqll.onrender.com',
+      '/api/triages':         'https://backend-eps-emergency-service-xqll.onrender.com',
+      '/api/atencion_urgencias': 'https://backend-eps-emergency-service-xqll.onrender.com',
+      '/api/prescriptions/items': 'https://backend-eps-medical-records-service.onrender.com',
+      '/api/administracion_medicamentos': 'https://backend-eps-medical-records-service.onrender.com',
+      '/api/pharmacy':        'https://backend-eps-pharmacy-service.onrender.com',
+      '/api/medical-records': 'https://backend-eps-medical-records-service.onrender.com',
+      '/api/referrals':       'https://backend-eps-medical-records-service.onrender.com',
+      '/api/appoinment':      'https://backend-eps-medical-records-service.onrender.com',
+      '/api/pattient':        'https://backend-eps-medical-records-service.onrender.com',
+      '/api/prescriptions':   'https://backend-eps-medical-records-service.onrender.com',
+      '/api/diagnosticos':    'https://backend-eps-medical-records-service.onrender.com',
+      '/api/medicamentos':    'https://backend-eps-medical-records-service.onrender.com',
+    },
+  },
+    test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
 })
