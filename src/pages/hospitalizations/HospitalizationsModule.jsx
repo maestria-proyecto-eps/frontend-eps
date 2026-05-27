@@ -767,6 +767,16 @@ function getDiagnosisName(item) {
 function buildHospitalizationParams(filters, page, pageSize) {
   const params = { pag: page, cantidad: pageSize };
 
+  const idPaciente = parseOptionalInt(filters.id_paciente);
+  if (idPaciente !== undefined) {
+    params.id_paciente = idPaciente;
+  }
+
+  const estado = parseOptionalInt(filters.estado);
+  if (estado !== undefined) {
+    params.estado = estado;
+  }
+
   if (filters.num_cama !== "" && filters.num_cama != null) {
     params.num_cama = parseOptionalInt(filters.num_cama);
   }
@@ -869,18 +879,9 @@ export default function HospitalizationsModule({ role }) {
         const allRows = sortHospitalizationsByEstado(
           unwrapArray(data).map(normalizeHospitalization)
         );
-
-        const rowsFiltradasPorEstado = filterHospitalizationsLocally(
-          allRows,
-          activeFilters
-        );
-
-        const totalRegistros = rowsFiltradasPorEstado.length;
+        const totalRegistros = allRows.length;
         const start = (nextPage - 1) * nextPageSize;
-        const paginaActual = rowsFiltradasPorEstado.slice(
-          start,
-          start + nextPageSize
-        );
+        const paginaActual = allRows.slice(start, start + nextPageSize);
 
         setHospitalizations(paginaActual);
         setTotalRows(totalRegistros);
