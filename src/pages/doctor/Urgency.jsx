@@ -579,9 +579,9 @@ export default function Urgency() {
       </div>
 
       {feedback && (
-        <div className="mb-4">
-          <Alert variant={feedback.type}>{feedback.text}</Alert>
-        </div>
+        <Alert variant={feedback.type} fixed>
+          {feedback.text}
+        </Alert>
       )}
 
       <section className="space-y-3">

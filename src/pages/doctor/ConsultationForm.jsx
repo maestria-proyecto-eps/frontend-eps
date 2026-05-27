@@ -1,159 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Alert, Badge, Button, Card, Input, Modal, Spinner } from "../../components/ui";
+import PrescriptionItemsForm from "../../components/prescriptions/PrescriptionItemsForm";
+import {
+  createPrescriptionItem,
+  validatePrescriptionItems,
+} from "../../components/prescriptions/prescriptionFormUtils";
 import { http } from "../../services/api/http";
 import { endpoints } from "../../services/api/endpoints";
 
 /* -------------------------------------------------------------------------- */
 /*                                  HELPERS                                   */
 /* -------------------------------------------------------------------------- */
-
-function createPrescriptionItem() {
-  return {
-    localId: crypto.randomUUID(),
-    codigo: "",
-    dosis: "",
-    duracion: "",
-    cantidad: "",
-    presentacion: "", // To store medication presentation format
-    principio_activo: "", // To store active principle associated with medication
-  };
-}
-
-/**
- * Get placeholder text for dose field based on medication presentation
- */
-function getDosePlaceholder(presentacion) {
-  if (!presentacion || !presentacion.trim()) return "Ej: 2, 5 ml, 10 mg";
-  
-  const lower = presentacion.toLowerCase();
-  
-  if (lower.includes("tableta") || lower.includes("cápsula") || lower.includes("capsula")) {
-    return "Ej: 1, 2, 3 (número de tabletas)";
-  }
-  if (lower.includes("ampolla") || lower.includes("inyectable") || lower.includes("inyección")) {
-    return "Ej: 10 mg, 1 ml (mg o ml)";
-  }
-  if (lower.includes("jarabe") || lower.includes("solución") || lower.includes("solucion") || lower.includes("ml")) {
-    return "Ej: 5 ml, 10 ml (mililitros)";
-  }
-  if (lower.includes("gota")) {
-    return "Ej: 5, 10 (número de gotas)";
-  }
-  
-  return "Ej: 2, 5 ml, 10 mg";
-}
-
-/**
- * Extract units from presentation (e.g., "Caja x12" → 12, "Frasco x 120ml" → 120)
- */
-function extractUnitsFromPresentation(presentacion) {
-  if (!presentacion) return null;
-  const match = presentacion.match(/x\s*(\d+)/i);
-  return match ? parseInt(match[1], 10) : null;
-}
-
-/**
- * Calculate quantity based on dose, duration, and presentation
- * cantidad = Math.ceil((dosis × duracion) / unidades_por_presentacion)
- * Example: 1 dose × 12 days = 12 units, Caja x12 = 1 caja
- */
-function calculateQuantity(dose, duration, presentacion) {
-  if (!dose || !duration) return "";
-  
-  // Extract numeric value from dose (handles "5 ml", "10 mg", etc.)
-  const doseNumeric = parseFloat(dose);
-  const durationNumeric = parseInt(duration, 10);
-  
-  if (isNaN(doseNumeric) || isNaN(durationNumeric)) return "";
-  
-  // Total units needed
-  const totalUnits = doseNumeric * durationNumeric;
-  
-  // If presentation has units, calculate how many presentations are needed
-  const unitsPerPresentation = extractUnitsFromPresentation(presentacion);
-  if (unitsPerPresentation && unitsPerPresentation > 0) {
-    return Math.ceil(totalUnits / unitsPerPresentation).toString();
-  }
-  
-  // If no presentation or can't extract units, return total units
-  return totalUnits.toString();
-}
-
-/**
- * Get unique active principles from medications
- */
-function getUniquePrincipiosActivos(medications) {
-  const seen = new Set();
-  const principios = [];
-  
-  medications.forEach((med) => {
-    const principio = med.principio_activo?.trim();
-    if (principio && !seen.has(principio)) {
-      seen.add(principio);
-      principios.push(principio);
-    }
-  });
-  
-  return principios.sort();
-}
-
-/**
- * Filter medications by active principle
- */
-function getMedicamentosByPrincipio(medications, principioActivo) {
-  if (!principioActivo) return [];
-  return medications.filter(
-    (med) => med.principio_activo?.trim() === principioActivo.trim()
-  );
-}
-
-/**
- * Determine expected dose format based on presentation type
- * Returns null if no specific format expected (free text)
- */
-function getExpectedDoseFormat(presentacion) {
-  if (!presentacion || !presentacion.trim()) return null;
-  
-  const lower = presentacion.toLowerCase();
-  
-  if (lower.includes("tableta") || lower.includes("cápsula") || lower.includes("capsula")) {
-    return { type: "integer", label: "número entero", pattern: /^\d+$/ };
-  }
-  if (lower.includes("jarabe") || lower.includes("solución") || lower.includes("solucion")) {
-    return { type: "liquid", label: "ml o gotas", pattern: /^(\d+\.?\d*)\s?(ml|gotas|gota|ml\.)$|^\d+\.?\d*$/ };
-  }
-  if (lower.includes("ampolla") || lower.includes("ampolla") || lower.includes("inyectable") || lower.includes("inyección")) {
-    return { type: "injectable", label: "mg/ml", pattern: /^(\d+\.?\d*)\s?(mg|ml|mg\/ml)$|^\d+\.?\d*$/ };
-  }
-  if (lower.includes("gota")) {
-    return { type: "drops", label: "gotas", pattern: /^\d+\s?gotas?$|^\d+$/ };
-  }
-  
-  return null;
-}
-
-/**
- * Validate dose against expected format
- * Returns { valid: boolean, warning: string | null }
- */
-function validateDoseFormat(dose, presentacion) {
-  if (!dose || !dose.trim()) return { valid: false, warning: null };
-  
-  const format = getExpectedDoseFormat(presentacion);
-  if (!format) return { valid: true, warning: null }; // No specific format = free text OK
-  
-  const trimmedDose = dose.trim();
-  
-  if (!format.pattern.test(trimmedDose)) {
-    return {
-      valid: false,
-      warning: `Se esperaba formato: ${format.label}. Ejemplo: ${format.type === "integer" ? "2" : format.type === "liquid" ? "5 ml" : "10 mg"}`,
-    };
-  }
-  
-  return { valid: true, warning: null };
-}
 
 function unwrapBackendResponse(responseData) {
   if (!responseData || typeof responseData !== "object") {
@@ -168,6 +26,30 @@ function unwrapBackendResponse(responseData) {
     message: responseData.message || "",
     data: responseData.data ?? null,
   };
+}
+
+function getApiErrorMessage(error, fallback) {
+  const data = error?.response?.data;
+  if (typeof data?.message === "string") return data.message;
+  if (typeof data?.Message === "string") return data.Message;
+  if (typeof data?.detail === "string") return data.detail;
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail
+      .map((item) => item?.msg || item?.message || JSON.stringify(item))
+      .join(" | ");
+  }
+  if (typeof error?.message === "string" && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+}
+
+function unwrapPrescriptionRows(responseData) {
+  const payload = responseData?.data ?? responseData?.Data ?? responseData;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.Data)) return payload.Data;
+  return [];
 }
 
 function TextAreaField({
@@ -376,122 +258,10 @@ export default function ConsultationForm() {
     setDiagnosticoQuery("");
   }
 
-  /* ---------------------------------------------------------------------- */
-  /*                          PRESCRIPTION ITEMS                             */
-  /* ---------------------------------------------------------------------- */
-
-  function updatePrescriptionItem(localId, key, value) {
-    // If updating principio_activo, clear medicamento selection
-    if (key === "principio_activo") {
-      setSelectedPrincipioActivo((prev) => ({ ...prev, [localId]: value }));
-      setPrescriptionItems((prev) =>
-        prev.map((item) =>
-          item.localId === localId
-            ? { ...item, codigo: "", dosis: "", duracion: "", cantidad: "", presentacion: "" }
-            : item
-        )
-      );
-      setErrors((prev) => {
-        const updated = { ...prev };
-        delete updated[`${localId}_codigo`];
-        delete updated[`${localId}_dosis`];
-        delete updated[`${localId}_duracion`];
-        return updated;
-      });
-    } 
-    // If updating medicamento (codigo), load presentacion and principio_activo
-    else if (key === "codigo" && value) {
-      const selectedMed = medicamentoOptions.find((m) => m.codigo === Number(value));
-      if (selectedMed) {
-        setPrescriptionItems((prev) =>
-          prev.map((item) =>
-            item.localId === localId
-              ? {
-                  ...item,
-                  [key]: value,
-                  presentacion: selectedMed.presentacion || "",
-                  principio_activo: selectedMed.principio_activo || "",
-                }
-              : item
-          )
-        );
-      } else {
-        setPrescriptionItems((prev) =>
-          prev.map((item) =>
-            item.localId === localId
-              ? { ...item, [key]: value, presentacion: "", principio_activo: "" }
-              : item
-          )
-        );
-      }
-    } 
-    // If updating dosis, recalculate cantidad and check for warnings
-    else if (key === "dosis") {
-      const item = prescriptionItems.find((i) => i.localId === localId);
-      const validation = validateDoseFormat(value, item?.presentacion);
-      
-      // Calculate new cantidad based on dosis and duracion
-      const newCantidad = calculateQuantity(value, item?.duracion, item?.presentacion);
-      
-      setPrescriptionItems((prev) =>
-        prev.map((item) => 
-          item.localId === localId 
-            ? { ...item, [key]: value, cantidad: newCantidad }
-            : item
-        )
-      );
-      
-      if (validation.warning) {
-        setDoseWarnings((prev) => ({ ...prev, [localId]: validation.warning }));
-      } else {
-        setDoseWarnings((prev) => {
-          const updated = { ...prev };
-          delete updated[localId];
-          return updated;
-        });
-      }
-    } 
-    // If updating duracion, recalculate cantidad
-    else if (key === "duracion") {
-      const item = prescriptionItems.find((i) => i.localId === localId);
-      const newCantidad = calculateQuantity(item?.dosis, value, item?.presentacion);
-      
-      setPrescriptionItems((prev) =>
-        prev.map((item) =>
-          item.localId === localId
-            ? { ...item, [key]: value, cantidad: newCantidad }
-            : item
-        )
-      );
-    }
-    // Any other field update
-    else {
-      setPrescriptionItems((prev) =>
-        prev.map((item) => (item.localId === localId ? { ...item, [key]: value } : item))
-      );
-    }
-    
-    setErrors((prev) => ({ ...prev, [`${localId}_${key}`]: "" }));
-  }
-
-  function addPrescriptionItem() {
-    setPrescriptionItems((prev) => [...prev, createPrescriptionItem()]);
-  }
-
-  function removePrescriptionItem(localId) {
-    if (prescriptionItems.length === 1) return;
-    setPrescriptionItems((prev) =>
-      prev.filter((item) => item.localId !== localId)
-    );
-    // Clean up state
-    setSelectedPrincipioActivo((prev) => {
+  function clearPrescriptionFieldError(localId, keys) {
+    setErrors((prev) => {
       const updated = { ...prev };
-      delete updated[localId];
-      return updated;
-    });
-    setDoseWarnings((prev) => {
-      const updated = { ...prev };
-      delete updated[localId];
+      keys.forEach((key) => delete updated[`${localId}_${key}`]);
       return updated;
     });
   }
@@ -515,29 +285,10 @@ export default function ConsultationForm() {
       newErrors.diagnostico = "Debe seleccionar un diagnóstico.";
     }
 
-    prescriptionItems.forEach((item) => {
-      const hasAny = item.codigo || item.dosis || item.duracion;
-      if (!hasAny) return;
-
-      if (!selectedPrincipioActivo[item.localId]) {
-        newErrors[`${item.localId}_principio_activo`] = "Debe seleccionar un principio activo.";
-      }
-      if (!item.codigo) {
-        newErrors[`${item.localId}_codigo`] = "Debe seleccionar un medicamento.";
-      }
-
-      if (!item.dosis.trim()) {
-        newErrors[`${item.localId}_dosis`] = "La dosis es obligatoria.";
-      }
-
-      if (!item.duracion || Number(item.duracion) <= 0) {
-        newErrors[`${item.localId}_duracion`] = "La duración debe ser mayor a cero.";
-      }
-      // Cantidad is auto-calculated, so we just validate it's > 0 if present
-      if (!item.cantidad || Number(item.cantidad) <= 0) {
-        newErrors[`${item.localId}_cantidad`] = "La cantidad calculada debe ser mayor a cero.";
-      }
-    });
+    Object.assign(
+      newErrors,
+      validatePrescriptionItems(prescriptionItems, selectedPrincipioActivo)
+    );
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -562,22 +313,57 @@ export default function ConsultationForm() {
 
     try {
       const medicamentosPayload = prescriptionItems
-        .filter((item) => item.codigo && item.dosis.trim() && item.duracion && item.cantidad)
+        .filter(
+          (item) =>
+            item.codigo &&
+            String(item.dosis || "").trim() &&
+            Number(item.duracion) > 0 &&
+            Number(item.cantidad) > 0
+        )
         .map((item) => ({
           codigo: Number(item.codigo),
-          dosis: item.dosis,
+          dosis: String(item.dosis).trim(),
           duracion: Number(item.duracion),
           cantidad: Number(item.cantidad),
         }));
 
-      // Note: "obervacion" is the field name in the API (typo in spec is intentional)
+      if (medicamentosPayload.length === 0) {
+        setFeedback({
+          type: "warning",
+          text: "Debes agregar al menos un medicamento válido para registrar la consulta con prescripción.",
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      // Some backend deployments still expect the typo "obervacion".
       const payload = {
-        obervacion: form.observacion,
-        tratamiento: form.tratamiento,
-        id_diagnostico: selectedDiagnostico.id_diagnostico,
+        obervacion: String(form.observacion).trim(),
+        observacion: String(form.observacion).trim(),
+        tratamiento: String(form.tratamiento).trim(),
+        id_diagnostico: Number(selectedDiagnostico.id_diagnostico),
         tipo_preinscripcion: 1,
         medicamentos: medicamentosPayload,
       };
+
+      // Guard against backend unique constraint (id_atencion, tipo).
+      const existingRxRes = await http.get(endpoints.medicalRecords.createPrescription, {
+        params: {
+          idAtencion: Number(appointmentId),
+          tipo: 1,
+          pag: 1,
+          cantidad: 1,
+        },
+      });
+      const existingRows = unwrapPrescriptionRows(existingRxRes.data);
+      if (existingRows.length > 0) {
+        setFeedback({
+          type: "warning",
+          text: "Esta cita ya tiene una prescripción de tipo medicamentos. No se puede crear otra para la misma atención.",
+        });
+        setIsSaving(false);
+        return;
+      }
 
       const res = await http.post(endpoints.consultations.create(appointmentId), payload);
       const wrapped = unwrapBackendResponse(res.data);
@@ -590,7 +376,7 @@ export default function ConsultationForm() {
     } catch (err) {
       setFeedback({
         type: "error",
-        text: err.message || "No fue posible guardar la consulta.",
+        text: getApiErrorMessage(err, "No fue posible guardar la consulta."),
       });
     } finally {
       setIsSaving(false);
@@ -705,7 +491,11 @@ export default function ConsultationForm() {
         </Badge>
       </div>
 
-      {feedback && <Alert variant={feedback.type}>{feedback.text}</Alert>}
+      {feedback && (
+        <Alert variant={feedback.type} fixed>
+          {feedback.text}
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_380px]">
         {/* ── LEFT COLUMN ─────────────────────────────────────── */}
@@ -839,187 +629,19 @@ export default function ConsultationForm() {
             </Card.Body>
           </Card>
 
-          {/* Medicamentos */}
-          <Card padding>
-            <Card.Header className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-neutral-800">Medicamentos</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addPrescriptionItem}
-                disabled={!!createdRegistroId}
-              >
-                Agregar
-              </Button>
-            </Card.Header>
-
-            <Card.Body>
-              <div className="space-y-4">
-                {prescriptionItems.map((item, index) => (
-                  <div key={item.localId} className="rounded-xl border border-neutral-200 p-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-neutral-700">
-                        Medicamento #{index + 1}
-                      </h3>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => removePrescriptionItem(item.localId)}
-                        disabled={!!createdRegistroId}
-                      >
-                        Quitar
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {/* 1. Principio Activo Selection */}
-                      <div className="md:col-span-2 space-y-1">
-                        <label className="block text-sm font-medium text-neutral-700">
-                          Principio Activo *
-                        </label>
-                        <select
-                          value={selectedPrincipioActivo[item.localId] || ""}
-                          onChange={(e) => updatePrescriptionItem(item.localId, "principio_activo", e.target.value)}
-                          disabled={!!createdRegistroId}
-                          className={[
-                            "block w-full rounded-lg border px-3 py-2 text-neutral-900 bg-white",
-                            "focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500",
-                            "disabled:bg-neutral-100 disabled:cursor-not-allowed",
-                            errors[`${item.localId}_principio_activo`]
-                              ? "border-emergency-500 focus:border-emergency-500 focus:ring-emergency-500"
-                              : "border-neutral-300",
-                          ].join(" ")}
-                        >
-                          <option value="">Seleccione principio activo</option>
-                          {getUniquePrincipiosActivos(medicamentoOptions).map((principio) => (
-                            <option key={principio} value={principio}>
-                              {principio}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* 2. Medicamento Selection (filtered by principio activo) */}
-                      <div className="md:col-span-2 space-y-1">
-                        <label className="block text-sm font-medium text-neutral-700">
-                          Medicamento *
-                        </label>
-                        <select
-                          value={item.codigo}
-                          onChange={(e) => updatePrescriptionItem(item.localId, "codigo", e.target.value)}
-                          disabled={!selectedPrincipioActivo[item.localId] || !!createdRegistroId}
-                          className={[
-                            "block w-full rounded-lg border px-3 py-2 text-neutral-900 bg-white",
-                            "focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500",
-                            "disabled:bg-neutral-100 disabled:cursor-not-allowed",
-                            errors[`${item.localId}_codigo`]
-                              ? "border-emergency-500 focus:border-emergency-500 focus:ring-emergency-500"
-                              : "border-neutral-300",
-                          ].join(" ")}
-                        >
-                          <option value="">
-                            {selectedPrincipioActivo[item.localId] 
-                              ? "Seleccione medicamento" 
-                              : "Seleccione primero un principio activo"}
-                          </option>
-                          {selectedPrincipioActivo[item.localId] && 
-                            getMedicamentosByPrincipio(medicamentoOptions, selectedPrincipioActivo[item.localId]).map((med) => (
-                              <option key={med.codigo} value={med.codigo}>
-                                {med.nombre_medicamento}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-
-                      {/* 3. Presentación (display as badge) */}
-                      {item.presentacion && (
-                        <div className="md:col-span-2 space-y-1">
-                          <label className="block text-sm font-medium text-neutral-700">
-                            Presentación
-                          </label>
-                          <Badge variant="secondary">{item.presentacion}</Badge>
-                        </div>
-                      )}
-
-                      {/* 4. Dosis */}
-                      <div className="space-y-1">
-                        <label className="block text-sm font-medium text-neutral-700">
-                          Dosis *
-                        </label>
-                        <input
-                          type="text"
-                          value={item.dosis}
-                          onChange={(e) => updatePrescriptionItem(item.localId, "dosis", e.target.value)}
-                          placeholder={getDosePlaceholder(item.presentacion)}
-                          disabled={!!createdRegistroId}
-                          className={[
-                            "block w-full rounded-lg border px-3 py-2 text-neutral-900 placeholder-neutral-400",
-                            "focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500",
-                            "disabled:bg-neutral-100 disabled:cursor-not-allowed",
-                            errors[`${item.localId}_dosis`]
-                              ? "border-emergency-500 focus:border-emergency-500 focus:ring-emergency-500"
-                              : doseWarnings[item.localId]
-                              ? "border-amber-300 focus:border-amber-400 focus:ring-amber-400"
-                              : "border-neutral-300",
-                          ].join(" ")}
-                        />
-                        {errors[`${item.localId}_dosis`] && (
-                          <p className="text-sm text-emergency-600">
-                            {errors[`${item.localId}_dosis`]}
-                          </p>
-                        )}
-                        {doseWarnings[item.localId] && !errors[`${item.localId}_dosis`] && (
-                          <p className="text-sm text-amber-600">
-                            ⚠ {doseWarnings[item.localId]}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* 5. Duración (días) */}
-                      <Input
-                        label="Duración (días) *"
-                        type="number"
-                        min="1"
-                        value={item.duracion}
-                        onChange={(e) =>
-                          updatePrescriptionItem(item.localId, "duracion", e.target.value)
-                        }
-                        error={errors[`${item.localId}_duracion`]}
-                        disabled={!!createdRegistroId}
-                      />
-
-                      {/* 6. Cantidad (auto-calculated based on presentation, read-only) */}
-                      <div className="space-y-1">
-                        <label className="block text-sm font-medium text-neutral-700">
-                          Cantidad
-                        </label>
-                        <input
-                          type="text"
-                          value={item.cantidad}
-                          readOnly
-                          disabled={true}
-                          placeholder="Se calcula automáticamente"
-                          className="block w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-700 bg-neutral-50 cursor-not-allowed"
-                        />
-                        {item.cantidad && (
-                          <p className="text-xs text-neutral-500">
-                            {(() => {
-                              const totalUnits = parseFloat(item.dosis) * parseInt(item.duracion);
-                              const unitsPerPresentation = extractUnitsFromPresentation(item.presentacion);
-                              if (unitsPerPresentation && unitsPerPresentation > 0) {
-                                return `${totalUnits} unidades ÷ ${unitsPerPresentation} (por presentación) = ${item.cantidad}`;
-                              }
-                              return `${item.dosis} × ${item.duracion} días = ${item.cantidad}`;
-                            })()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
+          <PrescriptionItemsForm
+            medicamentoOptions={medicamentoOptions}
+            prescriptionItems={prescriptionItems}
+            onPrescriptionItemsChange={setPrescriptionItems}
+            selectedPrincipioActivo={selectedPrincipioActivo}
+            onSelectedPrincipioActivoChange={setSelectedPrincipioActivo}
+            doseWarnings={doseWarnings}
+            onDoseWarningsChange={setDoseWarnings}
+            errors={errors}
+            onClearError={clearPrescriptionFieldError}
+            disabled={!!createdRegistroId}
+            title="Medicamentos"
+          />
 
           {/* Action buttons */}
           <div className="flex flex-wrap justify-end gap-3">

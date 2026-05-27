@@ -93,11 +93,9 @@ export default function Prescriptions() {
       </div>
 
       {error && (
-        <div className="mb-4">
-          <Alert variant="error" title="Error">
-            {error}
-          </Alert>
-        </div>
+        <Alert variant="error" title="Error" fixed>
+          {error}
+        </Alert>
       )}
 
       <DataTable

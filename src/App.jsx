@@ -15,6 +15,7 @@ import DoctorAppointments from "./pages/doctor/Appointments";
 import ConsultationForm from "./pages/doctor/ConsultationForm";
 import DoctorPrescriptions from "./pages/doctor/Prescriptions";
 import DoctorUrgency from "./pages/doctor/Urgency";
+import DoctorHospitalizations from "./pages/doctor/Hospitalizations";
 import NewPatient from "./pages/receptionist/newpatient";
 import Calendar from "./pages/patient/calendar";
 import PatientAppointments from "./pages/patient/Appointments";
@@ -33,6 +34,7 @@ import TriageForm from "./pages/nurse/TriageForm";
 
 // Importamos el Dashboard del Sprint
 import Dashboard from "./pages/Dashboard";
+import NurseHospitalizations from "./pages/nurse/Hospitalizations";
 
 export default function App() {
   return (
@@ -61,6 +63,7 @@ export default function App() {
             <Route path="prescriptions" element={<DoctorPrescriptions />} />
             <Route path="consultation/new" element={<ConsultationForm />} />
             <Route path="urgencia" element={<DoctorUrgency />} />
+            <Route path="hospitalizaciones" element={<DoctorHospitalizations />} />
           </Route>
 
           {/* Ruta de redirección intermedia tras login */}
@@ -118,7 +121,7 @@ export default function App() {
             <Route path="urgencias" element={<Maintenance />} />
             <Route path="triage" element={<Triages />} />
             <Route path="triage/new" element={<TriageForm />} />
-            <Route path="hospitalizaciones" element={<Maintenance />} />
+            <Route path="hospitalizaciones" element={<NurseHospitalizations />} />
           </Route>
 
           {/* Farmaceuta - SECCIÓN ACTUALIZADA SOLO PARA HABILITAR EL DASHBOARD */}

@@ -395,7 +395,7 @@ export default function DoctorSchedule() {
         </div>
 
         {pageError && (
-          <Alert variant="error" title="Error" className="mb-4">
+          <Alert variant="error" title="Error" fixed>
             {pageError}
           </Alert>
         )}

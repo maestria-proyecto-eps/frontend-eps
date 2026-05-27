@@ -74,6 +74,15 @@ function getStoredToken() {
 }
 
 http.interceptors.request.use((config) => {
+  const token = getStoredToken();
+  if (!config.headers) config.headers = {};
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // Peticiones directas a microservicios en Render (sin proxy de Vite/localhost).
+  if (config.directService) {
+    return config;
+  }
+
   const normalizedUrl = normalizeToRelativeApiUrl(config.url);
   config.url = normalizedUrl;
 
@@ -85,8 +94,5 @@ http.interceptors.request.use((config) => {
     config.baseURL = "";
   }
 
-  const token = getStoredToken();
-  if (!config.headers) config.headers = {};
-  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
