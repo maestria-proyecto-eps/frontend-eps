@@ -230,7 +230,6 @@ async function loadPrescriptionsByAttentionId(idAtencion) {
 
 async function postHospitalizationPrescription({
   idAtencionHospitalizacion,
-  idHospitalizacion,
   prescriptionItems,
 }) {
   const payload = buildPrescriptionApiPayload(
@@ -413,13 +412,6 @@ function getHospitalizationId(hospitalization) {
     hospitalization?.id;
   const numeric = Number(raw);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
-}
-
-function toApiValue(value) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && String(value).trim() !== ""
-    ? numeric
-    : value;
 }
 
 function getStatusNumber(value) {
@@ -818,24 +810,6 @@ function unwrapBackendResponse(responseData) {
     message: responseData.message || "",
     data: responseData.data ?? responseData,
   };
-}
-
-function filterHospitalizationsLocally(rows, filters) {
-  const idPacienteActivo = parseOptionalInt(filters.id_paciente);
-  const estadoActivo = parseOptionalInt(filters.estado);
-
-  return rows.filter((row) => {
-    if (idPacienteActivo !== undefined) {
-      const rowIdPaciente = parseOptionalInt(row.id_paciente);
-      if (rowIdPaciente !== idPacienteActivo) return false;
-    }
-
-    if (estadoActivo !== undefined) {
-      if (getStatusNumber(row.estado) !== estadoActivo) return false;
-    }
-
-    return true;
-  });
 }
 
 export default function HospitalizationsModule({ role }) {
@@ -2828,11 +2802,6 @@ function AttentionListModal({ hospitalization, onClose, setError }) {
                         hospitalization?.num_doc_paciente ??
                         row?.id_paciente
                       }
-                      idHospitalizacion={
-                        hospitalization?.id_hospitalizacion ??
-                        hospitalization?.idHospitalizacion ??
-                        row?.id_hospitalizacion
-                      }
                     />
                   }
                 />
@@ -3178,7 +3147,7 @@ function AttentionPrescriptionsList({ prescriptions, loading, medicationMap }) {
   );
 }
 
-function AttentionDetailBody({ data, idPaciente, idHospitalizacion }) {
+function AttentionDetailBody({ data, idPaciente }) {
   const [prescriptions, setPrescriptions] = React.useState([]);
   const [medicationMap, setMedicationMap] = React.useState(() => new Map());
   const [loadingPrescriptions, setLoadingPrescriptions] = React.useState(false);
