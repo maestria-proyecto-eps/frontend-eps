@@ -50,7 +50,7 @@ export const endpoints = {
 
   persons: {
     /** POST crear persona */
-    create: "/api/persons",
+    create: "/api/persons/",
     /** PUT actualizar persona por número de documento */
     updateById: (num_documento) => `/api/persons/${num_documento}`,
     getByDocument: (num_documento) => `/api/persons/${num_documento}`,
